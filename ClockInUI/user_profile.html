@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>User Profile — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/user_profile.css">
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  
+  <script src="scripts/user_profile.js" defer></script>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="hamburger" id="hamburger">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
+      <span class="brand">Clock In</span>
+    </div>
+
+    <nav class="menu">
+      <a href="home.html"><span class="material-symbols-outlined">home</span><span class="label">Home</span></a>
+      <a><span class="material-symbols-outlined">dashboard</span><span class="label">Dashboard</span></a>
+      <a><span class="material-symbols-outlined">group</span><span class="label">Users</span></a>
+      <a><span class="material-symbols-outlined">schedule</span><span class="label">Schedule</span></a>
+      <a><span class="material-symbols-outlined">event_available</span><span class="label">Attendance</span></a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a id="sidebarLogout">
+        <span class="material-symbols-outlined">logout</span>
+        <span class="label">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <div class="profile-banner"></div>
+
+    <div class="profile-card">
+      <div class="avatar" id="avatar"></div>
+
+      <h2 id="name"></h2>
+      <p id="email"></p>
+
+      <div class="info-grid">
+        <div class="label">Username</div>
+        <div class="value" id="username"></div>
+        <span class="material-symbols-outlined edit">edit</span>
+
+        <div class="label">Email</div>
+        <div class="value" id="emailField"></div>
+        <span class="material-symbols-outlined edit">edit</span>
+
+        <div class="label">Password</div>
+        <div class="value" id="passwordField">************</div>
+        <span class="material-symbols-outlined edit">edit</span>
+
+        <div class="label">Organization</div>
+        <div class="value muted" id="organization">Add organization</div>
+        <span class="material-symbols-outlined edit">edit</span>
+
+        <div class="label">Department</div>
+        <div class="value muted" id="department">Add department</div>
+        <span class="material-symbols-outlined edit">edit</span>
+      </div>
+
+      <a href="home.html" class="back-btn">Back</a>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
