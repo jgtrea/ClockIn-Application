@@ -1,37 +1,79 @@
 package com.example.clockin
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+
 @Composable
 fun ScannerScreen(navController: NavController) {
+    val context = LocalContext.current
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // State for Flashlight
+    var isFlashlightOn by remember { mutableStateOf(false) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted -> hasCameraPermission = granted }
+    )
+
+    LaunchedEffect(Unit) {
+        launcher.launch(Manifest.permission.CAMERA)
+    }
+
     Scaffold(
-        bottomBar = { CustomBottomNavigation(navController, "scan_qr") } // Reusing your existing nav bar
+        bottomBar = { CustomBottomNavigation(navController, "scan_qr") }
     ) { paddingValues ->
-        // Main container representing the camera view
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color.DarkGray) // Placeholder for Camera Feed
+                .background(Color.Black)
         ) {
-            // 1. Top Instruction Text
+            if (hasCameraPermission) {
+                CameraPreview(torchOn = isFlashlightOn)
+            } else {
+                Text(
+                    text = "Please enable camera permissions",
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
             Text(
                 text = "Find a QR code",
                 color = Color.White,
@@ -41,24 +83,16 @@ fun ScannerScreen(navController: NavController) {
                     .align(Alignment.TopCenter)
                     .padding(top = 60.dp)
             )
-
-            // 2. Scanning Brackets (Frame)
             Box(
                 modifier = Modifier
                     .size(280.dp)
                     .align(Alignment.Center)
             ) {
-                // Top-Left Bracket
                 ScannerBracket(Modifier.align(Alignment.TopStart), rotateX = false, rotateY = false)
-                // Top-Right Bracket
                 ScannerBracket(Modifier.align(Alignment.TopEnd), rotateX = true, rotateY = false)
-                // Bottom-Left Bracket
                 ScannerBracket(Modifier.align(Alignment.BottomStart), rotateX = false, rotateY = true)
-                // Bottom-Right Bracket
                 ScannerBracket(Modifier.align(Alignment.BottomEnd), rotateX = true, rotateY = true)
             }
-
-            // 3. Floating Action Buttons (Flashlight & Gallery)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -66,16 +100,62 @@ fun ScannerScreen(navController: NavController) {
                     .padding(bottom = 80.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                ScannerActionButton(icon = Icons.Default.FlashlightOn)
-                ScannerActionButton(icon = Icons.Default.Image)
+                ScannerActionButton(
+                    icon = if (isFlashlightOn) Icons.Default.FlashlightOff else Icons.Default.FlashlightOn,
+                    onClick = { isFlashlightOn = !isFlashlightOn }
+                )
+                ScannerActionButton(
+                    icon = Icons.Default.Image,
+                    onClick = { /* Handle gallery pick here */ }
+                )
             }
         }
     }
 }
 
 @Composable
+fun CameraPreview(torchOn: Boolean) {
+    val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+
+    var camera by remember { mutableStateOf<Camera?>(null) }
+
+    LaunchedEffect(torchOn) {
+        camera?.cameraControl?.enableTorch(torchOn)
+    }
+
+    AndroidView(
+        factory = { ctx ->
+            val previewView = PreviewView(ctx)
+            val executor = ContextCompat.getMainExecutor(ctx)
+
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                try {
+                    cameraProvider.unbindAll()
+                    camera = cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        cameraSelector,
+                        preview
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }, executor)
+            previewView
+        },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+@Composable
 fun ScannerBracket(modifier: Modifier, rotateX: Boolean, rotateY: Boolean) {
-    // Custom bracket shape using borders and clipping
     Box(
         modifier = modifier
             .size(40.dp)
@@ -93,12 +173,16 @@ fun ScannerBracket(modifier: Modifier, rotateX: Boolean, rotateY: Boolean) {
 }
 
 @Composable
-fun ScannerActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector) {
+fun ScannerActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .size(70.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.3f)), // Semi-transparent grey circle
+            .background(Color.White.copy(alpha = 0.2f))
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -108,4 +192,11 @@ fun ScannerActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector) {
             modifier = Modifier.size(32.dp)
         )
     }
+}
+
+@ComposePreview(showBackground = true, showSystemUi = true)
+@Composable
+fun ScannerScreenPreview() {
+    val navController = rememberNavController()
+    ScannerScreen(navController = navController)
 }
