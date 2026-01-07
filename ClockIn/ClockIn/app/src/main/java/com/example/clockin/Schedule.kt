@@ -1,0 +1,141 @@
+package com.example.clockin
+
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.compose.runtime.*
+
+@Composable
+fun ScheduleScreen(navController: NavController) {
+    var showPolicies by remember { mutableStateOf(false) }
+    var showFeedbackDialog by remember { mutableStateOf(false) }
+    var showFAQ by remember { mutableStateOf(false) }
+
+    // 2. SHOW THE DIALOG CONDITIONALLY
+    if (showFeedbackDialog) {
+        FeedbackDialog(onDismiss = { showFeedbackDialog = false })
+    }
+    Scaffold(
+        bottomBar = { CustomBottomNavigation(navController, "schedule") }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(Color.White)
+        ) {
+            // 1. Shared Header (Matches Home exactly)
+            DashboardHeader(
+                onProfileClick = { navController.navigate("profile") },
+                onSendFeedbackClick = { showFeedbackDialog = true },
+                onPoliciesClick = { showPolicies = true },
+                onFAQClick = { showFAQ = true },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                })
+
+            // 2. Edge-to-Edge Divider
+            HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+
+            if (showPolicies) {
+                // If showPolicies is true, display the Policies screen content
+                PoliciesView(onBack = { showPolicies = false })
+            }
+            if (showFAQ) {
+                // If showPolicies is true, display the Policies screen content
+                FAQView(onBack = { showFAQ = false })
+            }else {
+
+                // 3. Scrollable Body Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp) // Changed from 24.dp to 16.dp to match Home.kt
+                ) {
+                    // Title Section
+                    Text("Schedules", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "view and track class/work schedules.",
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Grouped Schedule Cards
+                    ScheduleDateGroup(
+                        "Monday - 2025/11/10", listOf(
+                            ScheduleItem("T001 - Math", "Math | R001 | Mon 8:00 - 9:30"),
+                            ScheduleItem("T002 - Math", "Math | R010 | Mon 9:30 - 11:00"),
+                            ScheduleItem("T003 - Math", "Math | R008 | Mon 1:00 - 2:30")
+                        )
+                    )
+
+                    ScheduleDateGroup(
+                        "Tuesday - 2025/11/11", listOf(
+                            ScheduleItem("T001 - Math", "Math | R001 | Mon 8:00 - 9:30"),
+                            ScheduleItem("T002 - Math", "Math | R010 | Mon 9:30 - 11:00")
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ScheduleDateGroup(date: String, items: List<ScheduleItem>) {
+    Column(modifier = Modifier.padding(vertical = 16.dp)) { // Removed horizontal padding here
+        Text(
+            text = date,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        items.forEach { item ->
+            ScheduleCard(item)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+fun ScheduleCard(item: ScheduleItem) {
+    Card(
+        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Placeholder for the square icon in the image
+            Box(modifier = Modifier.size(45.dp).border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)))
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column {
+                Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(text = item.details, color = Color.Gray, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+data class ScheduleItem(val title: String, val details: String)
