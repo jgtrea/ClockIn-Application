@@ -13,7 +13,6 @@ import {
   setDoc,
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDUnpdDMr0E6r-lohCNJKKKdUJfbVqzayM",
   authDomain: "clockin-project-db.firebaseapp.com",

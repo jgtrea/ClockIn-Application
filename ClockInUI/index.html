@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClockIn — Dashboard</title>
+  <link rel="stylesheet" href="styles/home.css">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="scripts/firebase_config.js" defer></script>
+  <script src="scripts/home.js" defer></script>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar collapsed" id="sidebar">
+    <div class="sidebar-header">
+      <button class="hamburger" id="hamburger">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
+      <span class="brand">ClockIn</span>
+    </div>
+
+    <nav class="menu">
+      <a href="home.html" target="contentFrame" class="active">
+        <span class="material-symbols-outlined">home</span>
+        <span class="label">Home</span>
+      </a>
+      <a href="dashboard_db.html" target="contentFrame">
+        <span class="material-symbols-outlined">dashboard</span>
+        <span class="label">Dashboard</span>
+      </a>
+      <a href="users_db.html" target="contentFrame">
+        <span class="material-symbols-outlined">group</span>
+        <span class="label">Users</span>
+      </a>
+      <a href="schedule_db.html" target="contentFrame">
+        <span class="material-symbols-outlined">calendar_month</span>
+        <span class="label">Schedule</span>
+      </a>
+      <a href="attendance_db.html" target="contentFrame">
+        <span class="material-symbols-outlined">how_to_reg</span>
+        <span class="label">Attendance</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="#" id="sidebarLogout">
+        <span class="material-symbols-outlined">logout</span>
+        <span class="label">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar">
+        <input type="text" placeholder="Search...">
+        <button>🔍</button>
+      </div>
+
+      <div class="top-actions">
+        <button class="notif-btn">🔔</button>
+
+        <div class="profile-wrapper">
+          <div class="profile-circle" id="profileCircle">A</div>
+          <div class="profile-menu" id="profileMenu">
+            <div class="profile-header">
+              <div class="profile-circle small" id="profileCircleMenu">A</div>
+              <div>
+                <div class="profile-name" id="profileName">User</div>
+                <div class="profile-email" id="profileEmail"></div>
+              </div>
+            </div>
+            <hr>
+            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
+            <a class="menu-item">Send Feedback</a>
+            <button class="menu-item logout" id="logoutBtn">Logout</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <iframe name="contentFrame" src="home.html" frameborder="0"></iframe>
+  </div>
+</div>
+
+</body>
+</html>

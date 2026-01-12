@@ -10,7 +10,6 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-//Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDUnpdDMr0E6r-lohCNJKKKdUJfbVqzayM",
   authDomain: "clockin-project-db.firebaseapp.com",
@@ -54,7 +53,7 @@ if (loginForm) {
       await signInWithEmailAndPassword(auth, email, password);
 
       alert('Login successful!');
-      window.location.href = 'home.html';
+      window.location.href = 'index.html';
 
     } catch (err) {
       console.error('Login failed', err);

@@ -1,23 +1,6 @@
+// TODO: update the profile pic letter?
+
 document.addEventListener("DOMContentLoaded", () => {
-  const firebaseConfig = {
-    apiKey: "AIzaSyDUnpdDMr0E6r-lohCNJKKKdUJfbVqzayM",
-    authDomain: "clockin-project-db.firebaseapp.com",
-    projectId: "clockin-project-db",
-    storageBucket: "clockin-project-db.firebasestorage.app",
-    messagingSenderId: "144733710358",
-    appId: "1:144733710358:web:5064e74d72052cded4ed37"
-  };
-
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-
-  // DOM Elements
-  const sidebar = document.getElementById("sidebar");
-  const hamburger = document.getElementById("hamburger");
-  const sidebarLogout = document.getElementById("sidebarLogout");
-
   const avatar = document.getElementById("avatar");
   const nameEl = document.getElementById("name");
   const emailEl = document.getElementById("email");
@@ -27,10 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const department = document.getElementById("department");
   const passwordField = document.getElementById("passwordField");
 
-  sidebar.classList.add("collapsed");
-  hamburger.addEventListener("click", () => sidebar.classList.toggle("collapsed"));
-
-  // Firebase Auth state listener
   auth.onAuthStateChanged(async user => {
     if (!user) return window.location.href = "login.html";
 
@@ -44,7 +23,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const docRef = db.collection("users").doc(user.uid);
     const docSnap = await docRef.get();
 
-    // To create default Firestore doc if not existing
     if (!docSnap.exists) {
       await docRef.set({
         organization: "",
@@ -57,11 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
     organization.textContent = data.organization || "Add organization";
     department.textContent = data.department || "Add department";
     passwordField.textContent = "*".repeat(data.passwordLength || 12);
-  });
-
-  sidebarLogout.addEventListener("click", async () => {
-    await auth.signOut();
-    window.location.href = "login.html";
   });
 
   const editButtons = document.querySelectorAll(".edit");

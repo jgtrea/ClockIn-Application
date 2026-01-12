@@ -1,14 +1,13 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyDUnpdDMr0E6r-lohCNJKKKdUJfbVqzayM",
-  authDomain: "clockin-project-db.firebaseapp.com",
-  projectId: "clockin-project-db",
-  storageBucket: "clockin-project-db.firebasestorage.app",
-  messagingSenderId: "144733710358",
-  appId: "1:144733710358:web:5064e74d72052cded4ed37"
-};
+const sidebar = document.getElementById("sidebar");
+const hamburger = document.getElementById("hamburger");
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+if (sidebar && hamburger) {
+  sidebar.classList.add("collapsed");
+  hamburger.addEventListener("click", () => {
+    sidebar.classList.toggle("expanded");
+    sidebar.classList.toggle("collapsed");
+  });
+}
 
 const profileCircle = document.getElementById("profileCircle");
 const profileCircleMenu = document.getElementById("profileCircleMenu");
@@ -18,24 +17,17 @@ const profileEmail = document.getElementById("profileEmail");
 const logoutBtn = document.getElementById("logoutBtn");
 const sidebarLogout = document.getElementById("sidebarLogout");
 
-const sidebar = document.getElementById("sidebar");
-const hamburger = document.getElementById("hamburger");
+if (profileCircle && profileMenu) {
+  profileCircle.addEventListener("click", () => {
+    profileMenu.classList.toggle("show");
+  });
 
-sidebar.classList.add("collapsed");
-
-hamburger.addEventListener("click", () => {
-  sidebar.classList.toggle("collapsed");
-});
-
-profileCircle.addEventListener("click", () => {
-  profileMenu.classList.toggle("show");
-});
-
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".profile-wrapper")) {
-    profileMenu.classList.remove("show");
-  }
-});
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".profile-wrapper")) {
+      profileMenu.classList.remove("show");
+    }
+  });
+}
 
 auth.onAuthStateChanged(user => {
   if (!user) {
@@ -46,10 +38,10 @@ auth.onAuthStateChanged(user => {
   const displayName = user.displayName || user.email.split("@")[0];
   const letter = displayName.charAt(0).toUpperCase();
 
-  profileCircle.textContent = letter;
-  profileCircleMenu.textContent = letter;
-  profileName.textContent = displayName;
-  profileEmail.textContent = user.email;
+  if (profileCircle) profileCircle.textContent = letter;
+  if (profileCircleMenu) profileCircleMenu.textContent = letter;
+  if (profileName) profileName.textContent = displayName;
+  if (profileEmail) profileEmail.textContent = user.email;
 });
 
 async function logout() {
@@ -57,5 +49,5 @@ async function logout() {
   window.location.href = "login.html";
 }
 
-logoutBtn.addEventListener("click", logout);
-sidebarLogout.addEventListener("click", logout);
+if (logoutBtn) logoutBtn.addEventListener("click", logout);
+if (sidebarLogout) sidebarLogout.addEventListener("click", logout);

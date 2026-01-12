@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Schedule — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/home.css">
+  <link rel="stylesheet" href="styles/container_card/schedule_add_card.css">
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="scripts/firebase_config.js" defer></script>
+  <script src="scripts/schedule_db.js" defer></script>
+</head>
+
+<body data-page="schedule_db">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Schedule</h1>
+            <p class="tagline">View and track class/work schedules.</p>
+          </div>
+          <button class="export-btn" id="addUserBtn">Add User</button>
+        </div>
+      </div>
+
+      <nav class="page-nav">
+        <a href="dashboard_db.html">Dashboard</a>
+        <a href="users_db.html">Users</a>
+        <a href="schedule_db.html" class="active">Schedule</a>
+        <a href="attendance_db.html">Attendance</a>
+      </nav>
+
+      <div id="scheduleList"></div>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

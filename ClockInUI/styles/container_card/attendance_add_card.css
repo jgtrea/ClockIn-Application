@@ -1,0 +1,111 @@
+/* style for attendance container card */
+
+.user-row {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  padding: 30px;
+}
+
+.user-expanded-content {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+}
+
+.schedule-main-section {
+  flex: 1;
+}
+
+.attendance-table-header {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid #d1d5db;
+  padding-bottom: 10px;
+  margin: 20px 0 10px 0;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.attendance-table-header span {
+  flex: 1;
+  text-align: center;
+}
+
+.add-slot-ui {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 10px;
+}
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  gap: 16px 30px;
+  align-items: center;
+}
+
+.edit-grid label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.edit-grid input, .edit-grid select {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  outline: none;
+  background-color: #fff;
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 180px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn-group.bottom-group {
+  margin-top: 50px; 
+}
+
+.btn-outline {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #111827;
+  font-size: 14px;
+  min-width: 90px;
+  text-align: center;
+}
+
+.add-slot-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  font-size: 24px;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
