@@ -118,10 +118,6 @@ fun ScannerScreen(navController: NavController) {
                     icon = if (isFlashlightOn) Icons.Default.FlashlightOff else Icons.Default.FlashlightOn,
                     onClick = { isFlashlightOn = !isFlashlightOn }
                 )
-                ScannerActionButton(
-                    icon = Icons.Default.Image,
-                    onClick = { /* Gallery Picker Logic */ }
-                )
             }
         }
     }
