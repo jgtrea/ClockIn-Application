@@ -34,7 +34,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
@@ -49,7 +51,6 @@ fun ScannerScreen(navController: NavController) {
 
     var isFlashlightOn by remember { mutableStateOf(false) }
 
-    // Permission Launcher
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted -> hasCameraPermission = granted }
@@ -72,18 +73,19 @@ fun ScannerScreen(navController: NavController) {
                 CameraPreview(
                     torchOn = isFlashlightOn,
                     onQrCodeDetected = { code ->
-                        Toast.makeText(context, "Scanned: $code", Toast.LENGTH_LONG).show()
-                        // Example: navController.navigate("attendance_details/$code")
+                        // DITO UNG PAPALITAN FOR DB
+                        Toast.makeText(context, "QR Detected: $code", Toast.LENGTH_SHORT).show()
                     }
                 )
             } else {
                 Text(
-                    text = "Camera permission is required to scan QR codes.",
+                    text = "Camera permission is required.",
                     color = Color.White,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
 
+            // Overlay UI
             Text(
                 text = "Align QR code within frame",
                 color = Color.White,
@@ -118,12 +120,13 @@ fun ScannerScreen(navController: NavController) {
                 )
                 ScannerActionButton(
                     icon = Icons.Default.Image,
-                    onClick = { /* TODO: Implement Gallery Picker */ }
+                    onClick = { /* Gallery Picker Logic */ }
                 )
             }
         }
     }
 }
+
 @OptIn(ExperimentalGetImage::class)
 @Composable
 fun CameraPreview(torchOn: Boolean, onQrCodeDetected: (String) -> Unit) {
@@ -131,12 +134,12 @@ fun CameraPreview(torchOn: Boolean, onQrCodeDetected: (String) -> Unit) {
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     var camera by remember { mutableStateOf<Camera?>(null) }
-
     var lastScannedCode by remember { mutableStateOf("") }
 
     LaunchedEffect(torchOn) {
         camera?.cameraControl?.enableTorch(torchOn)
     }
+
     AndroidView(
         factory = { ctx ->
             val previewView = PreviewView(ctx)
@@ -148,7 +151,7 @@ fun CameraPreview(torchOn: Boolean, onQrCodeDetected: (String) -> Unit) {
                 val preview = Preview.Builder().build().also {
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
-                
+
                 val imageAnalyzer = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
@@ -156,6 +159,7 @@ fun CameraPreview(torchOn: Boolean, onQrCodeDetected: (String) -> Unit) {
                         it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
                             processImageProxy(imageProxy) { result ->
                                 if (result != lastScannedCode) {
+                                    lastScannedCode = result
                                     onQrCodeDetected(result)
                                 }
                             }
@@ -190,7 +194,13 @@ private fun processImageProxy(
     val mediaImage = imageProxy.image
     if (mediaImage != null) {
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        val scanner = BarcodeScanning.getClient()
+
+        // Limit scanning to QR Codes only
+        val options = BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .build()
+
+        val scanner = BarcodeScanning.getClient(options)
 
         scanner.process(image)
             .addOnSuccessListener { barcodes ->
@@ -223,6 +233,7 @@ fun ScannerBracket(modifier: Modifier, rotateX: Boolean, rotateY: Boolean) {
             )
     )
 }
+
 @Composable
 fun ScannerActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -244,6 +255,7 @@ fun ScannerActionButton(
         )
     }
 }
+
 @ComposePreview(showBackground = true, showSystemUi = true)
 @Composable
 fun ScannerScreenPreview() {
