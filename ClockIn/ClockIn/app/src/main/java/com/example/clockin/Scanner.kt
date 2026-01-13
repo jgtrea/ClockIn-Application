@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.material.icons.filled.FlashlightOn
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,13 +26,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -57,11 +54,14 @@ fun ScannerScreen(navController: NavController) {
     )
 
     LaunchedEffect(Unit) {
-        launcher.launch(Manifest.permission.CAMERA)
+        if (!hasCameraPermission) {
+            launcher.launch(Manifest.permission.CAMERA)
+        }
     }
 
     Scaffold(
-        bottomBar = { /* CustomBottomNavigation(navController, "scan_qr") */ }
+        // Re-enabled the bottom bar using the passed navController
+        bottomBar = { CustomBottomNavigation(navController, "scan_qr") }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -73,7 +73,7 @@ fun ScannerScreen(navController: NavController) {
                 CameraPreview(
                     torchOn = isFlashlightOn,
                     onQrCodeDetected = { code ->
-                        // DITO UNG PAPALITAN FOR DB
+                        // Logic for Database or Navigation goes here
                         Toast.makeText(context, "QR Detected: $code", Toast.LENGTH_SHORT).show()
                     }
                 )
@@ -190,8 +190,6 @@ private fun processImageProxy(
     val mediaImage = imageProxy.image
     if (mediaImage != null) {
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-        // Limit scanning to QR Codes only
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
             .build()
@@ -250,11 +248,4 @@ fun ScannerActionButton(
             modifier = Modifier.size(32.dp)
         )
     }
-}
-
-@ComposePreview(showBackground = true, showSystemUi = true)
-@Composable
-fun ScannerScreenPreview() {
-    val navController = rememberNavController()
-    ScannerScreen(navController = navController)
 }
