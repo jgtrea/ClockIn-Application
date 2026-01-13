@@ -141,3 +141,18 @@ function toggleUser(uid) {
 }
 
 loadUsersFromDB();
+window.addEventListener('message', function(event) {
+  if (event.data.type === 'search') {
+    const searchTerm = event.data.term;
+    const rows = document.querySelectorAll('.user-row');
+    
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      if (!searchTerm || text.includes(searchTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+});

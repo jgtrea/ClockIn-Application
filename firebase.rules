@@ -14,11 +14,7 @@ service cloud.firestore {
       );
 
       match /user_schedule/{slotId} {
-        allow read, write: if request.auth != null && (
-          request.auth.token.admin == true 
-          || request.auth.token.email == 'hello@gmail.com'
-          || request.auth.token.email == get(/databases/$(database)/documents/user_employee_data/$(docId)).data.email
-        );
+        allow read, write: if request.auth != null;
       }
     }
 

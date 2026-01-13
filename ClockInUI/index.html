@@ -25,23 +25,23 @@
     </div>
 
     <nav class="menu">
-      <a href="home.html" target="contentFrame" class="active">
+      <a href="home.html" target="contentFrame" class="active" onclick="setActive(this)">
         <span class="material-symbols-outlined">home</span>
         <span class="label">Home</span>
       </a>
-      <a href="dashboard_db.html" target="contentFrame">
+      <a href="dashboard_db.html" target="contentFrame" onclick="setActive(this)">
         <span class="material-symbols-outlined">dashboard</span>
         <span class="label">Dashboard</span>
       </a>
-      <a href="users_db.html" target="contentFrame">
+      <a href="users_db.html" target="contentFrame" onclick="setActive(this)">
         <span class="material-symbols-outlined">group</span>
         <span class="label">Users</span>
       </a>
-      <a href="schedule_db.html" target="contentFrame">
+      <a href="schedule_db.html" target="contentFrame" onclick="setActive(this)">
         <span class="material-symbols-outlined">calendar_month</span>
         <span class="label">Schedule</span>
       </a>
-      <a href="attendance_db.html" target="contentFrame">
+      <a href="attendance_db.html" target="contentFrame" onclick="setActive(this)">
         <span class="material-symbols-outlined">how_to_reg</span>
         <span class="label">Attendance</span>
       </a>
@@ -58,8 +58,8 @@
   <div class="main">
     <header class="topbar">
       <div class="search-bar">
-        <input type="text" placeholder="Search...">
-        <button>🔍</button>
+        <input type="text" placeholder="Search..." id="globalSearch">
+        <button onclick="performSearch()">🔍</button>
       </div>
 
       <div class="top-actions">
@@ -90,3 +90,40 @@
  
 </body>
 </html>
+<script>
+function performSearch() {
+  const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
+  const iframe = document.getElementById('contentFrame');
+  
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage({
+      type: 'search',
+      term: searchTerm
+    }, '*');
+  }
+}
+
+document.getElementById('globalSearch').addEventListener('keyup', function(e) {
+  if (e.key === 'Enter') {
+    performSearch();
+  } else {
+    performSearch();
+  }
+});
+
+function setActive(clickedLink) {
+  // Remove active class from all menu links
+  document.querySelectorAll('.menu a').forEach(link => {
+    link.classList.remove('active');
+  });
+  // Add active class to clicked link
+  clickedLink.classList.add('active');
+  
+  // Close the sidebar
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.classList.add('collapsed');
+    sidebar.classList.remove('expanded');
+  }
+}
+</script>
