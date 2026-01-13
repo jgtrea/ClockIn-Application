@@ -1,71 +1,133 @@
-let userSchedules = [];
 const scheduleList = document.getElementById("scheduleList");
+const USERS_COLLECTION = 'user_employee_data';
+const SUB_COLLECTION = 'user_schedule';
+
+let userSchedules = []; 
+let expandedRows = {};  
+
+function loadUsersFromDB() {
+  if (!window.db) {
+    setTimeout(loadUsersFromDB, 500); 
+    return;
+  }
+
+  window.db.collection(USERS_COLLECTION)
+    .orderBy('createdAt', 'desc')
+    .get()
+    .then(async (snapshot) => {
+      const userPromises = snapshot.docs.map(async (doc) => {
+        const userData = doc.data();
+        const userId = doc.id;
+
+        let dateString = "No Date";
+        if (userData.createdAt && userData.createdAt.toDate) {
+            dateString = userData.createdAt.toDate().toLocaleString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        let slots = [];
+        try {
+          const scheduleSnap = await window.db.collection(USERS_COLLECTION)
+            .doc(userId).collection(SUB_COLLECTION).get();
+          
+          slots = scheduleSnap.docs.map(sDoc => ({
+            slotDocId: sDoc.id,
+            ...sDoc.data()
+          }));
+        } catch (e) { 
+            console.error("Subcollection Access Denied:", e); 
+        }
+
+        return {
+          uid: userId,
+          id: userData.employeeId || '',
+          name: userData.name || '',
+          department: userData.department || '',
+          employment: userData.employment || '',
+          dateStr: dateString, 
+          slots: slots 
+        };
+      });
+
+      userSchedules = await Promise.all(userPromises);
+      render();
+    })
+    .catch(err => {
+      console.error("Master Load Error:", err);
+      alert("Permission Error: Check your Firebase Security Rules.");
+    });
+}
+
+function saveSlot(uid) {
+  const db = window.db;
+  const newSlot = {
+    schedId: document.getElementById(`in-id-${uid}`).value,
+    weekday: document.getElementById(`in-day-${uid}`).value,
+    room: document.getElementById(`in-room-${uid}`).value,
+    start_time: document.getElementById(`in-start-${uid}`).value,
+    end_time: document.getElementById(`in-end-${uid}`).value
+  };
+
+  if (!newSlot.weekday || !newSlot.start_time) {
+    alert("Please enter at least a Weekday and Start Time.");
+    return;
+  }
+
+  db.collection(USERS_COLLECTION).doc(uid).collection(SUB_COLLECTION).add(newSlot)
+    .then(() => {
+      console.log("Slot successfully saved to Firebase!");
+      loadUsersFromDB(); 
+    })
+    .catch(err => {
+      console.error("Write Error:", err);
+      alert("Permission Denied: You don't have access to save here.");
+    });
+}
 
 function render() {
   scheduleList.innerHTML = '';
-  userSchedules.forEach((user, uIdx) => {
+  userSchedules.forEach(user => {
+    const isExpanded = !!expandedRows[user.uid];
     const row = document.createElement('div');
-    row.className = `user-row ${user.expanded ? 'expanded' : ''}`;
+    row.className = `user-row ${isExpanded ? 'expanded' : ''}`;
 
-    if (!user.expanded) {
+    if (!isExpanded) {
       row.innerHTML = `
-        <div class="user-bar" onclick="toggleUser(${uIdx})">
-          <div class="user-info-brief">
-            <div class="user-avatar-placeholder"></div>
-            <div class="user-text-details">
-              <div class="user-name">${user.name}</div>
-              <div class="user-subtitle">${user.details}</div>
-            </div>
+        <div class="user-bar" onclick="toggleUser('${user.uid}')" style="cursor:pointer; padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
+          <div>
+            <strong>${user.name}</strong> (${user.id})<br>
+            <small style="color:gray;">Employee added on: ${user.dateStr}</small>
           </div>
-          <div class="user-actions">
-            <button class="btn-outline" onclick="event.stopPropagation(); toggleUser(${uIdx})">Edit</button>
-            <button class="btn-outline" onclick="event.stopPropagation(); deleteUser(${uIdx})">Delete</button>
-          </div>
+          <button class="btn-outline">Edit Schedule</button>
         </div>`;
     } else {
       row.innerHTML = `
-        <div class="user-expanded-content">
-          <div class="schedule-main-section">
-            <div class="user-text-details">
-              <div class="user-name">${user.name}</div>
-              <div class="user-subtitle">${user.details}</div>
+        <div class="user-expanded-content" style="padding:20px; border:1px solid #4f46e5; border-radius:8px; margin:10px 0;">
+          <h3 style="margin-top:0;">${user.name}'s Schedule</h3>
+          
+          <div class="slots-list" style="margin-bottom:15px;">
+            <div style="display:grid; grid-template-columns: repeat(5, 1fr); font-weight:bold; border-bottom:1px solid #ddd; padding-bottom:5px;">
+                <span>ID</span><span>Day</span><span>Start</span><span>End</span><span>Room</span>
             </div>
-
-            <div class="schedule-table-header">
-              <span>ID</span><span>Weekday</span><span>Start Time</span><span>End Time</span><span>Room</span>
-            </div>
-
-            <div class="slots-list">
-              ${user.slots.map((s) => `
-                <div class="slot-row" style="display:flex; justify-content:space-around; padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
-                  <span>${s.id}</span><span>${s.weekday}</span><span>${s.start}</span><span>${s.end}</span><span>${s.room}</span>
-                </div>
-              `).join('')}
-            </div>
-
-            <div class="add-slot-ui">
-              <div class="edit-grid">
-                <label>ID</label><input type="text" id="in-id-${uIdx}" value="SCH001">
-                <label>Start Time</label><input type="time" id="in-start-${uIdx}">
-                <label>Weekday</label><input type="text" id="in-day-${uIdx}" placeholder="day.">
-                <label>End Time</label><input type="time" id="in-end-${uIdx}">
-                <label>Room</label><input type="text" id="in-room-${uIdx}" placeholder="no.">
+            ${user.slots.length > 0 ? user.slots.map(s => `
+              <div style="display:grid; grid-template-columns: repeat(5, 1fr); padding:8px 0; border-bottom:1px solid #f9f9f9;">
+                <span>${s.schedId || '-'}</span><span>${s.weekday || '-'}</span><span>${s.start_time || '-'}</span><span>${s.end_time || '-'}</span><span>${s.room || '-'}</span>
               </div>
-            </div>
-            
-            <button class="add-slot-btn" onclick="saveSlot(${uIdx})">+</button>
+            `).join('') : '<p style="text-align:center; color:#999; padding:10px;">No slots assigned.</p>'}
           </div>
 
-          <div class="sidebar-actions">
-            <div class="btn-group">
-              <button class="btn-outline" onclick="toggleUser(${uIdx})">Close</button>
-              <button class="btn-outline" onclick="deleteUser(${uIdx})">Delete</button>
+          <div style="background:#f4f4f4; padding:15px; border-radius:5px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                <input type="text" id="in-id-${user.uid}" placeholder="Sched ID" value="SCH001">
+                <input type="text" id="in-day-${user.uid}" placeholder="Day (e.g. Fri)">
+                <input type="text" id="in-room-${user.uid}" placeholder="Room (e.g. 101)">
+                <input type="time" id="in-start-${user.uid}">
+                <input type="time" id="in-end-${user.uid}">
             </div>
-            
-            <div class="btn-group bottom-group">
-              <button class="btn-outline" onclick="toggleUser(${uIdx})">Close</button>
-              <button class="btn-outline" onclick="saveSlot(${uIdx})">Add</button>
-            </div>
+            <button onclick="saveSlot('${user.uid}')" style="background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Add Slot</button>
+            <button onclick="toggleUser('${user.uid}')" style="background:#666; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-left:10px;">Close</button>
           </div>
         </div>`;
     }
@@ -73,24 +135,9 @@ function render() {
   });
 }
 
-function toggleUser(i) { userSchedules[i].expanded = !userSchedules[i].expanded; render(); }
-function deleteUser(i) { userSchedules.splice(i, 1); render(); }
-
-function saveSlot(i) {
-  const newSlot = {
-    id: document.getElementById(`in-id-${i}`).value,
-    weekday: document.getElementById(`in-day-${i}`).value,
-    start: document.getElementById(`in-start-${i}`).value,
-    end: document.getElementById(`in-end-${i}`).value,
-    room: document.getElementById(`in-room-${i}`).value
-  };
-  userSchedules[i].slots.push(newSlot);
+function toggleUser(uid) {
+  expandedRows[uid] = !expandedRows[uid];
   render();
 }
 
-document.getElementById("addUserBtn").onclick = () => {
-  userSchedules.push({ name: "New User", details: "Details here", expanded: true, slots: [] });
-  render();
-};
-
-render();
+loadUsersFromDB();

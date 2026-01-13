@@ -127,7 +127,6 @@
   pointer-events: none;
 }
 
-/* Expanded card — two-column form with right-side controls to match target layout */
 .user-row.expanded {
   padding: 20px;
 }
@@ -152,8 +151,6 @@
   gap: 12px;
   align-items: flex-end;
 }
-
-/* Stack label above inputs in expanded view for cleaner layout */
 
 .user-expanded-content .input-group {
   display: flex;
@@ -187,7 +184,6 @@
   margin-top: 8px;
 }
 
-/* Primary button style */
 .btn-primary {
   background: var(--accent);
   color: #fff;
@@ -202,13 +198,11 @@
 
 .btn-outline { padding: 10px 18px; border-radius: 18px; }
 
-/* Make the card full-width and visually spacious */
 .users-table .user-row,
 .users-table .user-add-card {
   width: 100%;
 }
 
-/* Responsive: stack columns on small screens */
 @media (max-width: 880px) {
   .user-row.expanded .user-expanded-content {
     flex-direction: column;

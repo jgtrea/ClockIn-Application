@@ -27,22 +27,22 @@ function initFirestoreCompat() {
   }
 
   const scriptUrl = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
-  console.log('Loading firestore compat dynamically from', scriptUrl);
+  console.log('Loading firestore dynamically from', scriptUrl);
   const s = document.createElement('script');
   s.src = scriptUrl;
   s.onload = () => {
     try {
       if (typeof firebase.firestore === 'function') {
         window.db = firebase.firestore();
-        console.log('Firestore compat loaded and initialized.');
+        console.log('Firestore loaded and initialized.');
       } else {
-        console.error('Loaded firestore-compat but firebase.firestore is still not a function.');
+        console.error('Loaded firestore-compat but firebase.');
       }
     } catch (err) {
-      console.error('Error initializing firestore after loading compat script', err);
+      console.error('Error initializing firestore', err);
     }
   };
-  s.onerror = (err) => console.error('Failed to load firestore-compat script', err);
+  s.onerror = (err) => console.error('Failed to load firestore script', err);
   document.head.appendChild(s);
 }
 
