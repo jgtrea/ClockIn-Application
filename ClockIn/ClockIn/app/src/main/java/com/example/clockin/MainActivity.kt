@@ -1,6 +1,8 @@
 package com.example.clockin
 
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -23,7 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.Date
 
 // --- Shared Colors ---
 val BrownHeader = Color(0xFFAF8373)
@@ -36,32 +40,42 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // --- CONNECTION TEST ---
+        // This runs automatically to verify Firestore is reachable.
+        val db = FirebaseFirestore.getInstance()
+        val testData = hashMapOf(
+            "status" to "Connection Successful",
+            "timestamp" to Date(),
+            "mode" to "Simple Login"
+        )
         setContent {
             val navController = rememberNavController()
 
             NavHost(navController = navController, startDestination = "login") {
                 composable("login") {
-                    LoginScreen(onLoginClick = {
-                        navController.navigate("home")
+                    LoginScreen(onLoginSuccess = {
+                        navController.navigate("home") {
+                            popUpTo("login") { inclusive = true }
+                        }
                     })
                 }
+
+                // --- NAVIGATION DESTINATIONS ---
+                // Make sure you have these Composable functions in your other files!
                 composable("home") {
+                    // Replace this with your actual DashboardScreen call
                     DashboardScreen(
                         navController = navController,
                         onLogout = {
-                            navController.navigate("login") {
-                                popUpTo("home") { inclusive = true }
-                            }
+                            navController.navigate("login") { popUpTo("home") { inclusive = true } }
                         },
-                        onProfileClick = {
-                            navController.navigate("profile") // Navigate to profile
-                        }
+                        onProfileClick = { navController.navigate("profile") }
                     )
                 }
                 composable("profile") {
-                    ProfileDetailsScreen( onBack = {
-                        navController.popBackStack() // Go back to Home
-                    })
+                    // Replace with your ProfileDetailsScreen
+                    ProfileDetailsScreen(onBack = { navController.popBackStack() })
                 }
                 composable("scan_qr") {
                     ScannerScreen(navController = navController)
@@ -78,7 +92,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun LoginScreen(onLoginClick: () -> Unit) {
+fun LoginScreen(onLoginSuccess: () -> Unit) {
+    val context = LocalContext.current
+    val db = FirebaseFirestore.getInstance()
+
+    var emailInput by remember { mutableStateOf("") }
+    var passwordInput by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -87,6 +108,7 @@ fun LoginScreen(onLoginClick: () -> Unit) {
             .verticalScroll(rememberScrollState())
             .imePadding()
     ) {
+        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,29 +123,99 @@ fun LoginScreen(onLoginClick: () -> Unit) {
             )
         }
 
+        // Login Form
         Column(
-            modifier = Modifier.padding(24.dp).navigationBarsPadding(),
+            modifier = Modifier
+                .padding(24.dp)
+                .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(20.dp))
             Text("Login to your Account", color = TextOrange, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            Text("See what is going on with your business", color = LightOrangeText, modifier = Modifier.padding(vertical = 8.dp))
+            Text("Simple Database Login", color = LightOrangeText, modifier = Modifier.padding(vertical = 8.dp))
 
             Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LabeledInput(label = "Username", placeholder = "Enter Username")
-                    LabeledInput(label = "Password", placeholder = "Enter Password", isPassword = true)
 
-                    Button(
-                        onClick = onLoginClick,
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ButtonOrange),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Login", color = Color.White)
+                    LabeledInput(
+                        label = "Email",
+                        placeholder = "Enter Email",
+                        value = emailInput,
+                        onValueChange = { emailInput = it }
+                    )
+
+                    LabeledInput(
+                        label = "Password",
+                        placeholder = "Enter Password",
+                        value = passwordInput,
+                        onValueChange = { passwordInput = it },
+                        isPassword = true
+                    )
+
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            color = ButtonOrange
+                        )
+                    } else {
+                        Button(
+                            onClick = {
+                                if (emailInput.isEmpty() || passwordInput.isEmpty()) {
+                                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+
+                                isLoading = true
+
+                                // --- LOGIC: CHECK ADMIN COLLECTION ---
+                                db.collection("user_admin_data")
+                                    .whereEqualTo("email", emailInput)
+                                    .whereEqualTo("pass", passwordInput) // Matching password directly
+                                    .get()
+                                    .addOnSuccessListener { adminDocs ->
+                                        if (!adminDocs.isEmpty) {
+                                            isLoading = false
+                                            Toast.makeText(context, "Welcome Admin!", Toast.LENGTH_SHORT).show()
+                                            onLoginSuccess()
+                                        } else {
+                                            // --- LOGIC: CHECK EMPLOYEE COLLECTION ---
+                                            db.collection("user_employee_data")
+                                                .whereEqualTo("email", emailInput)
+                                                .whereEqualTo("pass", passwordInput)
+                                                .get()
+                                                .addOnSuccessListener { empDocs ->
+                                                    isLoading = false
+                                                    if (!empDocs.isEmpty) {
+                                                        Toast.makeText(context, "Welcome Employee!", Toast.LENGTH_SHORT).show()
+                                                        onLoginSuccess()
+                                                    } else {
+                                                        Toast.makeText(context, "Invalid Email or Password", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                                .addOnFailureListener { e ->
+                                                    isLoading = false
+                                                    Toast.makeText(context, "Error checking employee: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                }
+                                        }
+                                    }
+                                    .addOnFailureListener { e ->
+                                        isLoading = false
+                                        Toast.makeText(context, "Error checking admin: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = ButtonOrange),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Login", color = Color.White)
+                        }
                     }
                 }
             }
@@ -132,18 +224,26 @@ fun LoginScreen(onLoginClick: () -> Unit) {
 }
 
 @Composable
-fun LabeledInput(label: String, placeholder: String, isPassword: Boolean = false) {
-    var text by remember { mutableStateOf("") }
+fun LabeledInput(
+    label: String,
+    placeholder: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    isPassword: Boolean = false
+) {
     Column {
         Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
         OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
+            value = value,
+            onValueChange = onValueChange,
             placeholder = { Text(placeholder) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-            keyboardOptions = if (isPassword) KeyboardOptions(keyboardType = KeyboardType.Password) else KeyboardOptions.Default,
-            shape = RoundedCornerShape(8.dp)
+            keyboardOptions = KeyboardOptions(
+                keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Email
+            ),
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true
         )
     }
 }
