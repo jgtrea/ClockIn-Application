@@ -28,13 +28,6 @@
   gap: 16px;
 }
 
-.user-avatar-placeholder {
-  width: 48px;
-  height: 48px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-}
-
 .user-name {
   font-weight: 700;
   font-size: 16px;

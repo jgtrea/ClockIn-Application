@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       row.innerHTML = `
         <div class="user-bar" onclick="window.toggleUser('${user.uid}')">
           <div class="user-info-brief">
-            <div class="user-avatar-placeholder"></div>
             <div>
               <div class="user-name">${user.name || 'New User'}</div>
               <div class="user-subtitle">${subtitle}</div>

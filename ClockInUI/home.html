@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/topbar.css">
   <link rel="stylesheet" href="styles/home.css">
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -17,9 +18,30 @@
 
 <body>
 
-  <!-- TODO: Add updates/attendance notifs -->
+<!-- TODO: Add updates/attendance notifs -->
 <div class="app">
   <div class="main">
+    <header class="topbar">
+      <div class="top-actions">
+        <div class="profile-wrapper">
+          <div class="profile-circle" id="profileCircle">A</div>
+          <div class="profile-menu" id="profileMenu">
+            <div class="profile-header">
+              <div class="profile-circle small" id="profileCircleMenu">A</div>
+              <div>
+                <div class="profile-name" id="profileName">User</div>
+                <div class="profile-email" id="profileEmail"></div>
+              </div>
+            </div>
+            <hr>
+            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
+            <a class="menu-item">Send Feedback</a>
+            <button class="menu-item logout" id="logoutBtn">Logout</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
     <main class="content">
       <h1>Attendance Monitoring System</h1>
       <p class="tagline">Scan. Record. Verify.</p>

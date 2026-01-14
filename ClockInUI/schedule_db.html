@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/topbar.css">
   <link rel="stylesheet" href="styles/home.css">
   <link rel="stylesheet" href="styles/container_card/schedule_add_card.css">
 
@@ -13,7 +14,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="scripts/firebase_config.js" defer></script>
-  <script src="scripts/schedule_db.js" defer></script>
+  <script src="scripts/home.js" defer></script>
+  <script src="scripts/user_management/schedule_db.js" defer></script>
 </head>
 
 <body data-page="schedule_db">
@@ -25,10 +27,7 @@
         <input type="text" placeholder="Search..." id="globalSearch">
         <button onclick="performSearch()">🔍</button>
       </div>
-
       <div class="top-actions">
-        <button class="notif-btn">🔔</button>
-
         <div class="profile-wrapper">
           <div class="profile-circle" id="profileCircle">A</div>
           <div class="profile-menu" id="profileMenu">
@@ -49,6 +48,7 @@
     </header>
 
     <main class="content">
+
       <div class="dashboard-header">
         <div class="dashboard-title-wrapper">
           <div>

@@ -127,7 +127,7 @@ function render() {
             <span class="user-subtitle">${user.subtitle}</span>
           </div>
           <div class="btn-group">
-            <button class="btn-outline" onclick="toggleUser('${user.uid}')">Edit</button>
+            <button class="btn-outline" onclick="toggleUser('${user.uid}')">View</button>
             <button class="btn-outline">Delete</button>
           </div>
         </div>`;
