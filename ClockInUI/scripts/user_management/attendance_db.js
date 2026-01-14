@@ -56,7 +56,9 @@ function saveRecord(uid) {
     date: document.getElementById(`in-date-${uid}`).value,
     time_in: document.getElementById(`in-in-${uid}`).value,
     time_out: document.getElementById(`in-out-${uid}`).value,
-    status: document.getElementById(`in-status-${uid}`).value
+    room: document.getElementById(`in-room-${uid}`).value,
+    status: document.getElementById(`in-status-${uid}`).value,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
   };
 
   db.collection(USERS_COLLECTION).doc(uid).collection(SUB_COLLECTION).add(newRecord)
@@ -71,6 +73,7 @@ function updateRecord(uid, recordId) {
     date: document.getElementById(`edit-date-${recordId}`).value,
     time_in: document.getElementById(`edit-in-${recordId}`).value,
     time_out: document.getElementById(`edit-out-${recordId}`).value,
+    room: document.getElementById(`edit-room-${recordId}`).value,
     status: document.getElementById(`edit-status-${recordId}`).value
   };
 
@@ -138,7 +141,7 @@ function render() {
             </div>
 
             <div class="attendance-table-header">
-              <span>Date</span><span>In</span><span>Out</span><span>Status</span><span class="actions-header">Actions</span>
+              <span>Date</span><span>In</span><span>Out</span><span>Room</span><span>Status</span><span class="actions-header">Actions</span>
             </div>
             
             <div class="records-list">
@@ -150,6 +153,7 @@ function render() {
                       <span><input type="date" id="edit-date-${r.recordId}" value="${r.date}"></span>
                       <span><input type="time" id="edit-in-${r.recordId}" value="${r.time_in}"></span>
                       <span><input type="time" id="edit-out-${r.recordId}" value="${r.time_out}"></span>
+                      <span><input type="text" id="edit-room-${r.recordId}" value="${r.room || ''}"></span>
                       <span>
                         <select id="edit-status-${r.recordId}">
                           <option value="Present" ${r.status==='Present'?'selected':''}>Present</option>
@@ -165,7 +169,7 @@ function render() {
                 }
                 return `
                   <div class="record-row">
-                    <span>${r.date || '-'}</span><span>${r.time_in || '-'}</span><span>${r.time_out || '-'}</span><span>${r.status || '-'}</span>
+                    <span>${r.date || '-'}</span><span>${r.time_in || '-'}</span><span>${r.time_out || '-'}</span><span>${r.room || '-'}</span><span>${r.status || '-'}</span>
                     <span class="actions-cell">
                       <button class="action-icon-btn" onclick="toggleEdit('${r.recordId}')"><span class="material-symbols-outlined">edit</span></button>
                       <button class="action-icon-btn delete" onclick="deleteRecord('${user.uid}', '${r.recordId}')"><span class="material-symbols-outlined">delete</span></button>
@@ -180,13 +184,14 @@ function render() {
               <div class="edit-grid">
                 <label>Date</label><input type="date" id="in-date-${user.uid}">
                 <label>Time In</label><input type="time" id="in-in-${user.uid}">
+                <label>Room</label><input type="text" id="in-room-${user.uid}" placeholder="e.g. 101">
+                <label>Time Out</label><input type="time" id="in-out-${user.uid}">
                 <label>Status</label>
                 <select id="in-status-${user.uid}">
                   <option value="Present">Present</option>
                   <option value="Late">Late</option>
                   <option value="Absent">Absent</option>
                 </select>
-                <label>Time Out</label><input type="time" id="in-out-${user.uid}">
               </div>
               <div class="btn-group" style="margin-top: 20px;">
                 <button class="btn-outline" onclick="toggleAddForm('${user.uid}')">Close</button>

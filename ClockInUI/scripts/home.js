@@ -46,7 +46,11 @@ auth.onAuthStateChanged(user => {
 
 async function logout() {
   await auth.signOut();
-  window.location.href = "login.html";
+  if (window.top !== window.self) {
+    window.top.location.href = "login.html";
+  } else {
+    window.location.href = "login.html";
+  }
 }
 
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
