@@ -55,35 +55,7 @@
     </div>
   </aside>
 
-  <div class="main">
-    <header class="topbar">
-      <div class="search-bar">
-        <input type="text" placeholder="Search..." id="globalSearch">
-        <button onclick="performSearch()">🔍</button>
-      </div>
-
-      <div class="top-actions">
-        <button class="notif-btn">🔔</button>
-
-        <div class="profile-wrapper">
-          <div class="profile-circle" id="profileCircle">A</div>
-          <div class="profile-menu" id="profileMenu">
-            <div class="profile-header">
-              <div class="profile-circle small" id="profileCircleMenu">A</div>
-              <div>
-                <div class="profile-name" id="profileName">User</div>
-                <div class="profile-email" id="profileEmail"></div>
-              </div>
-            </div>
-            <hr>
-            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
-            <a class="menu-item">Send Feedback</a>
-            <button class="menu-item logout" id="logoutBtn">Logout</button>
-          </div>
-        </div>
-      </div>
-    </header>
-
+  <div class="main">    
     <iframe name="contentFrame" src="home.html" frameborder="0" id="contentFrame"></iframe>
   </div>
 </div>
@@ -112,14 +84,11 @@ document.getElementById('globalSearch').addEventListener('keyup', function(e) {
 });
 
 function setActive(clickedLink) {
-  // Remove active class from all menu links
   document.querySelectorAll('.menu a').forEach(link => {
     link.classList.remove('active');
   });
-  // Add active class to clicked link
   clickedLink.classList.add('active');
   
-  // Close the sidebar
   const sidebar = document.getElementById('sidebar');
   if (sidebar) {
     sidebar.classList.add('collapsed');

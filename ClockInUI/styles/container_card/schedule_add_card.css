@@ -8,6 +8,12 @@
   padding: 30px;
 }
 
+.user-collapsed-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .user-expanded-content {
   display: flex;
   justify-content: space-between;
@@ -27,11 +33,14 @@
   font-size: 18px;
   font-weight: 700;
   color: #111827;
+  display: block;
 }
 
 .user-text-details .user-subtitle {
   font-size: 13px;
   color: #9ca3af;
+  display: block;
+  margin-top: 4px;
 }
 
 .schedule-table-header {
@@ -45,9 +54,62 @@
   font-weight: 600;
 }
 
-.schedule-table-header span {
+.schedule-table-header span, .slot-row span {
   flex: 1;
   text-align: center;
+}
+
+.schedule-table-header .actions-header, .slot-row .actions-cell {
+  flex: 0 0 100px;
+}
+
+.slot-row {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid #f9fafb;
+  font-size: 14px;
+  color: #374151;
+  align-items: center;
+}
+
+.slot-row.editing-row {
+  background-color: #f9fafb;
+  padding: 8px;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+}
+
+.slot-row input {
+  width: 90%;
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.action-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.action-icon-btn:hover {
+  color: #111827;
+}
+
+.action-icon-btn.delete:hover {
+  color: #ef4444;
 }
 
 .add-slot-ui {
@@ -56,6 +118,7 @@
   border-radius: 16px;
   padding: 24px;
   width: 100%;
+  margin-top: 20px;
 }
 
 .edit-grid {
@@ -109,10 +172,6 @@
   justify-content: flex-end;
 }
 
-.btn-group.bottom-group {
-  margin-top: 140px;
-}
-
 .btn-outline {
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -125,6 +184,8 @@
   min-width: 85px;
   text-align: center;
 }
+
+.hidden { display: none !important; }
 
 .slots-list {
   margin-bottom: 10px;

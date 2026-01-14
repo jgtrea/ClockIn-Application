@@ -8,14 +8,39 @@
   padding: 30px;
 }
 
+.user-collapsed-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .user-expanded-content {
   display: flex;
   justify-content: space-between;
   gap: 30px;
+  width: 100%;
 }
 
-.schedule-main-section {
+.attendance-main-section {
   flex: 1;
+}
+
+.user-text-details {
+  margin-bottom: 25px;
+}
+
+.user-text-details .user-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  display: block;
+}
+
+.user-text-details .user-subtitle {
+  font-size: 13px;
+  color: #9ca3af;
+  display: block;
+  margin-top: 4px;
 }
 
 .attendance-table-header {
@@ -23,29 +48,82 @@
   width: 100%;
   border-bottom: 1px solid #d1d5db;
   padding-bottom: 10px;
-  margin: 20px 0 10px 0;
+  margin-bottom: 20px;
   color: #9ca3af;
   font-size: 14px;
   font-weight: 600;
 }
 
-.attendance-table-header span {
+.attendance-table-header span, .record-row span {
   flex: 1;
   text-align: center;
 }
 
-.add-slot-ui {
+.attendance-table-header .actions-header, .record-row .actions-cell {
+  flex: 0 0 100px;
+}
+
+.record-row {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid #f9fafb;
+  font-size: 14px;
+  color: #374151;
+  align-items: center;
+}
+
+.record-row.editing-row {
+  background-color: #f9fafb;
+  padding: 8px;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+}
+
+.record-row input, .record-row select {
+  width: 90%;
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.action-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.action-icon-btn:hover {
+  color: #111827;
+}
+
+.action-icon-btn.delete:hover {
+  color: #ef4444;
+}
+
+.add-record-ui {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 24px;
-  margin-top: 10px;
+  width: 100%;
+  margin-top: 20px;
 }
 
 .edit-grid {
   display: grid;
   grid-template-columns: auto 1fr auto 1fr;
-  gap: 16px 30px;
+  gap: 20px 30px;
   align-items: center;
 }
 
@@ -53,7 +131,6 @@
   font-size: 14px;
   font-weight: 700;
   color: #111827;
-  white-space: nowrap;
 }
 
 .edit-grid input, .edit-grid select {
@@ -62,14 +139,26 @@
   border-radius: 12px;
   border: 1px solid #e5e7eb;
   font-size: 14px;
-  outline: none;
-  background-color: #fff;
+}
+
+.add-record-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
 }
 
 .sidebar-actions {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start; 
   min-width: 180px;
 }
 
@@ -77,10 +166,6 @@
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-}
-
-.btn-group.bottom-group {
-  margin-top: 50px; 
 }
 
 .btn-outline {
@@ -92,20 +177,10 @@
   cursor: pointer;
   color: #111827;
   font-size: 14px;
-  min-width: 90px;
+  min-width: 85px;
   text-align: center;
 }
 
-.add-slot-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  cursor: pointer;
-  font-size: 24px;
-  margin-top: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.hidden { 
+  display: none !important; 
 }
