@@ -1,5 +1,3 @@
-// TODO: update the profile pic letter?
-
 document.addEventListener("DOMContentLoaded", () => {
   const avatar = document.getElementById("avatar");
   const nameEl = document.getElementById("name");
