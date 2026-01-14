@@ -1,7 +1,6 @@
 package com.example.clockin
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Date
 
@@ -47,12 +47,17 @@ class MainActivity : ComponentActivity() {
         val testData = hashMapOf(
             "status" to "Connection Successful",
             "timestamp" to Date(),
-            "mode" to "Simple Login"
+            "mode" to "Auth Login"
         )
+
         setContent {
             val navController = rememberNavController()
+            val auth = FirebaseAuth.getInstance()
 
-            NavHost(navController = navController, startDestination = "login") {
+            // Check if user is already logged in at startup
+            val startDestination = if (auth.currentUser != null) "home" else "login"
+
+            NavHost(navController = navController, startDestination = startDestination) {
                 composable("login") {
                     LoginScreen(onLoginSuccess = {
                         navController.navigate("home") {
@@ -62,19 +67,17 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // --- NAVIGATION DESTINATIONS ---
-                // Make sure you have these Composable functions in your other files!
                 composable("home") {
-                    // Replace this with your actual DashboardScreen call
                     DashboardScreen(
                         navController = navController,
                         onLogout = {
+                            auth.signOut() // Actually sign out from Firebase
                             navController.navigate("login") { popUpTo("home") { inclusive = true } }
                         },
                         onProfileClick = { navController.navigate("profile") }
                     )
                 }
                 composable("profile") {
-                    // Replace with your ProfileDetailsScreen
                     ProfileDetailsScreen(onBack = { navController.popBackStack() })
                 }
                 composable("scan_qr") {
@@ -94,7 +97,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
-    val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance() // Use Auth instance
 
     var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
@@ -132,7 +135,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         ) {
             Spacer(modifier = Modifier.height(20.dp))
             Text("Login to your Account", color = TextOrange, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            Text("Simple Database Login", color = LightOrangeText, modifier = Modifier.padding(vertical = 8.dp))
+            Text("Enter Credentials", color = LightOrangeText, modifier = Modifier.padding(vertical = 8.dp))
 
             Card(
                 modifier = Modifier
@@ -172,40 +175,16 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                                 isLoading = true
 
-                                // --- LOGIC: CHECK ADMIN COLLECTION ---
-                                db.collection("user_admin_data")
-                                    .whereEqualTo("email", emailInput)
-                                    .whereEqualTo("pass", passwordInput) // Matching password directly
-                                    .get()
-                                    .addOnSuccessListener { adminDocs ->
-                                        if (!adminDocs.isEmpty) {
-                                            isLoading = false
-                                            Toast.makeText(context, "Welcome Admin!", Toast.LENGTH_SHORT).show()
-                                            onLoginSuccess()
-                                        } else {
-                                            // --- LOGIC: CHECK EMPLOYEE COLLECTION ---
-                                            db.collection("user_employee_data")
-                                                .whereEqualTo("email", emailInput)
-                                                .whereEqualTo("pass", passwordInput)
-                                                .get()
-                                                .addOnSuccessListener { empDocs ->
-                                                    isLoading = false
-                                                    if (!empDocs.isEmpty) {
-                                                        Toast.makeText(context, "Welcome Employee!", Toast.LENGTH_SHORT).show()
-                                                        onLoginSuccess()
-                                                    } else {
-                                                        Toast.makeText(context, "Invalid Email or Password", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                                .addOnFailureListener { e ->
-                                                    isLoading = false
-                                                    Toast.makeText(context, "Error checking employee: ${e.message}", Toast.LENGTH_SHORT).show()
-                                                }
-                                        }
+                                // --- CHANGED TO FIREBASE AUTH LOGIN ---
+                                auth.signInWithEmailAndPassword(emailInput, passwordInput)
+                                    .addOnSuccessListener {
+                                        isLoading = false
+                                        Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
+                                        onLoginSuccess()
                                     }
                                     .addOnFailureListener { e ->
                                         isLoading = false
-                                        Toast.makeText(context, "Error checking admin: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Login Failed: ${e.message}", Toast.LENGTH_LONG).show()
                                     }
                             },
                             modifier = Modifier
