@@ -51,7 +51,6 @@ fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfil
                 .padding(paddingValues)
                 .background(Color.White)
         ) {
-            // FIXED: No longer requires passing a name variable
             DashboardHeader(
                 onProfileClick = { navController.navigate("profile") },
                 onLogout = onLogout,
@@ -89,13 +88,11 @@ fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfil
     }
 }
 
-// --- FIXED: Fetches its own data ---
 @Composable
 fun UserMenuHeader() {
     val userEmail = FirebaseAuth.getInstance().currentUser?.email
     var userName by remember { mutableStateOf("Loading...") }
 
-    // Auto-fetch name here, so other files don't have to pass it
     LaunchedEffect(Unit) {
         val userProfile = FirebaseEmployeeManager.getCurrentUser()
         userName = userProfile?.name ?: "Guest User"
@@ -114,7 +111,6 @@ fun UserMenuHeader() {
     }
 }
 
-// --- FIXED: Removed 'currentUserName' parameter ---
 @Composable
 fun DashboardHeader(
     onProfileClick: () -> Unit,
@@ -149,7 +145,7 @@ fun DashboardHeader(
                 onDismissRequest = { expanded = false },
                 modifier = Modifier.background(Color.White).width(240.dp)
             ) {
-                UserMenuHeader() // Calls the smart header
+                UserMenuHeader()
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 MenuActionItem(Icons.Outlined.Person, "Profile") {
@@ -177,7 +173,6 @@ fun DashboardHeader(
     }
 }
 
-// ... (Rest of the file: CustomBottomNavigation, SelectableNavItem, etc. remains the same)
 
 @Composable
 fun CustomBottomNavigation(navController: NavController, currentRoute: String) {

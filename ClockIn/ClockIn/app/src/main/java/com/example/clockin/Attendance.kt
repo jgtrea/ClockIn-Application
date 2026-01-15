@@ -1,10 +1,11 @@
 package com.example.clockin
 
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -12,9 +13,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.compose.runtime.*
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 
-// Data model for the attendance list
+data class AttendanceRecord(
+    val date: String = "",
+    val room: String = "",
+    val status: String = "",
+    val time_in: String = "",
+    val time_out: String = "",
+    val timestamp: com.google.firebase.Timestamp? = null
+)
+
 data class AttendanceItem(
     val title: String,
     val details: String,
@@ -29,10 +39,56 @@ fun AttendanceScreen(navController: NavController) {
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
 
-    // 2. SHOW THE DIALOG CONDITIONALLY
+    var attendanceMap by remember { mutableStateOf<Map<String, List<AttendanceItem>>>(emptyMap()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val db = FirebaseFirestore.getInstance()
+        val userProfile = FirebaseEmployeeManager.getCurrentUser()
+
+        if (userProfile != null && userProfile.collectionName == "user_employee_data") {
+            try {
+                db.collection("user_employee_data")
+                    .document(userProfile.id)
+                    .collection("user_attendance")
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        val items = snapshot.documents.mapNotNull { doc ->
+                            val record = doc.toObject(AttendanceRecord::class.java)
+                            record?.let {
+                                AttendanceItem(
+                                    title = "Room: ${it.room}",
+                                    details = "Status: ${it.status}",
+                                    timeIn = it.time_in,
+                                    timeOut = if (it.time_out.isNotEmpty()) it.time_out else "--:--",
+                                    isLate = it.status == "Late"
+                                ) to it.date
+                            }
+                        }
+                        attendanceMap = items.groupBy({ it.second }, { it.first })
+                        isLoading = false
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("Attendance", "Error fetching data", e)
+                        errorMessage = "Failed to load data."
+                        isLoading = false
+                    }
+            } catch (e: Exception) {
+                errorMessage = e.message
+                isLoading = false
+            }
+        } else {
+            errorMessage = "No Employee Record Found."
+            isLoading = false
+        }
+    }
+
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
     }
+
     Scaffold(
         bottomBar = { CustomBottomNavigation(navController, "attendance") }
     ) { paddingValues ->
@@ -42,7 +98,6 @@ fun AttendanceScreen(navController: NavController) {
                 .padding(paddingValues)
                 .background(Color.White)
         ) {
-            // 1. Shared Header (Matches Home and Schedule)
             DashboardHeader(
                 onProfileClick = { navController.navigate("profile") },
                 onSendFeedbackClick = { showFeedbackDialog = true },
@@ -54,70 +109,47 @@ fun AttendanceScreen(navController: NavController) {
                     }
                 })
 
-            // 2. Edge-to-Edge Divider
             HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
 
             if (showPolicies) {
-                // If showPolicies is true, display the Policies screen content
                 PoliciesView(onBack = { showPolicies = false })
             } else {
-
-                // 3. Scrollable Body Content
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(16.dp) // Standardized 16dp padding
+                        .padding(16.dp)
                 ) {
-                    // Title Section
                     Text("Attendance", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text("view your time ins and time outs", color = Color.Gray, fontSize = 14.sp)
+                    Text("View your time ins and time outs", color = Color.Gray, fontSize = 14.sp)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Friday Group
-                    AttendanceDateGroup(
-                        "Friday - 2025/11/09", listOf(
-                            AttendanceItem(
-                                "T001 - Math",
-                                "Math | R001 | Mon 8:00 - 9:30",
-                                "7:55",
-                                "10:00"
-                            ),
-                            AttendanceItem(
-                                "T002 - Math",
-                                "Math | R010 | Mon 9:30 - 11:00",
-                                "1:30",
-                                "2:58",
-                                isLate = true
-                            ),
-                            AttendanceItem(
-                                "T003 - Math",
-                                "Math | R008 | Mon 1:00 - 2:30",
-                                "3:02",
-                                "5:05"
-                            )
-                        )
-                    )
-
-                    // Monday Group
-                    AttendanceDateGroup(
-                        "Monday - 2025/11/10", listOf(
-                            AttendanceItem(
-                                "T001 - Math",
-                                "Math | R001 | Mon 8:00 - 9:30",
-                                "7:50",
-                                "--:--"
-                            )
-                        )
-                    )
+                    if (isLoading) {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color(0xFFFF7F66))
+                        }
+                    } else if (errorMessage != null) {
+                        Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                            Text(text = errorMessage!!, color = Color.Red)
+                        }
+                    } else if (attendanceMap.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                            Text(text = "No attendance records found.", color = Color.Gray)
+                        }
+                    } else {
+                        attendanceMap.forEach { (date, items) ->
+                            AttendanceDateGroup(date, items)
+                        }
+                    }
                 }
             }
         }
     }
 }
+
 @Composable
 fun AttendanceDateGroup(date: String, items: List<AttendanceItem>) {
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
@@ -130,7 +162,7 @@ fun AttendanceDateGroup(date: String, items: List<AttendanceItem>) {
 
         items.forEach { item ->
             AttendanceCard(item)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -148,12 +180,13 @@ fun AttendanceCard(item: AttendanceItem) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Placeholder for icon box
             Box(
                 modifier = Modifier
                     .size(45.dp)
-                    .border(1.dp, Color.LightGray, RoundedCornerShape(8.dp))
-            )
+                    .border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -163,7 +196,6 @@ fun AttendanceCard(item: AttendanceItem) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Status Section (Time In/Out)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Text("Time In: ", fontSize = 13.sp, color = Color.Gray)
@@ -173,7 +205,7 @@ fun AttendanceCard(item: AttendanceItem) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(item.timeIn, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            if (item.isLate) { // Red late badge
+                            if (item.isLate) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Surface(
                                     color = Color.Red,
