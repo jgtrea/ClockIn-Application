@@ -33,6 +33,27 @@
   color: #111827;
 }
 
+.search-bar button {
+  background: transparent;   
+  border: none;              
+  outline: none;
+  cursor: pointer;
+
+  font-size: 20px;           
+  color: #6b7280;           
+  padding: 0;
+  margin-left: 8px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-bar button:hover {
+  color: #111827;           
+}
+
+
 .profile-wrapper {
   position: absolute;
   right: 24px;
