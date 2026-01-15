@@ -5,77 +5,77 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
-// Simple Employee Data Model
-data class Employee(
+data class UserProfile(
     val id: String = "",
     val name: String = "",
     val email: String = "",
     val employeeId: String = "",
     val department: String = "",
-    val employment: String = ""
+    val employment: String = "",
+    val collectionName: String = ""
 )
-
-// Extension to convert Firestore document to Employee
-fun com.google.firebase.firestore.DocumentSnapshot.toEmployee(): Employee? {
-    return try {
-        Employee(
-            id = id,
-            name = getString("name") ?: "",
-            email = getString("email") ?: "",
-            employeeId = getString("employeeId") ?: "",
-            department = getString("department") ?: "",
-            employment = getString("employment") ?: ""
-        )
-    } catch (e: Exception) {
-        Log.e("Firestore", "Error converting employee", e)
-        null
-    }
-}
 
 object FirebaseEmployeeManager {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    // Get current employee data
-    suspend fun getCurrentEmployee(): Employee? {
-        return try {
-            val userId = auth.currentUser?.uid ?: return null
+    suspend fun getCurrentUser(): UserProfile? {
+        val email = auth.currentUser?.email ?: return null
 
-            val doc = db.collection("user_employee_data")
-                .document(userId)
+        try {
+            val adminQuery = db.collection("user_admin_data")
+                .whereEqualTo("email", email)
                 .get()
                 .await()
 
-            doc.toEmployee()
-        } catch (e: Exception) {
-            Log.e("Firebase", "Get employee failed", e)
-            null
-        }
-    }
-
-    // Update employee data
-    suspend fun updateEmployee(employee: Employee): Boolean {
-        return try {
-            db.collection("user_employee_data")
-                .document(employee.id)
-                .update(
-                    mapOf(
-                        "name" to employee.name,
-                        "email" to employee.email,
-                        "employeeId" to employee.employeeId,
-                        "department" to employee.department,
-                        "employment" to employee.employment
-                    )
+            if (!adminQuery.isEmpty) {
+                val doc = adminQuery.documents[0]
+                return UserProfile(
+                    id = doc.id,
+                    name = doc.getString("name") ?: "",
+                    email = doc.getString("email") ?: "",
+                    department = doc.getString("department") ?: "",
+                    employment = doc.getString("employment") ?: "",
+                    collectionName = "user_admin_data"
                 )
+            }
+
+            val empQuery = db.collection("user_employee_data")
+                .whereEqualTo("email", email)
+                .get()
                 .await()
 
+            if (!empQuery.isEmpty) {
+                val doc = empQuery.documents[0]
+                return UserProfile(
+                    id = doc.id,
+                    name = doc.getString("name") ?: "",
+                    email = doc.getString("email") ?: "",
+                    employeeId = doc.getString("employeeId") ?: "",
+                    department = doc.getString("department") ?: "",
+                    employment = doc.getString("employment") ?: "",
+                    collectionName = "user_employee_data"
+                )
+            }
+
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error fetching user", e)
+        }
+        return null
+    }
+
+    suspend fun updateUser(profile: UserProfile, field: String, value: String): Boolean {
+        if (profile.collectionName.isEmpty() || profile.id.isEmpty()) return false
+
+        return try {
+            db.collection(profile.collectionName)
+                .document(profile.id)
+                .update(field, value)
+                .await()
             true
         } catch (e: Exception) {
-            Log.e("Firebase", "Update failed", e)
+            Log.e("FirebaseManager", "Update failed", e)
             false
         }
     }
-
-    fun getCurrentUserId(): String? = auth.currentUser?.uid
-    fun isLoggedIn(): Boolean = auth.currentUser != null
 }

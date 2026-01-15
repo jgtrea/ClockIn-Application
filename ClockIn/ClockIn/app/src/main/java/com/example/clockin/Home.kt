@@ -28,6 +28,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.BorderStroke
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 val PrimaryOrange = Color(0xFFFF7F66)
 
@@ -50,6 +51,7 @@ fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfil
                 .padding(paddingValues)
                 .background(Color.White)
         ) {
+            // FIXED: No longer requires passing a name variable
             DashboardHeader(
                 onProfileClick = { navController.navigate("profile") },
                 onLogout = onLogout,
@@ -87,9 +89,18 @@ fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfil
     }
 }
 
+// --- FIXED: Fetches its own data ---
 @Composable
 fun UserMenuHeader() {
-    val user = FirebaseAuth.getInstance().currentUser
+    val userEmail = FirebaseAuth.getInstance().currentUser?.email
+    var userName by remember { mutableStateOf("Loading...") }
+
+    // Auto-fetch name here, so other files don't have to pass it
+    LaunchedEffect(Unit) {
+        val userProfile = FirebaseEmployeeManager.getCurrentUser()
+        userName = userProfile?.name ?: "Guest User"
+    }
+
     Row(
         modifier = Modifier.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -97,12 +108,13 @@ fun UserMenuHeader() {
         Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.LightGray))
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(user?.displayName ?: "Guest User", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(user?.email ?: "No active session", color = Color.Gray, fontSize = 10.sp)
+            Text(userName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(userEmail ?: "No active session", color = Color.Gray, fontSize = 10.sp)
         }
     }
 }
 
+// --- FIXED: Removed 'currentUserName' parameter ---
 @Composable
 fun DashboardHeader(
     onProfileClick: () -> Unit,
@@ -137,7 +149,7 @@ fun DashboardHeader(
                 onDismissRequest = { expanded = false },
                 modifier = Modifier.background(Color.White).width(240.dp)
             ) {
-                UserMenuHeader()
+                UserMenuHeader() // Calls the smart header
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 MenuActionItem(Icons.Outlined.Person, "Profile") {
@@ -164,6 +176,8 @@ fun DashboardHeader(
         }
     }
 }
+
+// ... (Rest of the file: CustomBottomNavigation, SelectableNavItem, etc. remains the same)
 
 @Composable
 fun CustomBottomNavigation(navController: NavController, currentRoute: String) {

@@ -1,6 +1,6 @@
 package com.example.clockin
 
-import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,79 +14,72 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun ProfileDetailsScreen(onBack: () -> Unit) {
-    var isClicked by remember { mutableStateOf(false) }
-    var employeeData by remember { mutableStateOf<Employee?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+
     var showEditDialog by remember { mutableStateOf(false) }
     var editField by remember { mutableStateOf("") }
     var editValue by remember { mutableStateOf("") }
-    var debugInfo by remember { mutableStateOf("") }
-
-    val auth = FirebaseAuth.getInstance()
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        val currentUserId = auth.currentUser?.uid
-        val currentEmail = auth.currentUser?.email
-
-        // This sets the debug info you see in the red error screen
-        debugInfo = "User ID: ${currentUserId ?: "NULL"}\nEmail: ${currentEmail ?: "NULL"}"
-
-        if (currentUserId == null) {
-            isLoading = false
-            return@LaunchedEffect
+        val profile = FirebaseEmployeeManager.getCurrentUser()
+        if (profile != null) {
+            userProfile = profile
+        } else {
+            Toast.makeText(context, "User not found", Toast.LENGTH_SHORT).show()
         }
-
-        // Fetch data if user exists
-        val employee = withContext(Dispatchers.IO) {
-            FirebaseEmployeeManager.getCurrentEmployee()
-        }
-
-        employeeData = employee
         isLoading = false
     }
 
-    // Edit Dialog
-    if (showEditDialog) {
-        EditFieldDialog(
-            field = editField,
-            currentValue = editValue,
-            onDismiss = { showEditDialog = false },
-            onSave = { newValue ->
-                employeeData?.let { current ->
-                    val updated = when (editField) {
-                        "Name" -> current.copy(name = newValue)
-                        "Email" -> current.copy(email = newValue)
-                        "Employee ID" -> current.copy(employeeId = newValue)
-                        "Department" -> current.copy(department = newValue)
-                        "Employment" -> current.copy(employment = newValue)
-                        else -> current
+    fun saveField(newValue: String) {
+        val profile = userProfile ?: return
+
+        val dbField = when (editField) {
+            "Name" -> "name"
+            "Employment" -> "employment"
+            "Department" -> "department"
+            "Employee ID" -> "employeeId"
+            "Email" -> "email"
+            else -> ""
+        }
+
+        if (dbField.isNotEmpty()) {
+            scope.launch {
+                val success = FirebaseEmployeeManager.updateUser(profile, dbField, newValue)
+                if (success) {
+                    userProfile = when (editField) {
+                        "Name" -> profile.copy(name = newValue)
+                        "Employment" -> profile.copy(employment = newValue)
+                        "Department" -> profile.copy(department = newValue)
+                        "Employee ID" -> profile.copy(employeeId = newValue)
+                        "Email" -> profile.copy(email = newValue)
+                        else -> profile
                     }
-                    scope.launch(Dispatchers.IO) {
-                        if (FirebaseEmployeeManager.updateEmployee(updated)) {
-                            withContext(Dispatchers.Main) { employeeData = updated }
-                        }
-                    }
+                    Toast.makeText(context, "Updated Successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Update Failed", Toast.LENGTH_SHORT).show()
                 }
-                showEditDialog = false
             }
-        )
+        }
+        showEditDialog = false
     }
 
-    // Loading State
+    if (showEditDialog) {
+        EditFieldDialog(editField, editValue, { showEditDialog = false }, { saveField(it) })
+    }
+
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color(0xFFFF7F66))
@@ -94,48 +87,16 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
         return
     }
 
-    // Error State (Triggered if User is NULL)
-    if (employeeData == null) {
-        Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "Account Not Synced",
-                    color = Color.Red,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("Debug Info:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-
-                // This box shows the NULL values
-                Text(
-                    debugInfo,
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.background(Color(0xFFF0F0F0)).padding(12.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "Ensure you are logged in and your Firestore Document ID matches the User ID above.",
-                    textAlign = TextAlign.Center,
-                    fontSize = 12.sp
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onBack,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66))
-                ) {
-                    Text("Go Back")
-                }
-            }
+    if (userProfile == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Profile could not be loaded.")
+            Button(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text("Back") }
         }
         return
     }
 
-    // Success State
+    val isEmployeeCollection = userProfile?.collectionName == "user_employee_data"
+
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Box(
             modifier = Modifier
@@ -144,25 +105,14 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
                 .background(Brush.verticalGradient(listOf(Color(0xFF5D6366), Color(0xFFFF7F66))))
         ) {
             Button(
-                onClick = {
-                    if (!isClicked) {
-                        isClicked = true
-                        onBack()
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 40.dp, end = 20.dp),
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = 20.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66))
-            ) {
-                Text("Back")
-            }
+            ) { Text("Back") }
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-75).dp),
+            modifier = Modifier.fillMaxWidth().offset(y = (-75).dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -172,44 +122,48 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
                     .background(Color(0xFFE0E0E0))
                     .border(4.dp, Color.White, CircleShape)
             )
-
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(text = employeeData?.name ?: "User", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(text = employeeData?.email ?: "", color = Color.Gray, fontSize = 16.sp)
-            Text(
-                text = "ID: ${employeeData?.employeeId ?: ""}",
-                color = Color(0xFFFF7F66),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Text(text = userProfile?.name ?: "User", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(text = userProfile?.email ?: "", color = Color.Gray, fontSize = 16.sp)
+
+            if (!isEmployeeCollection) {
+                Text("ADMINISTRATOR", color = Color(0xFFFF7F66), fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(top=4.dp))
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                ProfileEditItem("Name", employeeData?.name ?: "") {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+
+                ProfileEditItem("Name", userProfile?.name ?: "", isEditable = true) {
                     editField = "Name"
-                    editValue = employeeData?.name ?: ""
+                    editValue = userProfile?.name ?: ""
                     showEditDialog = true
                 }
-                ProfileEditItem("Email", employeeData?.email ?: "") {
+
+                ProfileEditItem("Email", userProfile?.email ?: "", isEditable = !isEmployeeCollection) {
                     editField = "Email"
-                    editValue = employeeData?.email ?: ""
+                    editValue = userProfile?.email ?: ""
                     showEditDialog = true
                 }
-                ProfileEditItem("Employee ID", employeeData?.employeeId ?: "") {
-                    editField = "Employee ID"
-                    editValue = employeeData?.employeeId ?: ""
-                    showEditDialog = true
+
+                if (isEmployeeCollection || userProfile?.employeeId!!.isNotEmpty()) {
+                    ProfileEditItem("Employee ID", userProfile?.employeeId ?: "", isEditable = !isEmployeeCollection) {
+                        editField = "Employee ID"
+                        editValue = userProfile?.employeeId ?: ""
+                        showEditDialog = true
+                    }
                 }
-                ProfileEditItem("Department", employeeData?.department ?: "Add info") {
+
+                ProfileEditItem("Department", userProfile?.department ?: "None", isEditable = !isEmployeeCollection) {
                     editField = "Department"
-                    editValue = employeeData?.department ?: ""
+                    editValue = userProfile?.department ?: ""
+                    showEditDialog = true
+                }
+
+                ProfileEditItem("Employment", userProfile?.employment ?: "", isEditable = !isEmployeeCollection) {
+                    editField = "Employment"
+                    editValue = userProfile?.employment ?: ""
                     showEditDialog = true
                 }
             }
@@ -218,60 +172,33 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun ProfileEditItem(label: String, value: String, onEdit: () -> Unit) {
+fun ProfileEditItem(label: String, value: String, isEditable: Boolean = true, onEdit: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.width(120.dp),
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp
-        )
-        Text(
-            text = value,
-            modifier = Modifier.weight(1f),
-            fontSize = 14.sp
-        )
-        Icon(
-            Icons.Default.Edit,
-            "Edit",
-            modifier = Modifier
-                .size(20.dp)
-                .clickable { onEdit() }
-        )
+        Text(text = label, modifier = Modifier.width(120.dp), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
+        Text(text = value, modifier = Modifier.weight(1f), fontSize = 14.sp, color = if (isEditable) Color.Black else Color.Gray)
+
+        if (isEditable) {
+            Icon(Icons.Default.Edit, "Edit", tint = Color(0xFFFF7F66), modifier = Modifier.size(20.dp).clickable { onEdit() })
+        }
     }
 }
 
 @Composable
-fun EditFieldDialog(
-    field: String,
-    currentValue: String,
-    onDismiss: () -> Unit,
-    onSave: (String) -> Unit
-) {
+fun EditFieldDialog(field: String, currentValue: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var value by remember { mutableStateOf(currentValue) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(text = "Edit $field", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it },
-                    label = { Text(field) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                OutlinedTextField(value = value, onValueChange = { value = it }, label = { Text(field) }, modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Button(
-                        onClick = { onSave(value) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66))
-                    ) {
-                        Text("Save")
-                    }
+                    Button(onClick = { onSave(value) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66))) { Text("Save") }
                 }
             }
         }
