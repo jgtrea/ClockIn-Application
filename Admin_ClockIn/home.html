@@ -17,6 +17,22 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const sectionsContainer = document.getElementById('sectionsContainer');
+      const searchInput = document.getElementById('sectionSearch');
+      
+      if (searchInput) {
+        searchInput.addEventListener('keyup', searchSections);
+      }
+      
+      function updateTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
+      }
+      
+      updateTime();
+      setInterval(updateTime, 1000);
       
       function loadSections() {
         if (!window.db) {
@@ -100,8 +116,7 @@
               }
               
               sectionCards.push(`
-                <div class="section-card" onclick="showSchedule('${doc.id}', '${sectionName.replace(/'/g, "\\'")}')
-" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+                <div class="section-card" onclick="showSchedule('${doc.id}', '${sectionName.replace(/'/g, "\\'")}')" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
                   <h2 style="font-size: 20px; font-weight: 700; color: #111827; margin: 0; text-align: center;">${sectionName}</h2>
                   <div style="margin-top: 8px; text-align: center;">
                     <div style="font-size: 14px; color: #6b7280;">Current Class: ${currentSubject}</div>
@@ -136,24 +151,6 @@
         }
       });
     }
-    
-    document.addEventListener('DOMContentLoaded', () => {
-      const searchInput = document.getElementById('sectionSearch');
-      if (searchInput) {
-        searchInput.addEventListener('keyup', searchSections);
-      }
-      
-      function updateTime() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
-      }
-      
-      updateTime();
-      setInterval(updateTime, 1000);
-    });
   </script>
 </head>
 
