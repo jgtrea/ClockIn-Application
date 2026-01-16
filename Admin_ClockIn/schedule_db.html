@@ -58,7 +58,12 @@
             <h1>Schedules</h1>
             <p class="tagline">View and track class/work schedules.</p>
           </div>
-          <button class="export-btn" id="addUserBtn">Add User</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-outline" id="sortBtn" onclick="sortByName()">
+              Sort by Name <span id="sortIcon" style="display: none;"></span>
+            </button>
+            <button class="export-btn" id="addUserBtn">Add User</button>
+          </div>
         </div>
       </div>
 

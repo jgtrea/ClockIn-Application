@@ -14,6 +14,147 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="../Firebase/firebase_config.js" defer></script>
   <script src="scripts/home.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const sectionsContainer = document.getElementById('sectionsContainer');
+      
+      function loadSections() {
+        if (!window.db) {
+          setTimeout(loadSections, 500);
+          return;
+        }
+        
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const today = days[new Date().getDay()];
+        
+        window.db.collection('Sections')
+          .get()
+          .then(async (snapshot) => {
+            if (snapshot.empty) {
+              sectionsContainer.innerHTML = '<p style="text-align: center; color: #9ca3af;">No sections found</p>';
+              return;
+            }
+            
+            const sectionCards = [];
+            
+            for (const doc of snapshot.docs) {
+              const section = doc.data();
+              const sectionName = section.SectionName || section.name || doc.id;
+              let currentSubject = 'No class';
+              let timeRange = '';
+              
+              try {
+                console.log(`Checking ${sectionName} for ${today}`);
+                const dayDoc = await window.db
+                  .collection('Sections')
+                  .doc(doc.id)
+                  .collection(today)
+                  .get();
+                
+                console.log(`${sectionName} has ${dayDoc.docs.length} subjects for ${today}`);
+                
+                if (!dayDoc.empty) {
+                  const now = new Date();
+                  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                  console.log(`Current time: ${currentTime}`);
+                  
+                  const subjects = dayDoc.docs.map(d => ({
+                    ...d.data(),
+                    startTime: d.id
+                  })).sort((a, b) => a.startTime.localeCompare(b.startTime));
+                  
+                  for (let i = 0; i < subjects.length; i++) {
+                    subjects[i].endTime = subjects[i + 1] ? subjects[i + 1].startTime : '23:59';
+                  }
+                  
+                  console.log(`${sectionName} subjects:`, subjects);
+                  
+                  let found = false;
+                  for (let i = 0; i < subjects.length; i++) {
+                    const subject = subjects[i];
+                    const subjectName = subject.Subject || 'Class';
+                    const isLastSubject = i === subjects.length - 1;
+                    
+                    console.log(`Checking ${subjectName}: ${subject.startTime} - ${subject.endTime}, current: ${currentTime}`);
+                    
+                    if (currentTime >= subject.startTime && currentTime < subject.endTime) {
+                      currentSubject = subjectName;
+                      timeRange = isLastSubject ? 'Class Ended' : `${subject.startTime} - ${subject.endTime}`;
+                      console.log(`Match found: ${currentSubject}`);
+                      found = true;
+                      break;
+                    }
+                  }
+                  
+                  if (!found && subjects.length > 0) {
+                    const firstSubject = subjects[0];
+                    if (currentTime < firstSubject.startTime) {
+                      currentSubject = firstSubject.Subject || 'Class';
+                      timeRange = `${firstSubject.startTime} - ${firstSubject.endTime}`;
+                      console.log(`Before classes, showing first: ${currentSubject}`);
+                    }
+                  }
+                }
+              } catch (e) {
+                console.log('Error loading schedule for', sectionName, ':', e);
+              }
+              
+              sectionCards.push(`
+                <div class="section-card" onclick="showSchedule('${doc.id}', '${sectionName.replace(/'/g, "\\'")}')
+" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+                  <h2 style="font-size: 20px; font-weight: 700; color: #111827; margin: 0; text-align: center;">${sectionName}</h2>
+                  <div style="margin-top: 8px; text-align: center;">
+                    <div style="font-size: 14px; color: #6b7280;">Current Class: ${currentSubject}</div>
+                    ${timeRange ? `<div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">${timeRange}</div>` : ''}
+                  </div>
+                </div>
+              `);
+            }
+            
+            sectionsContainer.innerHTML = '<div id="sectionsGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 800px; margin: 0 auto;">' + 
+              sectionCards.join('') + '</div>';
+          })
+          .catch(err => {
+            console.error('Error loading sections:', err);
+            sectionsContainer.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading sections</p>';
+          });
+      }
+      
+      loadSections();
+    });
+    
+    function searchSections() {
+      const searchTerm = document.getElementById('sectionSearch').value.toLowerCase();
+      const cards = document.querySelectorAll('.section-card');
+      
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        if (!searchTerm || text.includes(searchTerm)) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('sectionSearch');
+      if (searchInput) {
+        searchInput.addEventListener('keyup', searchSections);
+      }
+      
+      function updateTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
+      }
+      
+      updateTime();
+      setInterval(updateTime, 1000);
+    });
+  </script>
 </head>
 
 <body>
@@ -22,6 +163,10 @@
 <div class="app">
   <div class="main">
     <header class="topbar">
+      <div class="search-bar">
+        <input type="text" placeholder="Search" id="sectionSearch">
+        <button class="material-symbols-outlined" onclick="searchSections()">search</button>   
+      </div>
       <div class="top-actions">
         <div class="profile-wrapper">
           <div class="profile-circle" id="profileCircle">A</div>
@@ -43,11 +188,66 @@
     </header>
 
     <main class="content">
-      <h1>Attendance Monitoring System</h1>
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h1>Attendance Monitoring System</h1>
+        <div id="currentTime" style="font-size: 24px; font-weight: 600; color: #111827;"></div>
+      </div>
       <p class="tagline">Scan. Record. Verify.</p>
+      
+      <div id="sectionsContainer" style="margin-top: 32px;">
+        <p style="text-align: center; color: #9ca3af;">Loading sections...</p>
+      </div>
     </main>
   </div>
 </div>
+
+<div id="scheduleModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 id="modalTitle" style="margin: 0; font-size: 20px; font-weight: 700;"></h2>
+      <button onclick="closeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+    </div>
+    <div id="modalContent" style="max-height: 400px; overflow-y: auto;"></div>
+  </div>
+</div>
+
+<script>
+async function showSchedule(sectionId, sectionName) {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const today = days[new Date().getDay()];
+  
+  try {
+    const dayDoc = await window.db.collection('Sections').doc(sectionId).collection(today).get();
+    
+    if (dayDoc.empty) {
+      document.getElementById('modalTitle').textContent = `${sectionName} - ${today}`;
+      document.getElementById('modalContent').innerHTML = '<p style="text-align: center; color: #9ca3af;">No schedule for today</p>';
+    } else {
+      const subjects = dayDoc.docs.map(d => ({ ...d.data(), startTime: d.id })).sort((a, b) => a.startTime.localeCompare(b.startTime));
+      
+      for (let i = 0; i < subjects.length; i++) {
+        subjects[i].endTime = subjects[i + 1] ? subjects[i + 1].startTime : 'End';
+      }
+      
+      document.getElementById('modalTitle').textContent = `${sectionName} - ${today}`;
+      document.getElementById('modalContent').innerHTML = subjects.map(s => 
+        `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <div style="font-weight: 600; color: #111827;">${s.Subject || 'Class'}</div>
+          <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">${s.startTime} - ${s.endTime}</div>
+        </div>`
+      ).join('');
+    }
+    
+    document.getElementById('scheduleModal').style.display = 'flex';
+  } catch (e) {
+    console.error('Error loading schedule:', e);
+  }
+}
+
+function closeModal() {
+  document.getElementById('scheduleModal').style.display = 'none';
+}
+</script>
 
 </body>
 </html>

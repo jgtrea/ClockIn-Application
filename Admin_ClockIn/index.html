@@ -71,3 +71,17 @@
  
 </body>
 </html>
+<script>
+function setActive(clickedLink) {
+  document.querySelectorAll('.menu a').forEach(link => {
+    link.classList.remove('active');
+  });
+  clickedLink.classList.add('active');
+  
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.classList.add('collapsed');
+    sidebar.classList.remove('expanded');
+  }
+}
+</script>

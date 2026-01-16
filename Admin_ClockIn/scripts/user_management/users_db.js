@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let users = [];
   let expandedRows = {};
+  let sortAscending = true;
 
   if (!db) {
     console.error('users_db: Firestore (window.db) is not initialized.');
@@ -201,6 +202,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     console.warn('users_db: Auth not available; cannot load users.');
   }
+  
+  window.sortByName = function() {
+    const sortIcon = document.getElementById('sortIcon');
+    users.sort((a, b) => {
+      const nameA = (a.name || '').toLowerCase();
+      const nameB = (b.name || '').toLowerCase();
+      return sortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    });
+    sortAscending = !sortAscending;
+    sortIcon.style.display = 'inline';
+    sortIcon.textContent = sortAscending ? '↓' : '↑';
+    renderUsers();
+  };
 });
 window.addEventListener('message', function(event) {
   if (event.data.type === 'search') {

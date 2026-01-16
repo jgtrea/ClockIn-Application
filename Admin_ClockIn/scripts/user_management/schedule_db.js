@@ -6,6 +6,7 @@ let userSchedules = [];
 let expandedRows = {};   
 let expandedAddForms = {}; 
 let editingSlotId = null;
+let sortAscending = true;
 
 function loadUsersFromDB() {
   if (!window.db) {
@@ -199,6 +200,19 @@ function render() {
     }
     scheduleList.appendChild(row);
   });
+}
+
+function sortByName() {
+  const sortIcon = document.getElementById('sortIcon');
+  userSchedules.sort((a, b) => {
+    const nameA = (a.name || '').toLowerCase();
+    const nameB = (b.name || '').toLowerCase();
+    return sortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+  });
+  sortAscending = !sortAscending;
+  sortIcon.style.display = 'inline';
+  sortIcon.textContent = sortAscending ? '↓' : '↑';
+  render();
 }
 
 loadUsersFromDB();
