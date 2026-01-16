@@ -31,7 +31,7 @@ if (profileCircle && profileMenu) {
 
 auth.onAuthStateChanged(user => {
   if (!user) {
-    window.location.href = "login.html";
+    window.location.href = "../../Login_Path/login.html";
     return;
   }
 
@@ -47,11 +47,17 @@ auth.onAuthStateChanged(user => {
 async function logout() {
   await auth.signOut();
   if (window.top !== window.self) {
-    window.top.location.href = "../Login_Path/login.html";
+    window.top.location.href = "../../Login_Path/login.html";
   } else {
-    window.location.href = "../Login_Path/login.html";
+    window.location.href = "../../Login_Path/login.html";
   }
 }
 
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
 if (sidebarLogout) sidebarLogout.addEventListener("click", logout);
+
+function setActive(element) {
+  const menuItems = document.querySelectorAll(".menu a");
+  menuItems.forEach(item => item.classList.remove("active"));
+  element.classList.add("active");
+}

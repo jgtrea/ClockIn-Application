@@ -9,6 +9,7 @@ import {
   browserSessionPersistence,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { adminEmails } from "../../Firebase/administrator_permissions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDUnpdDMr0E6r-lohCNJKKKdUJfbVqzayM",
@@ -50,38 +51,24 @@ if (loginForm) {
         remember ? browserLocalPersistence : browserSessionPersistence
       );
 
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      alert('Login successful!');
-      window.location.href = '../Admin_ClockIn/index.html';
+      const isAdmin = adminEmails.includes(user.email);
+
+      const storageKey = remember ? localStorage : sessionStorage;
+      storageKey.setItem('userEmail', user.email);
+      storageKey.setItem('userType', isAdmin ? 'admin' : 'employee');
+
+      if (isAdmin) {
+        window.location.href = '../Admin_ClockIn/index.html';
+      } else {
+        window.location.href = '../User_ClockIn/index_user.html';
+      }
 
     } catch (err) {
       console.error('Login failed', err);
-
-      switch (err.code) {
-        case 'auth/user-not-found':
-          alert('No account exists with this email.');
-          break;
-
-        case 'auth/wrong-password':
-          alert('Incorrect password.');
-          break;
-
-        case 'auth/invalid-email':
-          alert('Invalid email format.');
-          break;
-
-        case 'auth/too-many-requests':
-          alert('Too many failed attempts. Please try again later.');
-          break;
-
-        case 'auth/network-request-failed':
-          alert('Network error. Please check your internet connection.');
-          break;
-
-        default:
-          alert('Login failed.');
-      }
+      alert('Login failed. Please check your email and password.');
     }
   });
 }
