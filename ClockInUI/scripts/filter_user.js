@@ -3,11 +3,8 @@ function performSearch() {
   const rows = document.querySelectorAll('.user-row');
 
   rows.forEach(row => {
-    const nameElem = row.querySelector('.user-name');
-    if (!nameElem) return;
-
-    const nameText = nameElem.textContent.toLowerCase();
-    if (!searchTerm || nameText.includes(searchTerm)) {
+    const text = row.textContent.toLowerCase();
+    if (!searchTerm || text.includes(searchTerm)) {
       row.style.display = '';
     } else {
       row.style.display = 'none';
@@ -15,6 +12,9 @@ function performSearch() {
   });
 }
 
-document.getElementById('globalSearch').addEventListener('input', performSearch);
+const searchInput = document.getElementById('globalSearch');
+if (searchInput) {
+  searchInput.addEventListener('input', performSearch);
+}
 
 window.performSearch = performSearch;

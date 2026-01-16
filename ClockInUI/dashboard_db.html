@@ -61,9 +61,38 @@
       <!-- TODO: add chart/stats logic   -->
       <!-- TODO: add API logic -->
 
+      <div class="recent-activity">
+        <h2 style="font-size: 20px; margin-bottom: 16px; color: #111827;">Recent Clock-ins</h2>
+        <div id="activityFeed">
+          <p style="text-align: center; color: #9ca3af;">Loading recent activity...</p>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
 
 </body>
 </html>
+<script>
+function performSearch() {
+  const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
+  const rows = document.querySelectorAll('.user-row');
+  
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (!searchTerm || text.includes(searchTerm)) {
+      row.style.display = 'flex';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('globalSearch');
+  if (searchInput) {
+    searchInput.addEventListener('keyup', performSearch);
+  }
+});
+</script>
