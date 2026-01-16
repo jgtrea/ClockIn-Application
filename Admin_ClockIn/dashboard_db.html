@@ -2,33 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Schedule — ClockIn</title>
+  <title>Dashboard — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   <link rel="stylesheet" href="styles/topbar.css">
-  <link rel="stylesheet" href="styles/home.css">
-  <link rel="stylesheet" href="styles/container_card/schedule_add_card.css">
+  <link rel="stylesheet" href="styles/user_ui.css">
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="scripts/firebase_config.js" defer></script>
+  <script src="../Firebase/firebase_config.js" defer></script>
   <script src="scripts/home.js" defer></script>
-  <script src="scripts/user_management/schedule_db.js" defer></script>
-  <script src="scripts/filter_user.js" defer></script>
+  <script src="scripts/user_management/dashboard_db.js" defer></script>
 </head>
 
-<!-- TODO: Make drop down choices -->
-
-<body data-page="schedule_db">
+<body>
 
 <div class="app">
   <div class="main">
     <header class="topbar">
       <div class="search-bar">
         <input type="text" placeholder="Search..." id="globalSearch">
-        <button class="material-symbols-outlined" onclick="performSearch()">search</button>   
+        <button class="material-symbols-outlined" onclick="performSearch()">search</button>      
       </div>
       <div class="top-actions">
         <div class="profile-wrapper">
@@ -52,20 +48,51 @@
 
     <main class="content">
 
-      <div class="dashboard-header">
-        <div class="dashboard-title-wrapper">
-          <div>
-            <h1>Schedules</h1>
-            <p class="tagline">View and track class/work schedules.</p>
-          </div>
-          <button class="export-btn" id="addUserBtn">Add User</button>
+      <div class="dashboard-title-wrapper">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="tagline">
+            A smart and efficient way to monitor attendance in real time.
+          </p>
+        </div>
+        <button class="export-btn">Export Data</button>
+      </div>
+
+      <!-- TODO: add chart/stats logic   -->
+      <!-- TODO: add API logic -->
+
+      <div class="recent-activity">
+        <h2 style="font-size: 20px; margin-bottom: 16px; color: #111827;">Recent Clock-ins</h2>
+        <div id="activityFeed">
+          <p style="text-align: center; color: #9ca3af;">Loading recent activity...</p>
         </div>
       </div>
 
-      <div id="scheduleList"></div>
     </main>
   </div>
 </div>
 
 </body>
 </html>
+<script>
+function performSearch() {
+  const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
+  const rows = document.querySelectorAll('.user-row');
+  
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (!searchTerm || text.includes(searchTerm)) {
+      row.style.display = 'flex';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('globalSearch');
+  if (searchInput) {
+    searchInput.addEventListener('keyup', performSearch);
+  }
+});
+</script>

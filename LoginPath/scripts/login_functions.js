@@ -53,7 +53,7 @@ if (loginForm) {
       await signInWithEmailAndPassword(auth, email, password);
 
       alert('Login successful!');
-      window.location.href = 'index.html';
+      window.location.href = '../Admin_ClockIn/index.html';
 
     } catch (err) {
       console.error('Login failed', err);
