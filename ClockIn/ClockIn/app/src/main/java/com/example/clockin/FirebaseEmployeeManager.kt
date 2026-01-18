@@ -1,8 +1,10 @@
 package com.example.clockin
 
 import android.util.Log
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 
 data class UserProfile(
@@ -15,9 +17,35 @@ data class UserProfile(
     val collectionName: String = ""
 )
 
+data class AttendanceRecord(
+    val date: String = "",
+    val room: String = "",
+    val status: String = "",
+    val time_in: String = "",
+    val time_out: String = "",
+    val timestamp: Timestamp? = null
+)
+
 object FirebaseEmployeeManager {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+
+    fun isLoggedIn(): Boolean = auth.currentUser != null
+
+    fun getCurrentUserEmail(): String? = auth.currentUser?.email
+
+    fun signOut() {
+        auth.signOut()
+    }
+
+    suspend fun signIn(email: String, pass: String): Result<Boolean> {
+        return try {
+            auth.signInWithEmailAndPassword(email, pass).await()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     suspend fun getCurrentUser(): UserProfile? {
         val email = auth.currentUser?.email ?: return null
@@ -72,13 +100,27 @@ object FirebaseEmployeeManager {
             val querySnapshot = db.collection("qr")
                 .whereEqualTo("qr_id", code)
                 .whereEqualTo("status", true)
-                .get()
-                .await()
-
+                .get().await()
             !querySnapshot.isEmpty
         } catch (e: Exception) {
             Log.e("FirebaseManager", "QR Verification Failed", e)
             false
+        }
+    }
+
+    suspend fun getAttendanceHistory(userId: String): List<AttendanceRecord> {
+        return try {
+            val snapshot = db.collection("user_employee_data")
+                .document(userId)
+                .collection("user_attendance")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            snapshot.toObjects(AttendanceRecord::class.java)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error getting attendance", e)
+            emptyList()
         }
     }
 }

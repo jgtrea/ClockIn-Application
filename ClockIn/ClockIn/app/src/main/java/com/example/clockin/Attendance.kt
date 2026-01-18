@@ -1,6 +1,5 @@
 package com.example.clockin
 
-import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,17 +12,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-
-data class AttendanceRecord(
-    val date: String = "",
-    val room: String = "",
-    val status: String = "",
-    val time_in: String = "",
-    val time_out: String = "",
-    val timestamp: com.google.firebase.Timestamp? = null
-)
 
 data class AttendanceItem(
     val title: String,
@@ -44,41 +32,26 @@ fun AttendanceScreen(navController: NavController) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        val db = FirebaseFirestore.getInstance()
         val userProfile = FirebaseEmployeeManager.getCurrentUser()
 
         if (userProfile != null && userProfile.collectionName == "user_employee_data") {
-            try {
-                db.collection("user_employee_data")
-                    .document(userProfile.id)
-                    .collection("user_attendance")
-                    .orderBy("timestamp", Query.Direction.DESCENDING)
-                    .get()
-                    .addOnSuccessListener { snapshot ->
-                        val items = snapshot.documents.mapNotNull { doc ->
-                            val record = doc.toObject(AttendanceRecord::class.java)
-                            record?.let {
-                                AttendanceItem(
-                                    title = "Room: ${it.room}",
-                                    details = "Status: ${it.status}",
-                                    timeIn = it.time_in,
-                                    timeOut = if (it.time_out.isNotEmpty()) it.time_out else "--:--",
-                                    isLate = it.status == "Late"
-                                ) to it.date
-                            }
-                        }
-                        attendanceMap = items.groupBy({ it.second }, { it.first })
-                        isLoading = false
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("Attendance", "Error fetching data", e)
-                        errorMessage = "Failed to load data."
-                        isLoading = false
-                    }
-            } catch (e: Exception) {
-                errorMessage = e.message
-                isLoading = false
+            val records = FirebaseEmployeeManager.getAttendanceHistory(userProfile.id)
+
+            if (records.isNotEmpty()) {
+                val items = records.map { record ->
+                    AttendanceItem(
+                        title = "Room: ${record.room}",
+                        details = "Status: ${record.status}",
+                        timeIn = record.time_in,
+                        timeOut = if (record.time_out.isNotEmpty()) record.time_out else "--:--",
+                        isLate = record.status == "Late"
+                    ) to record.date
+                }
+                attendanceMap = items.groupBy({ it.second }, { it.first })
+            } else {
+                attendanceMap = emptyMap()
             }
+            isLoading = false
         } else {
             errorMessage = "No Employee Record Found."
             isLoading = false
@@ -104,6 +77,7 @@ fun AttendanceScreen(navController: NavController) {
                 onPoliciesClick = { showPolicies = true },
                 onFAQClick = { showFAQ = true },
                 onLogout = {
+                    FirebaseEmployeeManager.signOut()
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }

@@ -25,11 +25,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import java.util.Date
+import kotlinx.coroutines.launch
 
-// --- Shared Colors ---
 val BrownHeader = Color(0xFFAF8373)
 val TextOrange = Color(0xFFFF725E)
 val ButtonOrange = Color(0xFFFF725E)
@@ -41,21 +38,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // --- CONNECTION TEST ---
-        // This runs automatically to verify Firestore is reachable.
-        val db = FirebaseFirestore.getInstance()
-        val testData = hashMapOf(
-            "status" to "Connection Successful",
-            "timestamp" to Date(),
-            "mode" to "Auth Login"
-        )
-
         setContent {
             val navController = rememberNavController()
-            val auth = FirebaseAuth.getInstance()
 
-            // Check if user is already logged in at startup
-            val startDestination = if (auth.currentUser != null) "home" else "login"
+            val startDestination = if (FirebaseEmployeeManager.isLoggedIn()) "home" else "login"
 
             NavHost(navController = navController, startDestination = startDestination) {
                 composable("login") {
@@ -65,13 +51,11 @@ class MainActivity : ComponentActivity() {
                         }
                     })
                 }
-
-                // --- NAVIGATION DESTINATIONS ---
                 composable("home") {
                     DashboardScreen(
                         navController = navController,
                         onLogout = {
-                            auth.signOut() // Actually sign out from Firebase
+                            FirebaseEmployeeManager.signOut()
                             navController.navigate("login") { popUpTo("home") { inclusive = true } }
                         },
                         onProfileClick = { navController.navigate("profile") }
@@ -97,7 +81,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance() // Use Auth instance
+    val scope = rememberCoroutineScope()
 
     var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
@@ -111,7 +95,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             .verticalScroll(rememberScrollState())
             .imePadding()
     ) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -126,7 +109,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             )
         }
 
-        // Login Form
         Column(
             modifier = Modifier
                 .padding(24.dp)
@@ -172,20 +154,19 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                     Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }
-
                                 isLoading = true
 
-                                // --- CHANGED TO FIREBASE AUTH LOGIN ---
-                                auth.signInWithEmailAndPassword(emailInput, passwordInput)
-                                    .addOnSuccessListener {
-                                        isLoading = false
+                                scope.launch {
+                                    val result = FirebaseEmployeeManager.signIn(emailInput, passwordInput)
+                                    isLoading = false
+
+                                    if (result.isSuccess) {
                                         Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
                                         onLoginSuccess()
+                                    } else {
+                                        Toast.makeText(context, "Login Failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                     }
-                                    .addOnFailureListener { e ->
-                                        isLoading = false
-                                        Toast.makeText(context, "Login Failed: ${e.message}", Toast.LENGTH_LONG).show()
-                                    }
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
