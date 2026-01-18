@@ -35,11 +35,14 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 
 @Composable
 fun ScannerScreen(navController: NavController) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -47,6 +50,7 @@ fun ScannerScreen(navController: NavController) {
     }
 
     var isFlashlightOn by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -60,7 +64,6 @@ fun ScannerScreen(navController: NavController) {
     }
 
     Scaffold(
-        // Re-enabled the bottom bar using the passed navController
         bottomBar = { CustomBottomNavigation(navController, "scan_qr") }
     ) { paddingValues ->
         Box(
@@ -72,9 +75,22 @@ fun ScannerScreen(navController: NavController) {
             if (hasCameraPermission) {
                 CameraPreview(
                     torchOn = isFlashlightOn,
+                    isProcessing = isProcessing,
                     onQrCodeDetected = { code ->
-                        // Logic for Database or Navigation goes here
-                        Toast.makeText(context, "QR Detected: $code", Toast.LENGTH_SHORT).show()
+                        if (!isProcessing) {
+                            isProcessing = true
+                            Toast.makeText(context, "Verifying...", Toast.LENGTH_SHORT).show()
+                            scope.launch {
+                                val isValid = FirebaseEmployeeManager.verifyQrCode(code)
+
+                                if (isValid) {
+                                    Toast.makeText(context, "Success: Verified!", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Failed: Invalid or Inactive QR", Toast.LENGTH_LONG).show()
+                                }
+                                isProcessing = false
+                            }
+                        }
                     }
                 )
             } else {
@@ -85,10 +101,9 @@ fun ScannerScreen(navController: NavController) {
                 )
             }
 
-            // Overlay UI
             Text(
-                text = "Align QR code within frame",
-                color = Color.White,
+                text = if (isProcessing) "Verifying..." else "Align QR code within frame",
+                color = if(isProcessing) Color.Yellow else Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
@@ -125,7 +140,11 @@ fun ScannerScreen(navController: NavController) {
 
 @OptIn(ExperimentalGetImage::class)
 @Composable
-fun CameraPreview(torchOn: Boolean, onQrCodeDetected: (String) -> Unit) {
+fun CameraPreview(
+    torchOn: Boolean,
+    isProcessing: Boolean,
+    onQrCodeDetected: (String) -> Unit
+) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
@@ -154,9 +173,12 @@ fun CameraPreview(torchOn: Boolean, onQrCodeDetected: (String) -> Unit) {
                     .also {
                         it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
                             processImageProxy(imageProxy) { result ->
-                                if (result != lastScannedCode) {
+                                if (!isProcessing && result != lastScannedCode) {
                                     lastScannedCode = result
                                     onQrCodeDetected(result)
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                        lastScannedCode = ""
+                                    }, 3000)
                                 }
                             }
                         }

@@ -21,13 +21,9 @@ object FirebaseEmployeeManager {
 
     suspend fun getCurrentUser(): UserProfile? {
         val email = auth.currentUser?.email ?: return null
-
         try {
             val adminQuery = db.collection("user_admin_data")
-                .whereEqualTo("email", email)
-                .get()
-                .await()
-
+                .whereEqualTo("email", email).get().await()
             if (!adminQuery.isEmpty) {
                 val doc = adminQuery.documents[0]
                 return UserProfile(
@@ -39,12 +35,8 @@ object FirebaseEmployeeManager {
                     collectionName = "user_admin_data"
                 )
             }
-
             val empQuery = db.collection("user_employee_data")
-                .whereEqualTo("email", email)
-                .get()
-                .await()
-
+                .whereEqualTo("email", email).get().await()
             if (!empQuery.isEmpty) {
                 val doc = empQuery.documents[0]
                 return UserProfile(
@@ -57,7 +49,6 @@ object FirebaseEmployeeManager {
                     collectionName = "user_employee_data"
                 )
             }
-
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error fetching user", e)
         }
@@ -66,15 +57,27 @@ object FirebaseEmployeeManager {
 
     suspend fun updateUser(profile: UserProfile, field: String, value: String): Boolean {
         if (profile.collectionName.isEmpty() || profile.id.isEmpty()) return false
-
         return try {
-            db.collection(profile.collectionName)
-                .document(profile.id)
-                .update(field, value)
-                .await()
+            db.collection(profile.collectionName).document(profile.id)
+                .update(field, value).await()
             true
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Update failed", e)
+            false
+        }
+    }
+
+    suspend fun verifyQrCode(code: String): Boolean {
+        return try {
+            val querySnapshot = db.collection("qr")
+                .whereEqualTo("qr_id", code)
+                .whereEqualTo("status", true)
+                .get()
+                .await()
+
+            !querySnapshot.isEmpty
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "QR Verification Failed", e)
             false
         }
     }
