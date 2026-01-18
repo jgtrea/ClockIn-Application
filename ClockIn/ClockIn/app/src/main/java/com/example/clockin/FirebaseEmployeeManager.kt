@@ -1,5 +1,6 @@
 package com.example.clockin
 
+import android.annotation.SuppressLint
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -27,8 +28,8 @@ data class AttendanceRecord(
 )
 
 object FirebaseEmployeeManager {
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
+    private val auth get() = FirebaseAuth.getInstance()
+    private val db get() = FirebaseFirestore.getInstance()
 
     fun isLoggedIn(): Boolean = auth.currentUser != null
 

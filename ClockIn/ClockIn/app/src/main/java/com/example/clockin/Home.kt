@@ -11,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
@@ -27,8 +26,9 @@ import androidx.navigation.NavController
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.launch
 
 val PrimaryOrange = Color(0xFFFF7F66)
 
@@ -152,7 +152,7 @@ fun DashboardHeader(
                     expanded = false
                     onProfileClick()
                 }
-                MenuActionItem(Icons.Outlined.Assignment, "Send Feedback") {
+                MenuActionItem(Icons.AutoMirrored.Outlined.Assignment, "Send Feedback") {
                     expanded = false
                     onSendFeedbackClick()
                 }
@@ -160,11 +160,11 @@ fun DashboardHeader(
                     expanded = false
                     onPoliciesClick()
                 }
-                MenuActionItem(Icons.Outlined.HelpOutline, "Help") {
+                MenuActionItem(Icons.AutoMirrored.Outlined.HelpOutline, "Help") {
                     expanded = false
                     onFAQClick()
                 }
-                MenuActionItem(Icons.Outlined.Logout, "Logout") {
+                MenuActionItem(Icons.AutoMirrored.Outlined.Logout, "Logout") {
                     expanded = false
                     onLogout()
                 }
