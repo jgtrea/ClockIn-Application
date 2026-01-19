@@ -1,6 +1,5 @@
 package com.example.clockin
 
-import android.annotation.SuppressLint
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -25,6 +24,15 @@ data class AttendanceRecord(
     val time_in: String = "",
     val time_out: String = "",
     val timestamp: Timestamp? = null
+)
+
+// Matches your Firestore 'user_schedule' fields
+data class ScheduleRecord(
+    val schedId: String = "",
+    val room: String = "",
+    val weekday: String = "",
+    val start_time: String = "",
+    val end_time: String = ""
 )
 
 object FirebaseEmployeeManager {
@@ -121,6 +129,21 @@ object FirebaseEmployeeManager {
             snapshot.toObjects(AttendanceRecord::class.java)
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error getting attendance", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getUserSchedule(userId: String): List<ScheduleRecord> {
+        return try {
+            val snapshot = db.collection("user_employee_data")
+                .document(userId)
+                .collection("user_schedule")
+                .get()
+                .await()
+
+            snapshot.toObjects(ScheduleRecord::class.java)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error getting schedule", e)
             emptyList()
         }
     }

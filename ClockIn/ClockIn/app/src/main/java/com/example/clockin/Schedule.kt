@@ -4,7 +4,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -12,7 +12,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.compose.runtime.*
+
+data class ScheduleItem(val title: String, val details: String)
 
 @Composable
 fun ScheduleScreen(navController: NavController) {
@@ -20,10 +21,41 @@ fun ScheduleScreen(navController: NavController) {
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
 
-    // 2. SHOW THE DIALOG CONDITIONALLY
+    var scheduleMap by remember { mutableStateOf<Map<String, List<ScheduleItem>>>(emptyMap()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val userProfile = FirebaseEmployeeManager.getCurrentUser()
+
+        if (userProfile != null && userProfile.collectionName == "user_employee_data") {
+            val records = FirebaseEmployeeManager.getUserSchedule(userProfile.id)
+
+            if (records.isNotEmpty()) {
+                val items = records.map { record ->
+                    ScheduleItem(
+                        title = "${record.schedId} - ${record.room}",
+                        details = "Room ${record.room} | ${record.start_time} - ${record.end_time}"
+                    ) to record.weekday
+                }
+
+                val dayOrder = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+                scheduleMap = items.groupBy({ it.second }, { it.first })
+                    .toSortedMap(compareBy { dayOrder.indexOf(it) })
+            } else {
+                scheduleMap = emptyMap()
+            }
+            isLoading = false
+        } else {
+            errorMessage = "No Employee Record Found."
+            isLoading = false
+        }
+    }
+
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
     }
+
     Scaffold(
         bottomBar = { CustomBottomNavigation(navController, "schedule") }
     ) { paddingValues ->
@@ -33,41 +65,35 @@ fun ScheduleScreen(navController: NavController) {
                 .padding(paddingValues)
                 .background(Color.White)
         ) {
-            // 1. Shared Header (Matches Home exactly)
             DashboardHeader(
                 onProfileClick = { navController.navigate("profile") },
                 onSendFeedbackClick = { showFeedbackDialog = true },
                 onPoliciesClick = { showPolicies = true },
                 onFAQClick = { showFAQ = true },
                 onLogout = {
+                    FirebaseEmployeeManager.signOut()
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
                 })
 
-            // 2. Edge-to-Edge Divider
             HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
 
             if (showPolicies) {
-                // If showPolicies is true, display the Policies screen content
                 PoliciesView(onBack = { showPolicies = false })
-            }
-            if (showFAQ) {
-                // If showPolicies is true, display the Policies screen content
+            } else if (showFAQ) {
                 FAQView(onBack = { showFAQ = false })
-            }else {
+            } else {
 
-                // 3. Scrollable Body Content
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(16.dp) // Changed from 24.dp to 16.dp to match Home.kt
+                        .padding(16.dp)
                 ) {
-                    // Title Section
                     Text("Schedules", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "view and track class/work schedules.",
+                        "View and track class/work schedules.",
                         color = Color.Gray,
                         fontSize = 14.sp
                     )
@@ -76,21 +102,23 @@ fun ScheduleScreen(navController: NavController) {
                     HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Grouped Schedule Cards
-                    ScheduleDateGroup(
-                        "Monday - 2025/11/10", listOf(
-                            ScheduleItem("T001 - Math", "Math | R001 | Mon 8:00 - 9:30"),
-                            ScheduleItem("T002 - Math", "Math | R010 | Mon 9:30 - 11:00"),
-                            ScheduleItem("T003 - Math", "Math | R008 | Mon 1:00 - 2:30")
-                        )
-                    )
-
-                    ScheduleDateGroup(
-                        "Tuesday - 2025/11/11", listOf(
-                            ScheduleItem("T001 - Math", "Math | R001 | Mon 8:00 - 9:30"),
-                            ScheduleItem("T002 - Math", "Math | R010 | Mon 9:30 - 11:00")
-                        )
-                    )
+                    if (isLoading) {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color(0xFFFF7F66))
+                        }
+                    } else if (errorMessage != null) {
+                        Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                            Text(text = errorMessage!!, color = Color.Red)
+                        }
+                    } else if (scheduleMap.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                            Text(text = "No schedules found.", color = Color.Gray)
+                        }
+                    } else {
+                        scheduleMap.forEach { (day, items) ->
+                            ScheduleDateGroup(day, items)
+                        }
+                    }
                 }
             }
         }
@@ -99,7 +127,7 @@ fun ScheduleScreen(navController: NavController) {
 
 @Composable
 fun ScheduleDateGroup(date: String, items: List<ScheduleItem>) {
-    Column(modifier = Modifier.padding(vertical = 16.dp)) { // Removed horizontal padding here
+    Column(modifier = Modifier.padding(vertical = 16.dp)) {
         Text(
             text = date,
             fontWeight = FontWeight.Bold,
@@ -125,7 +153,6 @@ fun ScheduleCard(item: ScheduleItem) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Placeholder for the square icon in the image
             Box(modifier = Modifier.size(45.dp).border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)))
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -137,5 +164,3 @@ fun ScheduleCard(item: ScheduleItem) {
         }
     }
 }
-
-data class ScheduleItem(val title: String, val details: String)
