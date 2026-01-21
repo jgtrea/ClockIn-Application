@@ -2,6 +2,7 @@ package com.example.clockin
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Rect
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,6 +10,7 @@ import androidx.annotation.OptIn
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,8 +25,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,11 +44,15 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
+import kotlin.math.min
 
 @Composable
 fun ScannerScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    val bracketSizeDp = 280.dp
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -51,6 +62,8 @@ fun ScannerScreen(navController: NavController) {
 
     var isFlashlightOn by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
+    var lastScanTime by remember { mutableStateOf(0L) }
+    val cooldownDuration = 2000L
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -74,15 +87,17 @@ fun ScannerScreen(navController: NavController) {
         ) {
             if (hasCameraPermission) {
                 CameraPreview(
+                    modifier = Modifier.fillMaxSize(),
                     torchOn = isFlashlightOn,
-                    isProcessing = isProcessing,
                     onQrCodeDetected = { code ->
-                        if (!isProcessing) {
+                        val currentTime = System.currentTimeMillis()
+                        if (!isProcessing && (currentTime - lastScanTime > cooldownDuration)) {
                             isProcessing = true
+                            lastScanTime = currentTime
                             Toast.makeText(context, "Verifying...", Toast.LENGTH_SHORT).show()
+
                             scope.launch {
                                 val isValid = FirebaseEmployeeManager.verifyQrCode(code)
-
                                 if (isValid) {
                                     Toast.makeText(context, "Success: Verified!", Toast.LENGTH_LONG).show()
                                 } else {
@@ -93,6 +108,9 @@ fun ScannerScreen(navController: NavController) {
                         }
                     }
                 )
+
+                ScannerOverlay(bracketSizeDp)
+
             } else {
                 Text(
                     text = "Camera permission is required.",
@@ -103,7 +121,7 @@ fun ScannerScreen(navController: NavController) {
 
             Text(
                 text = if (isProcessing) "Verifying..." else "Align QR code within frame",
-                color = if(isProcessing) Color.Yellow else Color.White,
+                color = if (isProcessing) Color.Yellow else Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
@@ -113,7 +131,7 @@ fun ScannerScreen(navController: NavController) {
 
             Box(
                 modifier = Modifier
-                    .size(280.dp)
+                    .size(bracketSizeDp)
                     .align(Alignment.Center)
             ) {
                 ScannerBracket(Modifier.align(Alignment.TopStart), rotateX = false, rotateY = false)
@@ -138,18 +156,43 @@ fun ScannerScreen(navController: NavController) {
     }
 }
 
+@Composable
+fun ScannerOverlay(boxSizeDp: androidx.compose.ui.unit.Dp) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+        val boxSizePx = boxSizeDp.toPx()
+
+        val left = (canvasWidth - boxSizePx) / 2
+        val top = (canvasHeight - boxSizePx) / 2
+
+        with(drawContext.canvas.nativeCanvas) {
+            val checkPoint = saveLayer(null, null)
+
+            drawRect(Color.Black.copy(alpha = 0.6f))
+
+            drawRect(
+                topLeft = Offset(left, top),
+                size = Size(boxSizePx, boxSizePx),
+                color = Color.Transparent,
+                blendMode = BlendMode.Clear
+            )
+            restoreToCount(checkPoint)
+        }
+    }
+}
+
 @OptIn(ExperimentalGetImage::class)
 @Composable
 fun CameraPreview(
+    modifier: Modifier = Modifier,
     torchOn: Boolean,
-    isProcessing: Boolean,
     onQrCodeDetected: (String) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     var camera by remember { mutableStateOf<Camera?>(null) }
-    var lastScannedCode by remember { mutableStateOf("") }
 
     LaunchedEffect(torchOn) {
         camera?.cameraControl?.enableTorch(torchOn)
@@ -162,7 +205,6 @@ fun CameraPreview(
 
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
-
                 val preview = Preview.Builder().build().also {
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
@@ -172,15 +214,7 @@ fun CameraPreview(
                     .build()
                     .also {
                         it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
-                            processImageProxy(imageProxy) { result ->
-                                if (!isProcessing && result != lastScannedCode) {
-                                    lastScannedCode = result
-                                    onQrCodeDetected(result)
-                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                        lastScannedCode = ""
-                                    }, 3000)
-                                }
-                            }
+                            processImageProxy(imageProxy, onQrCodeDetected)
                         }
                     }
 
@@ -200,7 +234,7 @@ fun CameraPreview(
             }, executor)
             previewView
         },
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier
     )
 }
 
@@ -212,21 +246,38 @@ private fun processImageProxy(
     val mediaImage = imageProxy.image
     if (mediaImage != null) {
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+        val imgWidth = image.width
+        val imgHeight = image.height
+
+        val scanBoxSize = min(imgWidth, imgHeight) * 0.5f
+        val centerRect = Rect(
+            ((imgWidth - scanBoxSize) / 2).toInt(),
+            ((imgHeight - scanBoxSize) / 2).toInt(),
+            ((imgWidth + scanBoxSize) / 2).toInt(),
+            ((imgHeight + scanBoxSize) / 2).toInt()
+        )
+
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
             .build()
-
         val scanner = BarcodeScanning.getClient(options)
 
         scanner.process(image)
             .addOnSuccessListener { barcodes ->
                 for (barcode in barcodes) {
-                    barcode.rawValue?.let { onSuccess(it) }
+                    val box = barcode.boundingBox
+                    if (box != null) {
+                        val centerX = box.centerX()
+                        val centerY = box.centerY()
+
+                        if (centerRect.contains(centerX, centerY)) {
+                            barcode.rawValue?.let { onSuccess(it) }
+                        }
+                    }
                 }
             }
-            .addOnCompleteListener {
-                imageProxy.close()
-            }
+            .addOnCompleteListener { imageProxy.close() }
     } else {
         imageProxy.close()
     }
