@@ -3,6 +3,7 @@ package com.example.clockin
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
@@ -26,7 +27,6 @@ data class AttendanceRecord(
     val timestamp: Timestamp? = null
 )
 
-// Matches your Firestore 'user_schedule' fields
 data class ScheduleRecord(
     val schedId: String = "",
     val room: String = "",
@@ -106,13 +106,55 @@ object FirebaseEmployeeManager {
 
     suspend fun verifyQrCode(code: String): Boolean {
         return try {
-            val querySnapshot = db.collection("qr")
+            val qrQuery = db.collection("qr")
                 .whereEqualTo("qr_id", code)
                 .whereEqualTo("status", true)
-                .get().await()
-            !querySnapshot.isEmpty
+                .get()
+                .await()
+
+            if (qrQuery.isEmpty) return false
+
+            val qrDoc = qrQuery.documents[0]
+            val schedId = qrDoc.getString("schedId") ?: return false
+
+            qrDoc.reference.update("scanCount", FieldValue.increment(1)).await()
+
+            val currentUser = getCurrentUser() ?: return false
+            if (currentUser.collectionName != "user_employee_data") return false
+
+            val scheduleQuery = db.collection("user_employee_data")
+                .document(currentUser.id)
+                .collection("user_schedule")
+                .whereEqualTo("schedId", schedId)
+                .get()
+                .await()
+
+            if (scheduleQuery.isEmpty) return false
+
+            val roomNumber = scheduleQuery.documents[0].getString("room") ?: ""
+
+            val attendanceQuery = db.collection("user_employee_data")
+                .document(currentUser.id)
+                .collection("user_attendance")
+                .whereEqualTo("room", roomNumber)
+                .whereEqualTo("status", "Unattended")
+                .get()
+                .await()
+
+            if (attendanceQuery.isEmpty) return false
+
+            val attendanceDoc = attendanceQuery.documents[0]
+
+            attendanceDoc.reference.update(
+                mapOf(
+                    "status" to "Present",
+                    "timestamp" to FieldValue.serverTimestamp()
+                )
+            ).await()
+
+            true
         } catch (e: Exception) {
-            Log.e("FirebaseManager", "QR Verification Failed", e)
+            Log.e("FirebaseManager", "QR Workflow Failed", e)
             false
         }
     }
