@@ -35,6 +35,12 @@ data class ScheduleRecord(
     val end_time: String = ""
 )
 
+data class NotificationItem(
+    val header: String = "",
+    val message: String = "",
+    val dateCreated: Timestamp? = null
+)
+
 object FirebaseEmployeeManager {
     private val auth get() = FirebaseAuth.getInstance()
     private val db get() = FirebaseFirestore.getInstance()
@@ -186,6 +192,19 @@ object FirebaseEmployeeManager {
             snapshot.toObjects(ScheduleRecord::class.java)
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error getting schedule", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getNotifications(): List<NotificationItem> {
+        return try {
+            val snapshot = db.collection("notifications")
+                .orderBy("dateCreated", Query.Direction.DESCENDING)
+                .get()
+                .await()
+            snapshot.toObjects(NotificationItem::class.java)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error fetching notifications", e)
             emptyList()
         }
     }

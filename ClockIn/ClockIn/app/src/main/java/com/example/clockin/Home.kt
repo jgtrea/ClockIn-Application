@@ -29,6 +29,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.*
 import com.google.firebase.auth.FirebaseAuth
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 val PrimaryOrange = Color(0xFFFF7F66)
 
@@ -37,6 +39,14 @@ fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfil
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
+
+    var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
+    var isLoadingNotifs by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        notifications = FirebaseEmployeeManager.getNotifications()
+        isLoadingNotifs = false
+    }
 
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
@@ -72,15 +82,31 @@ fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfil
                             .padding(16.dp)
                     ) {
                         SectionHeader(title = "Notifications", icon = Icons.Default.NotificationsNone)
-                        InfoCard(
-                            title = "Update 2025/11/10:",
-                            text = "Fixed several issues to improve attendance tracking and system performance."
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        InfoCard(
-                            title = "Upcoming Schedule:",
-                            text = "Math | R001 | Mon 8:00-9:30"
-                        )
+
+                        if (isLoadingNotifs) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = PrimaryOrange, modifier = Modifier.size(24.dp))
+                            }
+                        } else if (notifications.isEmpty()) {
+                            Text(
+                                "No new notifications",
+                                color = Color.Gray,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                        } else {
+                            notifications.forEach { item ->
+                                val dateStr = item.dateCreated?.toDate()?.let {
+                                    SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(it)
+                                } ?: ""
+
+                                InfoCard(
+                                    title = "${item.header} $dateStr:",
+                                    text = item.message
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                        }
                     }
                 }
             }
