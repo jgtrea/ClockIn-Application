@@ -29,13 +29,22 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.*
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 val PrimaryOrange = Color(0xFFFF7F66)
 
 @Composable
-fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfileClick: () -> Unit) {
+fun DashboardScreen(
+    navController: NavController,
+    beaconDistance: Double,
+    deviceName: String,
+    onTargetBleChanged: (String) -> Unit,
+    isBeaconFound: Boolean,
+    onLogout: () -> Unit,
+    onProfileClick: () -> Unit
+) {
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
@@ -43,9 +52,26 @@ fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfil
     var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
     var isLoadingNotifs by remember { mutableStateOf(true) }
 
+    var sections by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var selectedDisplayTitle by remember { mutableStateOf("Select Section") }
+    var isDropdownExpanded by remember { mutableStateOf(false) }
+    var isLoadingSections by remember { mutableStateOf(true) }
+
     LaunchedEffect(Unit) {
         notifications = FirebaseEmployeeManager.getNotifications()
         isLoadingNotifs = false
+    }
+
+    LaunchedEffect(Unit) {
+        FirebaseFirestore.getInstance().collection("Sections")
+            .get()
+            .addOnSuccessListener { result ->
+                sections = result.documents.map { it.data ?: emptyMap<String, Any>() }
+                isLoadingSections = false
+            }
+            .addOnFailureListener {
+                isLoadingSections = false
+            }
     }
 
     if (showFeedbackDialog) {
@@ -81,6 +107,53 @@ fun DashboardScreen(navController: NavController, onLogout: () -> Unit, onProfil
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                            OutlinedButton(
+                                onClick = { isDropdownExpanded = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                if (isLoadingSections) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Text(selectedDisplayTitle)
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            }
+
+                            DropdownMenu(
+                                expanded = isDropdownExpanded,
+                                onDismissRequest = { isDropdownExpanded = false },
+                                modifier = Modifier.fillMaxWidth(0.9f)
+                            ) {
+                                sections.forEach { section ->
+                                    val year = section["YearLevel"] as? String ?: ""
+                                    val sectionName = section["SectionName"] as? String ?: ""
+                                    val bleTarget = section["ble"] as? String ?: ""
+                                    val fullTitle = "$year - $sectionName"
+
+                                    DropdownMenuItem(
+                                        text = { Text(fullTitle) },
+                                        onClick = {
+                                            selectedDisplayTitle = fullTitle
+                                            isDropdownExpanded = false
+                                            onTargetBleChanged(bleTarget)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        SectionHeader(title = "Attendance Proximity", icon = Icons.Default.Bluetooth)
+                        InfoCard(
+                            title = "Room: $selectedDisplayTitle",
+                            text = if (!isBeaconFound) "Searching for $deviceName..."
+                            else "Distance: %.2f meters".format(beaconDistance)
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         SectionHeader(title = "Notifications", icon = Icons.Default.NotificationsNone)
 
                         if (isLoadingNotifs) {

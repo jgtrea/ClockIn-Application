@@ -1,5 +1,10 @@
 package com.example.clockin
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
@@ -27,6 +32,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
+import kotlin.math.pow
 
 val BrownHeader = Color(0xFFAF8373)
 val TextOrange = Color(0xFFFF725E)
@@ -35,12 +41,36 @@ val LightOrangeText = Color(0xFFE69A8D)
 val BorderGray = Color(0xFFE0E0E0)
 
 class MainActivity : ComponentActivity() {
+    var targetBleName by mutableStateOf("")
+    private var currentScanCallback: ScanCallback? = null
+
+    private val bluetoothAdapter: BluetoothAdapter? by lazy {
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothManager.adapter
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
             val navController = rememberNavController()
+
+            var beaconDistance by remember { mutableDoubleStateOf(0.0) }
+            var isBeaconFound by remember { mutableStateOf(false) }
+
+            LaunchedEffect(targetBleName) {
+                if (targetBleName.isNotEmpty()) {
+                    beaconDistance = 0.0
+                    isBeaconFound = false
+
+                    startScanning(targetBleName) { name, distance ->
+                        beaconDistance = distance
+                        isBeaconFound = true
+                    }
+                }
+            }
+
             val startDestination = if (FirebaseEmployeeManager.isLoggedIn()) "home" else "login"
 
             NavHost(navController = navController, startDestination = startDestination) {
@@ -54,6 +84,13 @@ class MainActivity : ComponentActivity() {
                 composable("home") {
                     DashboardScreen(
                         navController = navController,
+                        beaconDistance = beaconDistance,
+                        isBeaconFound = isBeaconFound,
+                        deviceName = targetBleName,
+                        onTargetBleChanged = { newBleName ->
+                            targetBleName = newBleName
+                            isBeaconFound = false
+                        },
                         onLogout = {
                             FirebaseEmployeeManager.signOut()
                             navController.navigate("login") { popUpTo("home") { inclusive = true } }
@@ -75,6 +112,42 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun startScanning(filterName: String, onUpdate: (String, Double) -> Unit) {
+        val scanner = bluetoothAdapter?.bluetoothLeScanner ?: return
+
+        currentScanCallback?.let {
+            try {
+                scanner.stopScan(it)
+            } catch (e: Exception) {
+                android.util.Log.e("BLE", "Error stopping scan: ${e.message}")
+            }
+        }
+
+        val newCallback = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                val name = result.device.name
+                if (name == filterName) {
+                    val distance = calculateDistance(result.rssi, -59)
+                    runOnUiThread { onUpdate(name ?: "Unknown", distance) }
+                }
+            }
+        }
+
+        currentScanCallback = newCallback
+
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
+
+        scanner.startScan(null, settings, newCallback)
+    }
+
+    private fun calculateDistance(rssi: Int, txPower: Int): Double {
+        if (rssi == 0) return -1.0
+        val n = 2.5
+        return 10.0.pow((txPower.toDouble() - rssi) / (10 * n))
     }
 }
 
@@ -150,7 +223,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             ) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-                    // --- EMAIL AUTOCOMPLETE FIELD ---
                     Column {
                         Text("Email", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
                         ExposedDropdownMenuBox(
@@ -219,7 +291,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                     isLoading = false
 
                                     if (result.isSuccess) {
-                                        // Save account on success
                                         val newMap = savedAccounts.toMutableMap()
                                         newMap[emailInput] = passwordInput
                                         val saveString = newMap.entries.joinToString(",") { "${it.key}|${it.value}" }
