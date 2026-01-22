@@ -1,5 +1,6 @@
 package com.example.clockin
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -40,7 +41,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val navController = rememberNavController()
-
             val startDestination = if (FirebaseEmployeeManager.isLoggedIn()) "home" else "login"
 
             NavHost(navController = navController, startDestination = startDestination) {
@@ -78,14 +78,37 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val prefs = remember { context.getSharedPreferences("AccountHistory", Context.MODE_PRIVATE) }
 
     var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+
+    var savedAccounts by remember { mutableStateOf(mapOf<String, String>()) }
+    var expanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val rawString = prefs.getString("saved_accounts", "") ?: ""
+        if (rawString.isNotEmpty()) {
+            val map = mutableMapOf<String, String>()
+            rawString.split(",").forEach { entry ->
+                val parts = entry.split("|")
+                if (parts.size == 2) {
+                    map[parts[0]] = parts[1]
+                }
+            }
+            savedAccounts = map
+        }
+    }
+
+    val filteredEmails = savedAccounts.keys.filter {
+        it.contains(emailInput, ignoreCase = true)
+    }
 
     Column(
         modifier = Modifier
@@ -127,12 +150,47 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             ) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-                    LabeledInput(
-                        label = "Email",
-                        placeholder = "Enter Email",
-                        value = emailInput,
-                        onValueChange = { emailInput = it }
-                    )
+                    // --- EMAIL AUTOCOMPLETE FIELD ---
+                    Column {
+                        Text("Email", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
+                        ExposedDropdownMenuBox(
+                            expanded = expanded && filteredEmails.isNotEmpty(),
+                            onExpandedChange = { expanded = !expanded }
+                        ) {
+                            OutlinedTextField(
+                                value = emailInput,
+                                onValueChange = {
+                                    emailInput = it
+                                    expanded = true
+                                },
+                                placeholder = { Text("Enter Email") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                shape = RoundedCornerShape(8.dp),
+                                singleLine = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = expanded && filteredEmails.isNotEmpty(),
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                filteredEmails.forEach { email ->
+                                    DropdownMenuItem(
+                                        text = { Text(email) },
+                                        onClick = {
+                                            emailInput = email
+                                            passwordInput = savedAccounts[email] ?: ""
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
 
                     LabeledInput(
                         label = "Password",
@@ -161,6 +219,12 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                     isLoading = false
 
                                     if (result.isSuccess) {
+                                        // Save account on success
+                                        val newMap = savedAccounts.toMutableMap()
+                                        newMap[emailInput] = passwordInput
+                                        val saveString = newMap.entries.joinToString(",") { "${it.key}|${it.value}" }
+                                        prefs.edit().putString("saved_accounts", saveString).apply()
+
                                         Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
                                         onLoginSuccess()
                                     } else {
