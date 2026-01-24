@@ -58,12 +58,69 @@
         <button class="export-btn">Export Data</button>
       </div>
 
+      <!-- Stats Cards -->
+      <div class="stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+        <div class="stat-card" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="font-size: 32px; font-weight: 700; color: #059669;" id="todayAttendance">-</div>
+          <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Today's Attendance</div>
+          <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Loading...</div>
+        </div>
+        <div class="stat-card" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="font-size: 32px; font-weight: 700; color: #3b82f6;" id="totalUsers">-</div>
+          <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Total Users</div>
+          <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Loading...</div>
+        </div>
+        <div class="stat-card" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="font-size: 32px; font-weight: 700; color: #f59e0b;" id="currentlyActive">-</div>
+          <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Currently Active</div>
+          <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Loading...</div>
+        </div>
+        <div class="stat-card" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="font-size: 32px; font-weight: 700; color: #ef4444;" id="lateToday">-</div>
+          <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Late Today</div>
+          <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Chart Section -->
+      <div class="chart-section" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #111827;">7-Day Attendance Trend</h3>
+        <div id="attendanceChart" style="height: 200px; background: #f9fafb; border-radius: 8px; display: flex; align-items: end; justify-content: space-around; padding: 20px;">
+          <div style="background: #3b82f6; width: 30px; height: 80%; border-radius: 4px 4px 0 0; position: relative;">
+            <span style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #6b7280;">Mon</span>
+          </div>
+          <div style="background: #3b82f6; width: 30px; height: 90%; border-radius: 4px 4px 0 0; position: relative;">
+            <span style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #6b7280;">Tue</span>
+          </div>
+          <div style="background: #3b82f6; width: 30px; height: 70%; border-radius: 4px 4px 0 0; position: relative;">
+            <span style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #6b7280;">Wed</span>
+          </div>
+          <div style="background: #3b82f6; width: 30px; height: 85%; border-radius: 4px 4px 0 0; position: relative;">
+            <span style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #6b7280;">Thu</span>
+          </div>
+          <div style="background: #3b82f6; width: 30px; height: 95%; border-radius: 4px 4px 0 0; position: relative;">
+            <span style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #6b7280;">Fri</span>
+          </div>
+          <div style="background: #3b82f6; width: 30px; height: 60%; border-radius: 4px 4px 0 0; position: relative;">
+            <span style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #6b7280;">Sat</span>
+          </div>
+          <div style="background: #3b82f6; width: 30px; height: 40%; border-radius: 4px 4px 0 0; position: relative;">
+            <span style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #6b7280;">Sun</span>
+          </div>
+        </div>
+      </div>
+
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
 
       <div class="recent-activity">
         <h2 style="font-size: 20px; margin-bottom: 16px; color: #111827;">Recent Clock-ins</h2>
         <div id="activityFeed">
           <p style="text-align: center; color: #9ca3af;">Loading recent activity...</p>
+        </div>
+        <div id="pagination" style="display: none; text-align: center; margin-top: 20px;">
+          <button id="prevBtn" onclick="changePage(-1)" style="margin: 0 5px; padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer;">Previous</button>
+          <span id="pageInfo" style="margin: 0 15px; color: #6b7280;"></span>
+          <button id="nextBtn" onclick="changePage(1)" style="margin: 0 5px; padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer;">Next</button>
         </div>
       </div>
 
@@ -76,16 +133,9 @@
 <script>
 function performSearch() {
   const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
-  const rows = document.querySelectorAll('.user-row');
   
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    if (!searchTerm || text.includes(searchTerm)) {
-      row.style.display = 'flex';
-    } else {
-      row.style.display = 'none';
-    }
-  });
+  // Send search term to the dashboard script
+  window.postMessage({ type: 'search', term: searchTerm }, '*');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

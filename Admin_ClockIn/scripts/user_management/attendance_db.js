@@ -3,6 +3,9 @@ const USERS_COLLECTION = 'user_employee_data';
 const SUB_COLLECTION = 'user_attendance';
 
 let userAttendance = []; 
+let allUserAttendance = [];
+let currentPage = 1;
+const usersPerPage = 10;
 let expandedRows = {};   
 let expandedAddForms = {}; 
 let editingRecordId = null;
@@ -44,6 +47,7 @@ function loadUsersFromDB() {
       });
 
       userAttendance = await Promise.all(userPromises);
+      allUserAttendance = [...userAttendance];
       render();
     })
     .catch(err => {
@@ -113,8 +117,13 @@ function toggleAddForm(uid) {
 }
 
 function render() {
+  const totalPages = Math.ceil(allUserAttendance.length / usersPerPage);
+  const startIndex = (currentPage - 1) * usersPerPage;
+  const endIndex = startIndex + usersPerPage;
+  const pageUsers = allUserAttendance.slice(startIndex, endIndex);
+  
   attendanceList.innerHTML = '';
-  userAttendance.forEach(user => {
+  pageUsers.forEach(user => {
     const isExpanded = !!expandedRows[user.uid];
     const isAddFormOpen = !!expandedAddForms[user.uid];
     const row = document.createElement('div');
@@ -211,11 +220,41 @@ function render() {
     }
     attendanceList.appendChild(row);
   });
+  
+  updatePagination(totalPages);
+}
+
+function updatePagination(totalPages) {
+  const pagination = document.getElementById('pagination');
+  const pageInfo = document.getElementById('pageInfo');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  
+  if (totalPages > 1) {
+    pagination.style.display = 'block';
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages;
+    prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
+    nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
+  } else {
+    pagination.style.display = 'none';
+  }
+}
+
+function changePage(direction) {
+  const totalPages = Math.ceil(allUserAttendance.length / usersPerPage);
+  const newPage = currentPage + direction;
+  
+  if (newPage >= 1 && newPage <= totalPages) {
+    currentPage = newPage;
+    render();
+  }
 }
 
 function sortByName() {
   const sortIcon = document.getElementById('sortIcon');
-  userAttendance.sort((a, b) => {
+  allUserAttendance.sort((a, b) => {
     const nameA = (a.name || '').toLowerCase();
     const nameB = (b.name || '').toLowerCase();
     return sortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
@@ -223,6 +262,7 @@ function sortByName() {
   sortAscending = !sortAscending;
   sortIcon.style.display = 'inline';
   sortIcon.textContent = sortAscending ? '↓' : '↑';
+  currentPage = 1;
   render();
 }
 

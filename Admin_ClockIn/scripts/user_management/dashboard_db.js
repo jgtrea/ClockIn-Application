@@ -1,3 +1,34 @@
+let allRecords = [];
+let filteredRecords = [];
+let currentPage = 1;
+const recordsPerPage = 10;
+let currentSearchTerm = '';
+let dashboardStats = {
+  totalUsers: 0,
+  todayPresent: 0,
+  todayTotal: 0,
+  currentlyActive: 0,
+  lateToday: 0
+};
+
+function updateDashboardStats() {
+  // Update stats cards with real data
+  const todayAttendanceEl = document.getElementById('todayAttendance');
+  const totalUsersEl = document.getElementById('totalUsers');
+  const currentlyActiveEl = document.getElementById('currentlyActive');
+  const lateTodayEl = document.getElementById('lateToday');
+  
+  if (todayAttendanceEl) {
+    const percentage = dashboardStats.todayTotal > 0 ? Math.round((dashboardStats.todayPresent / dashboardStats.todayTotal) * 100) : 0;
+    todayAttendanceEl.textContent = `${dashboardStats.todayPresent}/${dashboardStats.todayTotal}`;
+    todayAttendanceEl.nextElementSibling.nextElementSibling.textContent = `${percentage}% Present`;
+  }
+  
+  if (totalUsersEl) totalUsersEl.textContent = dashboardStats.totalUsers;
+  if (currentlyActiveEl) currentlyActiveEl.textContent = dashboardStats.currentlyActive;
+  if (lateTodayEl) lateTodayEl.textContent = dashboardStats.lateToday;
+}
+
 function loadRecentActivity() {
   const activityFeed = document.getElementById('activityFeed');
   if (!activityFeed || !window.db) {
@@ -11,7 +42,16 @@ function loadRecentActivity() {
     .get()
     .then(async (usersSnapshot) => {
       console.log('Found users:', usersSnapshot.docs.length);
-      let allRecords = [];
+      allRecords = [];
+      
+      // Reset stats
+      dashboardStats.totalUsers = usersSnapshot.docs.length;
+      dashboardStats.todayPresent = 0;
+      dashboardStats.todayTotal = usersSnapshot.docs.length;
+      dashboardStats.currentlyActive = 0;
+      dashboardStats.lateToday = 0;
+      
+      const today = new Date().toISOString().split('T')[0];
 
       for (const userDoc of usersSnapshot.docs) {
         const userData = userDoc.data();
@@ -25,10 +65,32 @@ function loadRecentActivity() {
             .get();
 
           console.log(`${userName} has ${attendanceSnap.docs.length} attendance records`);
+          
+          let userPresentToday = false;
+          let userLateToday = false;
+          let userActiveToday = false;
 
           attendanceSnap.docs.forEach(doc => {
             const data = doc.data();
-            console.log('Record data:', data);
+            const recordDate = data.date;
+            
+            // Check if record is from today
+            if (recordDate === today) {
+              userPresentToday = true;
+              
+              // Check if late (assuming 9:00 AM is the cutoff)
+              const timeIn = data.timeIn || data.time_in;
+              if (timeIn && timeIn > '09:00') {
+                userLateToday = true;
+              }
+              
+              // Check if currently active (has time_in but no time_out or time_out is empty)
+              const timeOut = data.timeOut || data.time_out;
+              if (timeIn && (!timeOut || timeOut === '')) {
+                userActiveToday = true;
+              }
+            }
+            
             allRecords.push({
               userName: userName,
               timeIn: data.timeIn || data.time_in || 'N/A',
@@ -37,6 +99,12 @@ function loadRecentActivity() {
               timestamp: data.timestamp || null
             });
           });
+          
+          // Update stats
+          if (userPresentToday) dashboardStats.todayPresent++;
+          if (userLateToday) dashboardStats.lateToday++;
+          if (userActiveToday) dashboardStats.currentlyActive++;
+          
         } catch (e) {
           console.log('Error for', userName, ':', e);
         }
@@ -66,27 +134,10 @@ function loadRecentActivity() {
         return 0;
       });
       
-      console.log('After sorting:', allRecords.map(r => r.date + ' ' + r.timeIn));
-
-      const recentRecords = allRecords.slice(0, 10);
-
-      if (recentRecords.length === 0) {
-        activityFeed.innerHTML = '<p style="text-align: center; color: #9ca3af;">No recent clock-ins</p>';
-        return;
-      }
-
-      activityFeed.innerHTML = recentRecords.map(record => `
-        <div class="user-row" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-weight: 700; font-size: 16px; color: #111827;">${record.userName}</div>
-            <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.date} • Room ${record.room}</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-weight: 600; color: #059669;">${record.timeIn}</div>
-            <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Clocked in</div>
-          </div>
-        </div>
-      `).join('');
+      console.log('Dashboard Stats:', dashboardStats);
+      updateDashboardStats();
+      filteredRecords = [...allRecords];
+      renderPage();
     })
     .catch(err => {
       console.error('Error loading activity:', err);
@@ -94,20 +145,76 @@ function loadRecentActivity() {
     });
 }
 
+function renderPage() {
+  const activityFeed = document.getElementById('activityFeed');
+  const pagination = document.getElementById('pagination');
+  const pageInfo = document.getElementById('pageInfo');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  
+  if (filteredRecords.length === 0) {
+    activityFeed.innerHTML = '<p style="text-align: center; color: #9ca3af;">No recent clock-ins</p>';
+    pagination.style.display = 'none';
+    return;
+  }
+  
+  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+  const startIndex = (currentPage - 1) * recordsPerPage;
+  const endIndex = startIndex + recordsPerPage;
+  const pageRecords = filteredRecords.slice(startIndex, endIndex);
+  
+  activityFeed.innerHTML = pageRecords.map(record => `
+    <div class="user-row" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-weight: 700; font-size: 16px; color: #111827;">${record.userName}</div>
+        <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.date} • Room ${record.room}</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-weight: 600; color: #059669;">${record.timeIn}</div>
+        <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Clocked in</div>
+      </div>
+    </div>
+  `).join('');
+  
+  if (totalPages > 1) {
+    pagination.style.display = 'block';
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages;
+    prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
+    nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
+  } else {
+    pagination.style.display = 'none';
+  }
+}
+
+function changePage(direction) {
+  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+  const newPage = currentPage + direction;
+  
+  if (newPage >= 1 && newPage <= totalPages) {
+    currentPage = newPage;
+    renderPage();
+  }
+}
+
 loadRecentActivity();
 
 window.addEventListener('message', function(event) {
   if (event.data.type === 'search') {
-    const searchTerm = event.data.term;
-    const rows = document.querySelectorAll('.user-row');
+    const searchTerm = event.data.term.toLowerCase();
+    currentSearchTerm = searchTerm;
     
-    rows.forEach(row => {
-      const text = row.textContent.toLowerCase();
-      if (!searchTerm || text.includes(searchTerm)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
+    if (!searchTerm) {
+      filteredRecords = [...allRecords];
+    } else {
+      filteredRecords = allRecords.filter(record => {
+        const text = `${record.userName} ${record.date} ${record.room}`.toLowerCase();
+        return text.includes(searchTerm);
+      });
+    }
+    
+    currentPage = 1; // Reset to first page when searching
+    renderPage();
   }
 });

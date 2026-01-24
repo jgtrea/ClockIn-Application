@@ -70,6 +70,11 @@
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
 
       <div id="scheduleList"></div>
+      <div id="pagination" style="display: none; text-align: center; margin-top: 20px;">
+        <button id="prevBtn" onclick="changePage(-1)" style="margin: 0 5px; padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer;">Previous</button>
+        <span id="pageInfo" style="margin: 0 15px; color: #6b7280;"></span>
+        <button id="nextBtn" onclick="changePage(1)" style="margin: 0 5px; padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer;">Next</button>
+      </div>
     </main>
   </div>
 </div>

@@ -72,6 +72,11 @@
       
       <div class="users-table">
         <div id="usersList"></div>
+        <div id="pagination" style="display: none; text-align: center; margin-top: 20px;">
+          <button id="prevBtn" onclick="changePage(-1)" style="margin: 0 5px; padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer;">Previous</button>
+          <span id="pageInfo" style="margin: 0 15px; color: #6b7280;"></span>
+          <button id="nextBtn" onclick="changePage(1)" style="margin: 0 5px; padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer;">Next</button>
+        </div>
       </div>
 
     </main>
