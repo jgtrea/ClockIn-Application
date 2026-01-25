@@ -18,7 +18,8 @@ data class AttendanceItem(
     val details: String,
     val timeIn: String,
     val timeOut: String,
-    val isLate: Boolean = false
+    val isLate: Boolean = false,
+    val isPresent: Boolean = false
 )
 
 @Composable
@@ -44,7 +45,8 @@ fun AttendanceScreen(navController: NavController) {
                         details = "Status: ${record.status}",
                         timeIn = record.time_in,
                         timeOut = if (record.time_out.isNotEmpty()) record.time_out else "--:--",
-                        isLate = record.status == "Late"
+                        isLate = record.status == "Late",
+                        isPresent = record.status == "Present"
                     ) to record.date
                 }
                 attendanceMap = items.groupBy({ it.second }, { it.first })
@@ -179,6 +181,7 @@ fun AttendanceCard(item: AttendanceItem) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(item.timeIn, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+
                             if (item.isLate) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Surface(
@@ -186,7 +189,21 @@ fun AttendanceCard(item: AttendanceItem) {
                                     shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Text(
-                                        "late",
+                                        "Late",
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } else if (item.isPresent) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    color = Color(0xFF4CAF50),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        "Present",
                                         color = Color.White,
                                         fontSize = 10.sp,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),

@@ -7,6 +7,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class UserProfile(
     val id: String = "",
@@ -38,7 +41,8 @@ data class ScheduleRecord(
 data class NotificationItem(
     val header: String = "",
     val message: String = "",
-    val dateCreated: Timestamp? = null
+    val dateCreated: Timestamp? = null,
+    val notifId: Int = 0
 )
 
 object FirebaseEmployeeManager {
@@ -137,9 +141,32 @@ object FirebaseEmployeeManager {
 
             if (scheduleQuery.isEmpty) return false
 
-            val roomNumber = scheduleQuery.documents[0].getString("room") ?: ""
+            val scheduleDoc = scheduleQuery.documents[0]
+            val roomNumber = scheduleDoc.getString("room") ?: ""
+            val startTimeStr = scheduleDoc.getString("start_time") ?: "00:00"
 
-            val attendanceQuery = db.collection("user_employee_data")
+            val activeSessionQuery = db.collection("user_employee_data")
+                .document(currentUser.id)
+                .collection("user_attendance")
+                .whereEqualTo("room", roomNumber)
+                .whereIn("status", listOf("Present", "Late"))
+                .get()
+                .await()
+
+            if (!activeSessionQuery.isEmpty) {
+                val attendanceDoc = activeSessionQuery.documents[0]
+                val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+
+                attendanceDoc.reference.update(
+                    mapOf(
+                        "status" to "Completed",
+                        "time_out" to currentTime
+                    )
+                ).await()
+                return true
+            }
+
+            val unattendedQuery = db.collection("user_employee_data")
                 .document(currentUser.id)
                 .collection("user_attendance")
                 .whereEqualTo("room", roomNumber)
@@ -147,18 +174,42 @@ object FirebaseEmployeeManager {
                 .get()
                 .await()
 
-            if (attendanceQuery.isEmpty) return false
+            if (!unattendedQuery.isEmpty) {
+                val attendanceDoc = unattendedQuery.documents[0]
 
-            val attendanceDoc = attendanceQuery.documents[0]
+                val format = SimpleDateFormat("HH:mm", Locale.getDefault())
+                val now = Date()
+                val currentTimeStr = format.format(now)
 
-            attendanceDoc.reference.update(
-                mapOf(
-                    "status" to "Present",
-                    "timestamp" to FieldValue.serverTimestamp()
-                )
-            ).await()
+                var newStatus = "Present"
 
-            true
+                try {
+                    val dateStart = format.parse(startTimeStr)
+                    val dateNow = format.parse(currentTimeStr)
+
+                    if (dateStart != null && dateNow != null) {
+                        val diffMillis = dateNow.time - dateStart.time
+                        val diffMinutes = diffMillis / (1000 * 60)
+
+                        if (diffMinutes > 15) {
+                            newStatus = "Late"
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("Manager", "Time parsing error", e)
+                }
+
+                attendanceDoc.reference.update(
+                    mapOf(
+                        "status" to newStatus,
+                        "time_in" to currentTimeStr,
+                        "timestamp" to FieldValue.serverTimestamp()
+                    )
+                ).await()
+                return true
+            }
+
+            return false
         } catch (e: Exception) {
             Log.e("FirebaseManager", "QR Workflow Failed", e)
             false
@@ -202,6 +253,7 @@ object FirebaseEmployeeManager {
                 .orderBy("dateCreated", Query.Direction.DESCENDING)
                 .get()
                 .await()
+
             snapshot.toObjects(NotificationItem::class.java)
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error fetching notifications", e)
