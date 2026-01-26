@@ -28,8 +28,6 @@ function updateDashboardStats() {
   if (lateTodayEl) lateTodayEl.textContent = dashboardStats.lateToday;
 }
 
-// Chart for the week/month/yearly
-
 function loadRecentActivity() {
   const activityFeed = document.getElementById('activityFeed');
   if (!activityFeed || !window.db) {
@@ -219,112 +217,6 @@ async function getWeeklyAttendanceData() {
   return weeklyData;
 }
 
-loadRecentActivity();
-
-window.addEventListener('message', function(event) {
-  if (event.data.type === 'search') {
-    const searchTerm = event.data.term.toLowerCase();
-    currentSearchTerm = searchTerm;
-    
-    if (!searchTerm) {
-      filteredRecords = [...allRecords];
-    } else {
-      filteredRecords = allRecords.filter(record => {
-        const text = `${record.userName} ${record.date} ${record.room}`.toLowerCase();
-        return text.includes(searchTerm);
-      });
-    }
-    
-    currentPage = 1;
-    renderPage();
-  }
-});
-
-function performSearch() {
-  const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
-  window.postMessage({ type: 'search', term: searchTerm }, '*');
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  const searchInput = document.getElementById('globalSearch');
-  if (searchInput) {
-    searchInput.addEventListener('keyup', performSearch);
-  }
-});
-function switchTrend(trend) {
-  currentTrend = trend;
-  
-  // Update button styles
-  document.querySelectorAll('[id$="Btn"]').forEach(btn => {
-    btn.style.background = 'white';
-    btn.style.color = '#6b7280';
-    btn.style.border = '1px solid #d1d5db';
-  });
-  
-  const activeBtn = document.getElementById(trend + 'Btn');
-  activeBtn.style.background = '#FF725E';
-  activeBtn.style.color = 'white';
-  activeBtn.style.border = '1px solid #FF725E';
-  
-  // Update chart
-  updateChartForTrend(trend);
-}
-
-async function updateChartForTrend(trend) {
-  let data;
-  switch(trend) {
-    case 'weekly':
-      data = await getWeeklyAttendanceData();
-      break;
-    case 'monthly':
-      data = await getMonthlyAttendanceData();
-      break;
-    case 'yearly':
-      data = await getYearlyAttendanceData();
-      break;
-  }
-  updateChart(data, trend);
-}
-
-async function getMonthlyAttendanceData() {
-  const monthlyData = [];
-  const today = new Date();
-  
-  for (let i = 0; i < 12; i++) {
-    const date = new Date(today.getFullYear(), today.getMonth() - (5 - i), 1);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    
-    let monthCount = 0;
-    for (const record of allRecords) {
-      if (record.date && record.date.startsWith(`${year}-${month}`)) {
-        monthCount++;
-      }
-    }
-    monthlyData.push(monthCount);
-  }
-  
-  return monthlyData;
-}
-
-async function getYearlyAttendanceData() {
-  const yearlyData = [];
-  const currentYear = new Date().getFullYear();
-  
-  for (let i = 0; i < 5; i++) {
-    const year = currentYear - (2 - i);
-    
-    let yearCount = 0;
-    for (const record of allRecords) {
-      if (record.date && record.date.startsWith(year.toString())) {
-        yearCount++;
-      }
-    }
-    yearlyData.push(yearCount);
-  }
-  
-  return yearlyData;
-}
 loadRecentActivity();
 
 window.addEventListener('message', function(event) {

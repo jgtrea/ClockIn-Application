@@ -1,0 +1,163 @@
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.stat-value.today-attendance { color: #059669; }
+.stat-value.total-users { color: #3b82f6; }
+.stat-value.currently-active { color: #f59e0b; }
+.stat-value.late-today { color: #ef4444; }
+
+.stat-label {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.stat-sublabel {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.chart-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.chart-title {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+#attendanceChart {
+  height: 200px;
+  background: #f9fafb;
+  border-radius: 8px;
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.chart-bar {
+  border-radius: 4px 4px 0 0;
+  position: absolute;
+}
+
+.chart-day-label {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.section-divider {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 0 0 20px 0;
+}
+
+.recent-activity-title {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #111827;
+}
+
+.loading-text {
+  text-align: center;
+  color: #9ca3af;
+}
+
+.user-row {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-name {
+  font-weight: 700;
+  font-size: 16px;
+  color: #111827;
+}
+
+.user-details {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.user-time {
+  text-align: right;
+}
+
+.time-in {
+  font-weight: 600;
+  color: #059669;
+}
+
+.time-label {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+#pagination {
+  display: none;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.pagination-btn {
+  margin: 0 5px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.page-info {
+  margin: 0 15px;
+  color: #6b7280;
+}
+.trend-btn {
+  margin: 0 4px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.trend-btn.active {
+  border: 1px solid #FF725E;
+  background: #FF725E;
+  color: white;
+}
