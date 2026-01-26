@@ -62,7 +62,10 @@ document.addEventListener('DOMContentLoaded', async () => {
               <label>Email</label><input type="text" id="email-${user.uid}" value="${user.email || ''}">
               <label>Password</label><input type="password" id="password-${user.uid}" value="${user.password || ''}">
               <label>Department</label><input type="text" id="dept-${user.uid}" value="${user.department || ''}">
-              <label>Employment</label><input type="text" id="emp-${user.uid}" value="${user.employment || ''}">
+              <label>Employment</label><select id="emp-${user.uid}">
+                <option value="Full-time" ${user.employment === 'Full-time' ? 'selected' : ''}>Full-time</option>
+                <option value="Part-time" ${user.employment === 'Part-time' ? 'selected' : ''}>Part-time</option>
+              </select>
             </div>
           </div>
           <div class="sidebar-actions">

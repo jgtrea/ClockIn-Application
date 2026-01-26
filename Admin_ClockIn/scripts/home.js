@@ -2,6 +2,47 @@ document.addEventListener('DOMContentLoaded', () => {
   const sectionsContainer = document.getElementById('sectionsContainer');
   const searchInput = document.getElementById('sectionSearch');
   
+  // Profile functionality
+  const profileCircle = document.getElementById('profileCircle');
+  const profileMenu = document.getElementById('profileMenu');
+  const profileName = document.getElementById('profileName');
+  const profileEmail = document.getElementById('profileEmail');
+  const profileCircleMenu = document.getElementById('profileCircleMenu');
+  const logoutBtn = document.getElementById('logoutBtn');
+  
+  if (profileCircle && profileMenu) {
+    profileCircle.addEventListener('click', () => {
+      profileMenu.classList.toggle('show');
+    });
+    
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.profile-wrapper')) {
+        profileMenu.classList.remove('show');
+      }
+    });
+  }
+  
+  if (window.auth) {
+    window.auth.onAuthStateChanged(user => {
+      if (user) {
+        const displayName = user.displayName || user.email.split('@')[0];
+        const letter = displayName.charAt(0).toUpperCase();
+        
+        if (profileCircle) profileCircle.textContent = letter;
+        if (profileCircleMenu) profileCircleMenu.textContent = letter;
+        if (profileName) profileName.textContent = displayName;
+        if (profileEmail) profileEmail.textContent = user.email;
+      }
+    });
+  }
+  
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await window.auth.signOut();
+      window.top.location.href = '../Login_Path/login.html';
+    });
+  }
+  
   if (searchInput) {
     searchInput.addEventListener('keyup', searchSections);
   }

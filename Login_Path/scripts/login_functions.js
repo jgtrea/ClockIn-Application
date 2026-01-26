@@ -24,8 +24,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+// Check if user is already logged in and redirect
 onAuthStateChanged(auth, (user) => {
   console.log('onAuthStateChanged ->', user);
+  if (user) {
+    const isAdmin = adminEmails.includes(user.email);
+    if (isAdmin) {
+      window.location.href = '../Admin_ClockIn/index.html';
+    } else {
+      window.location.href = '../User_ClockIn/index_user.html';
+    }
+  }
 });
 
 const loginForm = document.getElementById('loginForm');

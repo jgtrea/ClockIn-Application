@@ -12,6 +12,20 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="../Firebase/firebase_config.js" defer></script>
   <script src="scripts/home_user.js" defer></script>
+  <script>
+    // Authentication guard
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (window.auth) {
+          window.auth.onAuthStateChanged(user => {
+            if (!user) {
+              window.location.href = '../Login_Path/login.html';
+            }
+          });
+        }
+      }, 1000);
+    });
+  </script>
 </head>
 <body>
 
