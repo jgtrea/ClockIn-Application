@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="user-subtitle">${subtitle}</div>
           </div>
           <div class="btn-group">
-            <button class="btn-outline" onclick="event.stopPropagation(); window.toggleUser('${user.uid}')">View</button>
+            <button class="btn-outline" onclick="event.stopPropagation(); window.toggleUser('${user.uid}')">Edit</button>
             <button class="btn-outline" onclick="event.stopPropagation(); window.deleteUser('${user.uid}')">Delete</button>
           </div>
         </div>

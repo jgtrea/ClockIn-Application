@@ -205,13 +205,13 @@ async function getWeeklyAttendanceData() {
     date.setDate(today.getDate() - (3 - i));
     const dateString = date.toISOString().split('T')[0];
     
-    let dayCount = 0;
+    const uniqueUsers = new Set();
     for (const record of allRecords) {
       if (record.date === dateString) {
-        dayCount++;
+        uniqueUsers.add(record.userName);
       }
     }
-    weeklyData[i] = dayCount;
+    weeklyData[i] = uniqueUsers.size;
   }
   
   return weeklyData;

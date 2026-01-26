@@ -51,7 +51,7 @@ function updateChart(attendanceData, trend = 'weekly') {
     }
     
     const chartWidth = chart.offsetWidth - 50;
-    const barWidth = Math.min(40, chartWidth / 7 - 10);
+    const barWidth = Math.min(60, chartWidth / 7 - 10);
     const barSpacing = chartWidth / 7;
     const barLeft = 25 + (index * barSpacing) + (barSpacing - barWidth) / 2;
     
@@ -59,7 +59,12 @@ function updateChart(attendanceData, trend = 'weekly') {
     bar.className = 'chart-bar';
     const hasData = value > 0;
     const barColor = isToday ? '#3b82f6' : (hasData ? '#d1d5db' : '#f3f4f6');
-    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${barColor}; border-radius: 4px 4px 0 0; ${!hasData ? 'opacity: 0.5;' : ''}`;
+    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${barColor}; border-radius: 4px 4px 0 0; ${!hasData ? 'opacity: 0.5;' : ''} display: flex; align-items: center; justify-content: center; color: ${isToday ? '#fff' : '#6b7280'}; font-size: 12px; font-weight: 600;`;
+    
+    if (hasData) {
+      const percentage = dashboardStats.totalUsers > 0 ? Math.round((value / dashboardStats.totalUsers) * 100) : 0;
+      bar.textContent = percentage + '%';
+    }
     
     chart.appendChild(bar);
   });
@@ -159,14 +164,14 @@ async function getWeeklyAttendanceData() {
     const dateString = date.toISOString().split('T')[0];
     console.log(`Day ${i}: ${dateString}`);
     
-    let dayCount = 0;
+    const uniqueUsers = new Set();
     for (const record of allRecords) {
       if (record.date === dateString) {
-        dayCount++;
+        uniqueUsers.add(record.userName);
       }
     }
-    console.log(`Count for ${dateString}: ${dayCount}`);
-    weeklyData[i] = dayCount;
+    weeklyData[i] = uniqueUsers.size;
+    console.log(`Unique users for ${dateString}: ${uniqueUsers.size}`);
   }
   
   console.log('Weekly data:', weeklyData);
@@ -182,13 +187,13 @@ async function getMonthlyAttendanceData() {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     
-    let monthCount = 0;
+    const uniqueUsers = new Set();
     for (const record of allRecords) {
       if (record.date && record.date.startsWith(`${year}-${month}`)) {
-        monthCount++;
+        uniqueUsers.add(record.userName);
       }
     }
-    monthlyData.push(monthCount);
+    monthlyData.push(uniqueUsers.size);
   }
   
   return monthlyData;
@@ -201,13 +206,13 @@ async function getYearlyAttendanceData() {
   for (let i = 0; i < 7; i++) {
     const year = currentYear - (3 - i);
     
-    let yearCount = 0;
+    const uniqueUsers = new Set();
     for (const record of allRecords) {
       if (record.date && record.date.startsWith(year.toString())) {
-        yearCount++;
+        uniqueUsers.add(record.userName);
       }
     }
-    yearlyData.push(yearCount);
+    yearlyData.push(uniqueUsers.size);
   }
   
   return yearlyData;
