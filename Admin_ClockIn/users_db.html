@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   <link rel="stylesheet" href="styles/topbar.css">
   <link rel="stylesheet" href="styles/user_ui.css">
-  <link rel="stylesheet" href="styles/container_card/user_add_card.css">
+  <link rel="stylesheet" href="styles/container_card/attendance_add_card.css">
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -18,9 +18,6 @@
   <script src="scripts/user_management/users_db.js" defer></script>
   <script src="scripts/filter_user.js" defer></script>
 </head>
-
-<!-- TODO: Make drop down choices -->
-<!-- TODO: Improve ui or design? -->
 
 <body data-page="users_db">
 
@@ -73,9 +70,9 @@
       <div class="users-table">
         <div id="usersList"></div>
         <div id="pagination" style="display: none; text-align: center; margin-top: 20px;">
-          <button id="prevBtn" onclick="changePage(-1)" style="margin: 0 5px; padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer;">Previous</button>
+          <button id="prevBtn" onclick="changePage(-1)" class="btn-outline" style="margin: 0 5px;">Previous</button>
           <span id="pageInfo" style="margin: 0 15px; color: #6b7280;"></span>
-          <button id="nextBtn" onclick="changePage(1)" style="margin: 0 5px; padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer;">Next</button>
+          <button id="nextBtn" onclick="changePage(1)" class="btn-outline" style="margin: 0 5px;">Next</button>
         </div>
       </div>
 

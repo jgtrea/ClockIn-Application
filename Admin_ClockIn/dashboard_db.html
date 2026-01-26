@@ -90,11 +90,11 @@
       <div class="chart-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <h3 class="chart-title">Attendance Trend</h3>
-          <div>
-            <button id="weeklyBtn" onclick="switchTrend('weekly')" class="trend-btn active">Weekly</button>
-            <button id="monthlyBtn" onclick="switchTrend('monthly')" class="trend-btn">Monthly</button>
-            <button id="yearlyBtn" onclick="switchTrend('yearly')" class="trend-btn">Yearly</button>
-          </div>
+          <select id="trendSelect" onchange="onTrendChange()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
         </div>
         <div id="attendanceChart">
         </div>

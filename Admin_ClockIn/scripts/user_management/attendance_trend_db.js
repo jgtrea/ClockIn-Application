@@ -57,7 +57,9 @@ function updateChart(attendanceData, trend = 'weekly') {
     
     const bar = document.createElement('div');
     bar.className = 'chart-bar';
-    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${isToday ? '#3b82f6' : '#d1d5db'}; border-radius: 4px 4px 0 0;`;
+    const hasData = value > 0;
+    const barColor = isToday ? '#3b82f6' : (hasData ? '#d1d5db' : '#f3f4f6');
+    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${barColor}; border-radius: 4px 4px 0 0; ${!hasData ? 'opacity: 0.5;' : ''}`;
     
     chart.appendChild(bar);
   });
@@ -120,20 +122,13 @@ function updateChart(attendanceData, trend = 'weekly') {
   chart.appendChild(weekLabelsContainer);
 }
 
+function onTrendChange() {
+  const select = document.getElementById('trendSelect');
+  switchTrend(select.value);
+}
+
 function switchTrend(trend) {
   currentTrend = trend;
-  
-  document.querySelectorAll('[id$="Btn"]').forEach(btn => {
-    btn.style.background = 'white';
-    btn.style.color = '#6b7280';
-    btn.style.border = '1px solid #d1d5db';
-  });
-  
-  const activeBtn = document.getElementById(trend + 'Btn');
-  activeBtn.style.background = '#FF725E';
-  activeBtn.style.color = 'white';
-  activeBtn.style.border = '1px solid #FF725E';
-  
   updateChartForTrend(trend);
 }
 
