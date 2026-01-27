@@ -255,16 +255,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('users_db: Auth not available; cannot load users.');
   }
   
-  window.sortByName = function() {
-    const sortIcon = document.getElementById('sortIcon');
+  window.sortUsers = function(field) {
     allUsers.sort((a, b) => {
-      const nameA = (a.name || '').toLowerCase();
-      const nameB = (b.name || '').toLowerCase();
-      return sortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      let valueA, valueB;
+      if (field === 'name') {
+        valueA = (a.name || '').toLowerCase();
+        valueB = (b.name || '').toLowerCase();
+      } else if (field === 'id') {
+        valueA = (a.id || '').toLowerCase();
+        valueB = (b.id || '').toLowerCase();
+      } else if (field === 'createdAt') {
+        valueA = a.createdAt || 0;
+        valueB = b.createdAt || 0;
+      }
+      return sortAscending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
     });
     sortAscending = !sortAscending;
-    sortIcon.style.display = 'inline';
-    sortIcon.textContent = sortAscending ? '↓' : '↑';
     currentPage = 1;
     renderUsers();
   };

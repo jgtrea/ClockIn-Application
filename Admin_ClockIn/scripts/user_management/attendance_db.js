@@ -252,16 +252,22 @@ function changePage(direction) {
   }
 }
 
-function sortByName() {
-  const sortIcon = document.getElementById('sortIcon');
+function sortAttendance(field) {
   allUserAttendance.sort((a, b) => {
-    const nameA = (a.name || '').toLowerCase();
-    const nameB = (b.name || '').toLowerCase();
-    return sortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    let valueA, valueB;
+    if (field === 'name') {
+      valueA = (a.name || '').toLowerCase();
+      valueB = (b.name || '').toLowerCase();
+    } else if (field === 'id') {
+      valueA = (a.uid || '').toLowerCase();
+      valueB = (b.uid || '').toLowerCase();
+    } else if (field === 'createdAt') {
+      valueA = a.createdAt || 0;
+      valueB = b.createdAt || 0;
+    }
+    return sortAscending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
   });
   sortAscending = !sortAscending;
-  sortIcon.style.display = 'inline';
-  sortIcon.textContent = sortAscending ? '↓' : '↑';
   currentPage = 1;
   render();
 }
