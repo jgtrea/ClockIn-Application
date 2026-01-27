@@ -189,8 +189,8 @@ fun DashboardScreen(
 
 @Composable
 fun UserMenuHeader() {
-    val userEmail = FirebaseAuth.getInstance().currentUser?.email
-    var userName by remember { mutableStateOf("Loading...") }
+    val userEmail = FirebaseEmployeeManager.getCurrentUserEmail()
+    var userName by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         val userProfile = FirebaseEmployeeManager.getCurrentUser()
@@ -201,11 +201,34 @@ fun UserMenuHeader() {
         modifier = Modifier.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.LightGray))
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFFF7F66)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = userName.firstOrNull()?.uppercase() ?: "",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        }
+
         Spacer(modifier = Modifier.width(12.dp))
+
         Column {
-            Text(userName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(userEmail ?: "No active session", color = Color.Gray, fontSize = 10.sp)
+            Text(
+                text = if (userName.isNotEmpty()) userName else "Loading...",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+            Text(
+                text = userEmail ?: "No active session",
+                color = Color.Gray,
+                fontSize = 10.sp
+            )
         }
     }
 }
@@ -219,6 +242,14 @@ fun DashboardHeader(
     onFAQClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var userName by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        val user = FirebaseEmployeeManager.getCurrentUser()
+        if (user != null) {
+            userName = user.name
+        }
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -235,9 +266,17 @@ fun DashboardHeader(
                 modifier = Modifier
                     .size(50.dp)
                     .clip(CircleShape)
-                    .background(Color.LightGray)
-                    .clickable { expanded = true }
-            )
+                    .background(Color(0xFFFF7F66))
+                    .clickable { expanded = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = userName.firstOrNull()?.uppercase() ?: "",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            }
 
             DropdownMenu(
                 expanded = expanded,
@@ -271,7 +310,6 @@ fun DashboardHeader(
         }
     }
 }
-
 
 @Composable
 fun CustomBottomNavigation(navController: NavController, currentRoute: String) {
