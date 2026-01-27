@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,7 +49,6 @@ import kotlin.math.min
 fun ScannerScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
 
     val bracketSizeDp = 280.dp
 
@@ -94,14 +92,37 @@ fun ScannerScreen(navController: NavController) {
                         if (!isProcessing && (currentTime - lastScanTime > cooldownDuration)) {
                             isProcessing = true
                             lastScanTime = currentTime
+
+                            if (!WifiChecker.isWifiEnabled(context)) {
+                                Toast.makeText(
+                                    context,
+                                    "Please enable WiFi to clock in/out",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                isProcessing = false
+                                return@CameraPreview
+                            }
+
+                            if (!WifiChecker.isConnectedToAllowedWifi(context)) {
+                                val currentWifi = WifiChecker.getCurrentWifiSsid(context) ?: "Unknown"
+                                val requiredWifi = WifiChecker.getAllowedWifiSsid()
+                                Toast.makeText(
+                                    context,
+                                    "Wrong WiFi!\nConnected: $currentWifi\nRequired: $requiredWifi",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                isProcessing = false
+                                return@CameraPreview
+                            }
+
                             Toast.makeText(context, "Verifying...", Toast.LENGTH_SHORT).show()
 
                             scope.launch {
-                                val isValid = FirebaseEmployeeManager.verifyQrCode(code)
+                                val isValid = FirebaseEmployeeManager.verifyQrCode(code, context)
                                 if (isValid) {
-                                    Toast.makeText(context, "Success: Verified!", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "✓ Success: Clock In/Out Recorded!", Toast.LENGTH_LONG).show()
                                 } else {
-                                    Toast.makeText(context, "Failed: Invalid or Inactive QR", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "✗ Failed: Invalid QR or Not Allowed", Toast.LENGTH_LONG).show()
                                 }
                                 isProcessing = false
                             }
@@ -119,15 +140,41 @@ fun ScannerScreen(navController: NavController) {
                 )
             }
 
-            Text(
-                text = if (isProcessing) "Verifying..." else "Align QR code within frame",
-                color = if (isProcessing) Color.Yellow else Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 60.dp)
-            )
+                    .padding(top = 60.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = if (isProcessing) "Verifying..." else "Align QR code within frame",
+                    color = if (isProcessing) Color.Yellow else Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                val isWifiConnected = WifiChecker.isWifiEnabled(context) &&
+                        WifiChecker.isConnectedToAllowedWifi(context)
+                val currentWifi = WifiChecker.getCurrentWifiSsid(context)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isWifiConnected) Color(0xFF4CAF50) else Color(0xFFFF5252)
+                ) {
+                    Text(
+                        text = if (isWifiConnected)
+                            "✓ Connected: ${WifiChecker.getAllowedWifiSsid()}"
+                        else
+                            "✗ Wrong WiFi: ${currentWifi ?: "Not Connected"}",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             Box(
                 modifier = Modifier

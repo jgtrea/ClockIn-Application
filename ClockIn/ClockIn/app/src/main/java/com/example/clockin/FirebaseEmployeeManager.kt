@@ -1,5 +1,6 @@
 package com.example.clockin
 
+import android.content.Context
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -114,15 +115,30 @@ object FirebaseEmployeeManager {
         }
     }
 
-    suspend fun verifyQrCode(code: String): Boolean {
+    suspend fun verifyQrCode(code: String, context: Context): Boolean {
         return try {
+            if (!WifiChecker.isWifiEnabled(context)) {
+                Log.e("FirebaseManager", "WiFi is not enabled")
+                return false
+            }
+
+            if (!WifiChecker.isConnectedToAllowedWifi(context)) {
+                val currentSsid = WifiChecker.getCurrentWifiSsid(context) ?: "Unknown"
+                val requiredSsid = WifiChecker.getAllowedWifiSsid()
+                Log.e("FirebaseManager", "Not connected to allowed WiFi. Current: $currentSsid, Required: $requiredSsid")
+                return false
+            }
+
             val qrQuery = db.collection("qr")
                 .whereEqualTo("qr_id", code)
                 .whereEqualTo("status", true)
                 .get()
                 .await()
 
-            if (qrQuery.isEmpty) return false
+            if (qrQuery.isEmpty) {
+                Log.e("FirebaseManager", "QR code not found or inactive")
+                return false
+            }
 
             val qrDoc = qrQuery.documents[0]
             val schedId = qrDoc.getString("schedId") ?: return false
@@ -139,7 +155,10 @@ object FirebaseEmployeeManager {
                 .get()
                 .await()
 
-            if (scheduleQuery.isEmpty) return false
+            if (scheduleQuery.isEmpty) {
+                Log.e("FirebaseManager", "Schedule not found for user")
+                return false
+            }
 
             val scheduleDoc = scheduleQuery.documents[0]
             val roomNumber = scheduleDoc.getString("room") ?: ""
@@ -163,6 +182,7 @@ object FirebaseEmployeeManager {
                         "time_out" to currentTime
                     )
                 ).await()
+                Log.d("FirebaseManager", "Clock-out successful")
                 return true
             }
 
@@ -206,9 +226,11 @@ object FirebaseEmployeeManager {
                         "timestamp" to FieldValue.serverTimestamp()
                     )
                 ).await()
+                Log.d("FirebaseManager", "Clock-in successful with status: $newStatus")
                 return true
             }
 
+            Log.e("FirebaseManager", "No valid attendance record found")
             return false
         } catch (e: Exception) {
             Log.e("FirebaseManager", "QR Workflow Failed", e)
