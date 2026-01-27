@@ -6,13 +6,13 @@
 
 ##  Features
 
-* ** Secure Authentication:** Employee login using Firebase Authentication.
-* ** QR Code Clock-In/Out:**
+* **Secure Authentication:** Employee login using Firebase Authentication.
+* **QR Code Clock-In/Out:**
     * Scans secure QR codes to log attendance.
     * **Smart Logic:** Automatically toggles between "Clock In" and "Clock Out".
     * **Late Detection:** Automatically marks attendance as "Late" if clocked in >15 minutes after start time.
     * **Prevents Double Scanning:** Rejects scans if a session is already "Completed".
-* ** Location Verification:**
+* **Location Verification:**
     * **WiFi Restriction:** Clock-in is only allowed when connected to a specific Office WiFi network.
     * **BLE Proximity:** Detects nearby Bluetooth Beacons to verify room presence.
 * ** Schedule & History:** View weekly schedules and past attendance records with status badges (Present/Late).
@@ -21,7 +21,7 @@
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 * **Language:** Kotlin
 * **UI Framework:** Jetpack Compose (Material3)
