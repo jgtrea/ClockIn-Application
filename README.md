@@ -15,9 +15,9 @@
 * **Location Verification:**
     * **WiFi Restriction:** Clock-in is only allowed when connected to a specific Office WiFi network.
     * **BLE Proximity:** Detects nearby Bluetooth Beacons to verify room presence.
-* ** Schedule & History:** View weekly schedules and past attendance records with status badges (Present/Late).
-* ** Notifications:** Real-time announcements from the admin.
-* ** Profile Management:** View employee details and logout capability.
+* **Schedule & History:** View weekly schedules and past attendance records with status badges (Present/Late).
+* **Notifications:** Real-time announcements from the admin.
+* **Profile Management:** View employee details and logout capability.
 
 ---
 
