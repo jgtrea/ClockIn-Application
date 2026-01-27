@@ -7,7 +7,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -50,236 +52,229 @@ object FirebaseEmployeeManager {
     private val auth get() = FirebaseAuth.getInstance()
     private val db get() = FirebaseFirestore.getInstance()
 
+    private var currentUserCache: UserProfile? = null
+
     fun isLoggedIn(): Boolean = auth.currentUser != null
 
     fun getCurrentUserEmail(): String? = auth.currentUser?.email
 
     fun signOut() {
         auth.signOut()
+        currentUserCache = null
     }
 
     suspend fun signIn(email: String, pass: String): Result<Boolean> {
-        return try {
-            auth.signInWithEmailAndPassword(email, pass).await()
-            Result.success(true)
-        } catch (e: Exception) {
-            Result.failure(e)
+        return withContext(Dispatchers.IO) {
+            try {
+                auth.signInWithEmailAndPassword(email, pass).await()
+                getCurrentUser()
+                Result.success(true)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
         }
     }
 
-    suspend fun getCurrentUser(): UserProfile? {
+    suspend fun getCurrentUser(forceRefresh: Boolean = false): UserProfile? {
+        if (!forceRefresh && currentUserCache != null) return currentUserCache
+
         val email = auth.currentUser?.email ?: return null
-        try {
-            val adminQuery = db.collection("user_admin_data")
-                .whereEqualTo("email", email).get().await()
-            if (!adminQuery.isEmpty) {
-                val doc = adminQuery.documents[0]
-                return UserProfile(
-                    id = doc.id,
-                    name = doc.getString("name") ?: "",
-                    email = doc.getString("email") ?: "",
-                    department = doc.getString("department") ?: "",
-                    employment = doc.getString("employment") ?: "",
-                    collectionName = "user_admin_data"
-                )
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val empQuery = db.collection("user_employee_data")
+                    .whereEqualTo("email", email).get().await()
+
+                if (!empQuery.isEmpty) {
+                    val doc = empQuery.documents[0]
+                    val profile = UserProfile(
+                        id = doc.id,
+                        name = doc.getString("name") ?: "",
+                        email = doc.getString("email") ?: "",
+                        employeeId = doc.getString("employeeId") ?: "",
+                        department = doc.getString("department") ?: "",
+                        employment = doc.getString("employment") ?: "",
+                        collectionName = "user_employee_data"
+                    )
+                    currentUserCache = profile
+                    return@withContext profile
+                }
+
+                val adminQuery = db.collection("user_admin_data")
+                    .whereEqualTo("email", email).get().await()
+
+                if (!adminQuery.isEmpty) {
+                    val doc = adminQuery.documents[0]
+                    val profile = UserProfile(
+                        id = doc.id,
+                        name = doc.getString("name") ?: "",
+                        email = doc.getString("email") ?: "",
+                        department = doc.getString("department") ?: "",
+                        employment = doc.getString("employment") ?: "",
+                        collectionName = "user_admin_data"
+                    )
+                    currentUserCache = profile
+                    return@withContext profile
+                }
+            } catch (e: Exception) {
+                Log.e("FirebaseManager", "Error fetching user", e)
             }
-            val empQuery = db.collection("user_employee_data")
-                .whereEqualTo("email", email).get().await()
-            if (!empQuery.isEmpty) {
-                val doc = empQuery.documents[0]
-                return UserProfile(
-                    id = doc.id,
-                    name = doc.getString("name") ?: "",
-                    email = doc.getString("email") ?: "",
-                    employeeId = doc.getString("employeeId") ?: "",
-                    department = doc.getString("department") ?: "",
-                    employment = doc.getString("employment") ?: "",
-                    collectionName = "user_employee_data"
-                )
-            }
-        } catch (e: Exception) {
-            Log.e("FirebaseManager", "Error fetching user", e)
+            return@withContext null
         }
-        return null
     }
 
     suspend fun updateUser(profile: UserProfile, field: String, value: String): Boolean {
         if (profile.collectionName.isEmpty() || profile.id.isEmpty()) return false
-        return try {
-            db.collection(profile.collectionName).document(profile.id)
-                .update(field, value).await()
-            true
-        } catch (e: Exception) {
-            Log.e("FirebaseManager", "Update failed", e)
-            false
+        return withContext(Dispatchers.IO) {
+            try {
+                db.collection(profile.collectionName).document(profile.id)
+                    .update(field, value).await()
+                true
+            } catch (e: Exception) {
+                Log.e("FirebaseManager", "Update failed", e)
+                false
+            }
         }
     }
 
     suspend fun verifyQrCode(code: String, context: Context): Boolean {
-        return try {
-            if (!WifiChecker.isWifiEnabled(context)) {
-                Log.e("FirebaseManager", "WiFi is not enabled")
-                return false
-            }
-
-            if (!WifiChecker.isConnectedToAllowedWifi(context)) {
-                val currentSsid = WifiChecker.getCurrentWifiSsid(context) ?: "Unknown"
-                val requiredSsid = WifiChecker.getAllowedWifiSsid()
-                Log.e("FirebaseManager", "Not connected to allowed WiFi. Current: $currentSsid, Required: $requiredSsid")
-                return false
-            }
-
-            val qrQuery = db.collection("qr")
-                .whereEqualTo("qr_id", code)
-                .whereEqualTo("status", true)
-                .get()
-                .await()
-
-            if (qrQuery.isEmpty) {
-                Log.e("FirebaseManager", "QR code not found or inactive")
-                return false
-            }
-
-            val qrDoc = qrQuery.documents[0]
-            val schedId = qrDoc.getString("schedId") ?: return false
-
-            qrDoc.reference.update("scanCount", FieldValue.increment(1)).await()
-
-            val currentUser = getCurrentUser() ?: return false
-            if (currentUser.collectionName != "user_employee_data") return false
-
-            val scheduleQuery = db.collection("user_employee_data")
-                .document(currentUser.id)
-                .collection("user_schedule")
-                .whereEqualTo("schedId", schedId)
-                .get()
-                .await()
-
-            if (scheduleQuery.isEmpty) {
-                Log.e("FirebaseManager", "Schedule not found for user")
-                return false
-            }
-
-            val scheduleDoc = scheduleQuery.documents[0]
-            val roomNumber = scheduleDoc.getString("room") ?: ""
-            val startTimeStr = scheduleDoc.getString("start_time") ?: "00:00"
-
-            val activeSessionQuery = db.collection("user_employee_data")
-                .document(currentUser.id)
-                .collection("user_attendance")
-                .whereEqualTo("room", roomNumber)
-                .whereIn("status", listOf("Present", "Late"))
-                .get()
-                .await()
-
-            if (!activeSessionQuery.isEmpty) {
-                val attendanceDoc = activeSessionQuery.documents[0]
-                val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-
-                attendanceDoc.reference.update(
-                    mapOf(
-                        "status" to "Completed",
-                        "time_out" to currentTime
-                    )
-                ).await()
-                Log.d("FirebaseManager", "Clock-out successful")
-                return true
-            }
-
-            val unattendedQuery = db.collection("user_employee_data")
-                .document(currentUser.id)
-                .collection("user_attendance")
-                .whereEqualTo("room", roomNumber)
-                .whereEqualTo("status", "Unattended")
-                .get()
-                .await()
-
-            if (!unattendedQuery.isEmpty) {
-                val attendanceDoc = unattendedQuery.documents[0]
-
-                val format = SimpleDateFormat("HH:mm", Locale.getDefault())
-                val now = Date()
-                val currentTimeStr = format.format(now)
-
-                var newStatus = "Present"
-
-                try {
-                    val dateStart = format.parse(startTimeStr)
-                    val dateNow = format.parse(currentTimeStr)
-
-                    if (dateStart != null && dateNow != null) {
-                        val diffMillis = dateNow.time - dateStart.time
-                        val diffMinutes = diffMillis / (1000 * 60)
-
-                        if (diffMinutes > 15) {
-                            newStatus = "Late"
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("Manager", "Time parsing error", e)
+        return withContext(Dispatchers.IO) {
+            try {
+                if (!WifiChecker.isWifiEnabled(context) || !WifiChecker.isConnectedToAllowedWifi(context)) {
+                    return@withContext false
                 }
 
-                attendanceDoc.reference.update(
-                    mapOf(
-                        "status" to newStatus,
-                        "time_in" to currentTimeStr,
-                        "timestamp" to FieldValue.serverTimestamp()
-                    )
-                ).await()
-                Log.d("FirebaseManager", "Clock-in successful with status: $newStatus")
-                return true
-            }
+                val qrQuery = db.collection("qr")
+                    .whereEqualTo("qr_id", code)
+                    .whereEqualTo("status", true)
+                    .get()
+                    .await()
 
-            Log.e("FirebaseManager", "No valid attendance record found")
-            return false
-        } catch (e: Exception) {
-            Log.e("FirebaseManager", "QR Workflow Failed", e)
-            false
+                if (qrQuery.isEmpty) return@withContext false
+
+                val qrDoc = qrQuery.documents[0]
+                val schedId = qrDoc.getString("schedId") ?: return@withContext false
+
+                qrDoc.reference.update("scanCount", FieldValue.increment(1))
+
+                val currentUser = getCurrentUser() ?: return@withContext false
+                if (currentUser.collectionName != "user_employee_data") return@withContext false
+
+                val scheduleQuery = db.collection("user_employee_data")
+                    .document(currentUser.id)
+                    .collection("user_schedule")
+                    .whereEqualTo("schedId", schedId)
+                    .get()
+                    .await()
+
+                if (scheduleQuery.isEmpty) return@withContext false
+
+                val scheduleDoc = scheduleQuery.documents[0]
+                val roomNumber = scheduleDoc.getString("room") ?: ""
+                val startTimeStr = scheduleDoc.getString("start_time") ?: "00:00"
+
+                val activeSessionQuery = db.collection("user_employee_data")
+                    .document(currentUser.id)
+                    .collection("user_attendance")
+                    .whereEqualTo("room", roomNumber)
+                    .whereIn("status", listOf("Present", "Late"))
+                    .get()
+                    .await()
+
+                if (!activeSessionQuery.isEmpty) {
+                    val attendanceDoc = activeSessionQuery.documents[0]
+                    val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+                    attendanceDoc.reference.update(mapOf("status" to "Completed", "time_out" to currentTime)).await()
+                    return@withContext true
+                }
+
+                val unattendedQuery = db.collection("user_employee_data")
+                    .document(currentUser.id)
+                    .collection("user_attendance")
+                    .whereEqualTo("room", roomNumber)
+                    .whereEqualTo("status", "Unattended")
+                    .get()
+                    .await()
+
+                if (!unattendedQuery.isEmpty) {
+                    val attendanceDoc = unattendedQuery.documents[0]
+                    val format = SimpleDateFormat("HH:mm", Locale.getDefault())
+                    val currentTimeStr = format.format(Date())
+
+                    var newStatus = "Present"
+                    try {
+                        val dateStart = format.parse(startTimeStr)
+                        val dateNow = format.parse(currentTimeStr)
+                        if (dateStart != null && dateNow != null) {
+                            val diffMinutes = (dateNow.time - dateStart.time) / (1000 * 60)
+                            if (diffMinutes > 15) newStatus = "Late"
+                        }
+                    } catch (e: Exception) { Log.e("Manager", "Time error", e) }
+
+                    attendanceDoc.reference.update(
+                        mapOf(
+                            "status" to newStatus,
+                            "time_in" to currentTimeStr,
+                            "timestamp" to FieldValue.serverTimestamp()
+                        )
+                    ).await()
+                    return@withContext true
+                }
+                return@withContext false
+            } catch (e: Exception) {
+                Log.e("FirebaseManager", "QR Workflow Failed", e)
+                false
+            }
         }
     }
 
     suspend fun getAttendanceHistory(userId: String): List<AttendanceRecord> {
-        return try {
-            val snapshot = db.collection("user_employee_data")
-                .document(userId)
-                .collection("user_attendance")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .get()
-                .await()
+        return withContext(Dispatchers.IO) {
+            try {
+                val snapshot = db.collection("user_employee_data")
+                    .document(userId)
+                    .collection("user_attendance")
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(20)
+                    .get()
+                    .await()
 
-            snapshot.toObjects(AttendanceRecord::class.java)
-        } catch (e: Exception) {
-            Log.e("FirebaseManager", "Error getting attendance", e)
-            emptyList()
+                snapshot.toObjects(AttendanceRecord::class.java)
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 
     suspend fun getUserSchedule(userId: String): List<ScheduleRecord> {
-        return try {
-            val snapshot = db.collection("user_employee_data")
-                .document(userId)
-                .collection("user_schedule")
-                .get()
-                .await()
+        return withContext(Dispatchers.IO) {
+            try {
+                val snapshot = db.collection("user_employee_data")
+                    .document(userId)
+                    .collection("user_schedule")
+                    .get()
+                    .await()
 
-            snapshot.toObjects(ScheduleRecord::class.java)
-        } catch (e: Exception) {
-            Log.e("FirebaseManager", "Error getting schedule", e)
-            emptyList()
+                snapshot.toObjects(ScheduleRecord::class.java)
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 
     suspend fun getNotifications(): List<NotificationItem> {
-        return try {
-            val snapshot = db.collection("notifications")
-                .orderBy("dateCreated", Query.Direction.DESCENDING)
-                .get()
-                .await()
+        return withContext(Dispatchers.IO) {
+            try {
+                val snapshot = db.collection("notifications")
+                    .orderBy("dateCreated", Query.Direction.DESCENDING)
+                    .limit(10)
+                    .get()
+                    .await()
 
-            snapshot.toObjects(NotificationItem::class.java)
-        } catch (e: Exception) {
-            Log.e("FirebaseManager", "Error fetching notifications", e)
-            emptyList()
+                snapshot.toObjects(NotificationItem::class.java)
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 }
