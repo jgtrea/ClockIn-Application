@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Push Notification</title>
+  <link rel="stylesheet" href="styles/user_ui.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="../Firebase/firebase_config.js"></script>
+  <link rel="stylesheet" href="styles/notif.css" />
+</head>
+<body>
+  <div class="pn-wrapper">
+    <div class="card">
+      <div class="card-header">
+        <span class="material-symbols-outlined">notifications_active</span>
+        <div class="title">New Push Notification</div>
+      </div>
+      <div class="separator"></div>
+      <div class="card-body">
+        <div class="field recipients">
+          <div class="label">Send To</div>
+          <div class="recipient-input-row">
+            <input id="pn-recipient-input" class="input" type="text" placeholder="Type a name, email, or 'everyone'" autocomplete="off">
+          </div>
+          <div id="pn-chips" class="chips"></div>
+          <div id="pn-suggestions" class="suggestions"></div>
+        </div>
+
+        <div class="field">
+          <div class="label">Header (optional)</div>
+          <input id="pn-header" class="input" type="text" placeholder="Short title for the notification" />
+        </div>
+        <div class="field">
+          <div class="label">Message</div>
+          <textarea id="pn-message" class="textarea" placeholder="Write your message..."></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="pn-send-primary" class="btn-primary">Send notification</button>
+      </div>
+    </div>
+  </div>
+  <script src="scripts/notif.js"></script>
+</body>
+</html>
