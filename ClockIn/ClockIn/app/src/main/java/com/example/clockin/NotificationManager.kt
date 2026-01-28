@@ -44,32 +44,18 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-
-/**
- * Data class representing a notification toast
- */
 data class NotificationToast(
     val id: String = UUID.randomUUID().toString(),
     val header: String,
     val message: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val duration: Long = 4000L // 4 seconds default
+    val duration: Long = 4000L
 )
 
-/**
- * Global notification state manager
- * Use this object to show notifications from anywhere in the app
- */
 object NotificationManager {
     private val _notifications = mutableStateListOf<NotificationToast>()
     val notifications: List<NotificationToast> = _notifications
 
-    /**
-     * Show a new notification
-     * @param header The title/header of the notification
-     * @param message The message body
-     * @param duration How long to show the notification in milliseconds (default 4000ms)
-     */
     fun show(header: String, message: String, duration: Long = 4000L) {
         _notifications.add(
             NotificationToast(
@@ -80,32 +66,19 @@ object NotificationManager {
         )
     }
 
-    /**
-     * Dismiss a specific notification by ID
-     */
     fun dismiss(id: String) {
         _notifications.removeAll { it.id == id }
     }
 
-    /**
-     * Clear all notifications
-     */
     fun clearAll() {
         _notifications.clear()
     }
 }
 
-/**
- * The main notification overlay composable
- * This should be placed at the root level of your app to show notifications over all screens
- */
 @Composable
 fun NotificationOverlay(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // Main content
         content()
-
-        // Notification overlay layer
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,9 +97,6 @@ fun NotificationOverlay(content: @Composable () -> Unit) {
     }
 }
 
-/**
- * Individual notification toast item with auto-dismiss
- */
 @Composable
 private fun NotificationToastItem(
     notification: NotificationToast,
@@ -134,12 +104,11 @@ private fun NotificationToastItem(
 ) {
     var isVisible by remember { mutableStateOf(false) }
 
-    // Show animation
     LaunchedEffect(notification.id) {
         isVisible = true
         delay(notification.duration)
         isVisible = false
-        delay(300) // Wait for exit animation
+        delay(300)
         onDismiss()
     }
 
@@ -169,7 +138,6 @@ private fun NotificationToastItem(
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Notification icon
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -189,7 +157,6 @@ private fun NotificationToastItem(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Notification content
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = notification.header,
@@ -211,7 +178,6 @@ private fun NotificationToastItem(
                     )
                 }
 
-                // Close button
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.size(24.dp)
@@ -228,9 +194,6 @@ private fun NotificationToastItem(
     }
 }
 
-/**
- * Format timestamp to "just now", "1m ago", etc.
- */
 private fun formatTimestamp(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp

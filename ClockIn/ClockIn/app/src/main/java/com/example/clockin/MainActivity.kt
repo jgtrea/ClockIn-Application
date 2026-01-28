@@ -9,7 +9,6 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -88,7 +87,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize notification tracker to track which notifications have been shown
         NotificationTracker.init(this)
 
         setContent {
@@ -98,7 +96,10 @@ class MainActivity : ComponentActivity() {
                 ActivityResultContracts.RequestPermission()
             ) { isGranted ->
                 if (!isGranted) {
-                    Toast.makeText(context, "Permission needed to detect WiFi Name", Toast.LENGTH_LONG).show()
+                    NotificationManager.show(
+                        header = "Permission Required",
+                        message = "Location permission is needed to detect WiFi Name."
+                    )
                 }
             }
 
@@ -107,7 +108,6 @@ class MainActivity : ComponentActivity() {
                     locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 }
             }
-            // ---------------------------------
 
             var beaconDistance by remember { mutableDoubleStateOf(0.0) }
             var isBeaconFound by remember { mutableStateOf(false) }
@@ -126,7 +126,6 @@ class MainActivity : ComponentActivity() {
 
             val startDestination = if (FirebaseEmployeeManager.isLoggedIn()) "home" else "login"
 
-            // Background notification listener - checks for new notifications every 30 seconds
             NotificationListener(
                 checkIntervalMs = 30000L,
                 enabled = FirebaseEmployeeManager.isLoggedIn()
@@ -350,7 +349,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         Button(
                             onClick = {
                                 if (emailInput.isEmpty() || passwordInput.isEmpty()) {
-                                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
+                                    NotificationManager.show("Input Error", "Please fill all fields")
                                     return@Button
                                 }
                                 isLoading = true
@@ -365,10 +364,13 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                         val saveString = newMap.entries.joinToString(",") { "${it.key}|${it.value}" }
                                         prefs.edit().putString("saved_accounts", saveString).apply()
 
-                                        Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
+                                        NotificationManager.show("Success", "Login Successful")
                                         onLoginSuccess()
                                     } else {
-                                        Toast.makeText(context, "Login Failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                                        NotificationManager.show(
+                                            "Login Failed",
+                                            result.exceptionOrNull()?.message ?: "Unknown Error"
+                                        )
                                     }
                                 }
                             },

@@ -103,21 +103,18 @@ fun DashboardScreen(
         notifications = FirebaseEmployeeManager.getNotifications()
         isLoadingNotifs = false
 
-        // Only show NEW notifications (ones that haven't been shown before)
         val newNotifications = NotificationTracker.filterNewNotifications(notifications)
 
         newNotifications.forEach { notif ->
             NotificationManager.show(
                 header = notif.header,
                 message = notif.message,
-                duration = 5000L // Show for 5 seconds
+                duration = 5000L
             )
 
-            // Mark this notification as shown
             NotificationTracker.markAsShown(context, notif.notifId)
         }
 
-        // Cleanup old tracked IDs periodically
         NotificationTracker.cleanup(context)
     }
 

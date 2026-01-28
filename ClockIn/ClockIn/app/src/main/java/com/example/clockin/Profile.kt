@@ -1,6 +1,5 @@
 package com.example.clockin
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -66,7 +65,7 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
         if (profile != null) {
             userProfile = profile
         } else {
-            Toast.makeText(context, "User not found", Toast.LENGTH_SHORT).show()
+            NotificationManager.show("Error", "User not found")
         }
         isLoading = false
     }
@@ -155,9 +154,17 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
                 modifier = Modifier
                     .size(150.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE0E0E0))
-                    .border(4.dp, Color.White, CircleShape)
-            )
+                    .background(Color(0xFFFF7F66))
+                    .border(4.dp, Color.White, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = userProfile?.name?.firstOrNull()?.uppercase() ?: "",
+                    color = Color.White,
+                    fontSize = 64.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(text = userProfile?.name ?: "User", fontSize = 24.sp, fontWeight = FontWeight.Bold)

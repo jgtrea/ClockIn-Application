@@ -3,7 +3,6 @@ package com.example.clockin
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Rect
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
@@ -117,11 +116,10 @@ fun ScannerScreen(navController: NavController) {
                             lastScanTime = currentTime
 
                             if (!WifiChecker.isWifiEnabled(context)) {
-                                Toast.makeText(
-                                    context,
-                                    "Please enable WiFi to clock in/out",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                NotificationManager.show(
+                                    header = "WiFi Required",
+                                    message = "Please enable WiFi to clock in/out"
+                                )
                                 isProcessing = false
                                 return@CameraPreview
                             }
@@ -129,16 +127,13 @@ fun ScannerScreen(navController: NavController) {
                             if (!WifiChecker.isConnectedToAllowedWifi(context)) {
                                 val currentWifi = WifiChecker.getCurrentWifiSsid(context) ?: "Unknown"
                                 val requiredWifi = WifiChecker.getAllowedWifiSsid()
-                                Toast.makeText(
-                                    context,
-                                    "Wrong WiFi!\nConnected: $currentWifi\nRequired: $requiredWifi",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                NotificationManager.show(
+                                    header = "Wrong WiFi Network",
+                                    message = "Connected: $currentWifi\nRequired: $requiredWifi"
+                                )
                                 isProcessing = false
                                 return@CameraPreview
                             }
-
-                            Toast.makeText(context, "Verifying...", Toast.LENGTH_SHORT).show()
 
                             scope.launch {
                                 val isValid = FirebaseEmployeeManager.verifyQrCode(code, context)
