@@ -34,7 +34,6 @@ object NotificationTracker {
 
     fun cleanup(context: Context) {
         if (shownNotificationIds.size > 100) {
-            // Keep only the 100 most recent IDs
             val sortedIds = shownNotificationIds.sorted()
             shownNotificationIds = sortedIds.takeLast(100).toMutableSet()
             saveToPreferences(context)
