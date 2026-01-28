@@ -127,10 +127,8 @@ class MainActivity : ComponentActivity() {
 
             val startDestination = if (FirebaseEmployeeManager.isLoggedIn()) "home" else "login"
 
-            NotificationListener(
-                checkIntervalMs = 30000L,
-                enabled = FirebaseEmployeeManager.isLoggedIn()
-            )
+            // Real-time notification listener - shows notifications instantly
+            RealtimeNotificationListener()
 
             NotificationOverlay {
                 NavHost(navController = navController, startDestination = startDestination) {
