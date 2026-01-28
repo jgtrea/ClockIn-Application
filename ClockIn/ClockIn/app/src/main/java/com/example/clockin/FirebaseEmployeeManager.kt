@@ -44,6 +44,7 @@ data class ScheduleRecord(
 data class NotificationItem(
     val header: String = "",
     val message: String = "",
+    val endNotif: String = "everyone",
     val dateCreated: Timestamp? = null,
     val notifId: Int = 0
 )
@@ -235,7 +236,7 @@ object FirebaseEmployeeManager {
                     .document(userId)
                     .collection("user_attendance")
                     .orderBy("timestamp", Query.Direction.DESCENDING)
-                    .limit(20)
+                    .limit(50)
                     .get()
                     .await()
 
@@ -264,14 +265,25 @@ object FirebaseEmployeeManager {
 
     suspend fun getNotifications(): List<NotificationItem> {
         return withContext(Dispatchers.IO) {
+            val userEmail = getCurrentUserEmail() ?: return@withContext emptyList()
+
             try {
                 val snapshot = db.collection("notifications")
                     .orderBy("dateCreated", Query.Direction.DESCENDING)
-                    .limit(10)
+                    .limit(20)
                     .get()
                     .await()
 
-                snapshot.toObjects(NotificationItem::class.java)
+                val allNotifs = snapshot.toObjects(NotificationItem::class.java)
+
+                allNotifs.filter { notif ->
+                    val targets = notif.endNotif.split(",").map { it.trim() }
+
+                    targets.any { target ->
+                        target.equals("everyone", ignoreCase = true) ||
+                                target.equals(userEmail, ignoreCase = true)
+                    }
+                }
             } catch (e: Exception) {
                 emptyList()
             }

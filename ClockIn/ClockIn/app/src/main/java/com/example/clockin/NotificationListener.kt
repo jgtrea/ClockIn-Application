@@ -52,9 +52,10 @@ fun NotificationListener(
 @Composable
 fun RealtimeNotificationListener() {
     val context = LocalContext.current
+    val currentUserEmail = FirebaseEmployeeManager.getCurrentUserEmail()
 
-    LaunchedEffect(Unit) {
-        if (!FirebaseEmployeeManager.isLoggedIn()) return@LaunchedEffect
+    LaunchedEffect(currentUserEmail) {
+        if (!FirebaseEmployeeManager.isLoggedIn() || currentUserEmail == null) return@LaunchedEffect
 
         try {
             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
@@ -73,8 +74,14 @@ fun RealtimeNotificationListener() {
                             if (doc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
                                 val notif = doc.document.toObject(NotificationItem::class.java)
 
-                                // Check if this is a new notification
-                                if (!NotificationTracker.hasBeenShown(notif.notifId)) {
+                                val targets = notif.endNotif.split(",").map { it.trim() }
+
+                                val isRelevant = targets.any { target ->
+                                    target.equals("everyone", ignoreCase = true) ||
+                                            target.equals(currentUserEmail, ignoreCase = true)
+                                }
+
+                                if (isRelevant && !NotificationTracker.hasBeenShown(notif.notifId)) {
                                     NotificationManager.show(
                                         header = notif.header,
                                         message = notif.message,
