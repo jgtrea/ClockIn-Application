@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
@@ -63,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -90,6 +92,8 @@ fun DashboardScreen(
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
+
+    var searchQuery by remember { mutableStateOf("") }
 
     var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
     var isLoadingNotifs by remember { mutableStateOf(true) }
@@ -130,6 +134,17 @@ fun DashboardScreen(
             }
     }
 
+    val filteredNotifications = remember(notifications, searchQuery) {
+        if (searchQuery.isBlank()) {
+            notifications
+        } else {
+            notifications.filter {
+                it.header.contains(searchQuery, ignoreCase = true) ||
+                        it.message.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
     }
@@ -148,7 +163,9 @@ fun DashboardScreen(
                 onLogout = onLogout,
                 onPoliciesClick = { showPolicies = true },
                 onFAQClick = { showFAQ = true },
-                onSendFeedbackClick = { showFeedbackDialog = true }
+                onSendFeedbackClick = { showFeedbackDialog = true },
+                searchQuery = searchQuery,
+                onSearchChange = { searchQuery = it }
             )
 
             HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
@@ -216,15 +233,15 @@ fun DashboardScreen(
                             Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
                                 CircularProgressIndicator(color = PrimaryOrange, modifier = Modifier.size(24.dp))
                             }
-                        } else if (notifications.isEmpty()) {
+                        } else if (filteredNotifications.isEmpty()) {
                             Text(
-                                "No new notifications",
+                                if(searchQuery.isNotEmpty()) "No matching notifications" else "No new notifications",
                                 color = Color.Gray,
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(bottom = 12.dp)
                             )
                         } else {
-                            notifications.forEach { item ->
+                            filteredNotifications.forEach { item ->
                                 val dateStr = item.dateCreated?.toDate()?.let {
                                     SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(it)
                                 } ?: ""
@@ -295,7 +312,9 @@ fun DashboardHeader(
     onLogout: () -> Unit,
     onSendFeedbackClick: () -> Unit,
     onPoliciesClick: () -> Unit,
-    onFAQClick: () -> Unit
+    onFAQClick: () -> Unit,
+    searchQuery: String,
+    onSearchChange: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("") }
@@ -312,7 +331,12 @@ fun DashboardHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            SearchField(label = "Search", isHighlighted = false)
+            SearchField(
+                label = "Search...",
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                isHighlighted = false
+            )
         }
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -426,16 +450,41 @@ fun MenuActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun SearchField(label: String, isHighlighted: Boolean) {
+fun SearchField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    isHighlighted: Boolean
+) {
     val borderColor = if (isHighlighted) PrimaryOrange else Color.LightGray
-    Row(
-        modifier = Modifier.fillMaxWidth().border(1.5.dp, borderColor, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = label, color = Color.Gray, fontSize = 16.sp)
-    }
+
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        textStyle = TextStyle(
+            fontSize = 16.sp,
+            color = Color.Black
+        ),
+        singleLine = true,
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+                Spacer(modifier = Modifier.width(8.dp))
+                Box {
+                    if (value.isEmpty()) {
+                        Text(text = label, color = Color.Gray, fontSize = 16.sp)
+                    }
+                    innerTextField()
+                }
+            }
+        }
+    )
 }
 
 @Composable

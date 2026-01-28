@@ -43,6 +43,8 @@ fun ScheduleScreen(navController: NavController) {
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
 
+    var searchQuery by remember { mutableStateOf("") }
+
     var scheduleMap by remember { mutableStateOf<Map<String, List<ScheduleItem>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -74,6 +76,19 @@ fun ScheduleScreen(navController: NavController) {
         }
     }
 
+    val filteredSchedule = remember(scheduleMap, searchQuery) {
+        if (searchQuery.isBlank()) {
+            scheduleMap
+        } else {
+            scheduleMap.mapValues { (_, items) ->
+                items.filter {
+                    it.title.contains(searchQuery, true) ||
+                            it.details.contains(searchQuery, true)
+                }
+            }.filterValues { it.isNotEmpty() }
+        }
+    }
+
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
     }
@@ -97,7 +112,10 @@ fun ScheduleScreen(navController: NavController) {
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
-                })
+                },
+                searchQuery = searchQuery,
+                onSearchChange = { searchQuery = it }
+            )
 
             HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
 
@@ -132,12 +150,12 @@ fun ScheduleScreen(navController: NavController) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                             Text(text = errorMessage!!, color = Color.Red)
                         }
-                    } else if (scheduleMap.isEmpty()) {
+                    } else if (filteredSchedule.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                            Text(text = "No schedules found.", color = Color.Gray)
+                            Text(text = if(searchQuery.isNotEmpty()) "No matching schedules found." else "No schedules found.", color = Color.Gray)
                         }
                     } else {
-                        scheduleMap.forEach { (day, items) ->
+                        filteredSchedule.forEach { (day, items) ->
                             ScheduleDateGroup(day, items)
                         }
                     }

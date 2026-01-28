@@ -51,6 +51,8 @@ fun AttendanceScreen(navController: NavController) {
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
 
+    var searchQuery by remember { mutableStateOf("") }
+
     var attendanceMap by remember { mutableStateOf<Map<String, List<AttendanceItem>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -83,6 +85,20 @@ fun AttendanceScreen(navController: NavController) {
         }
     }
 
+    val filteredAttendance = remember(attendanceMap, searchQuery) {
+        if (searchQuery.isBlank()) {
+            attendanceMap
+        } else {
+            attendanceMap.mapValues { (_, items) ->
+                items.filter {
+                    it.title.contains(searchQuery, true) ||
+                            it.details.contains(searchQuery, true) ||
+                            it.timeIn.contains(searchQuery, true)
+                }
+            }.filterValues { it.isNotEmpty() }
+        }
+    }
+
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
     }
@@ -106,7 +122,10 @@ fun AttendanceScreen(navController: NavController) {
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
-                })
+                },
+                searchQuery = searchQuery,
+                onSearchChange = { searchQuery = it }
+            )
 
             HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
 
@@ -134,12 +153,12 @@ fun AttendanceScreen(navController: NavController) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                             Text(text = errorMessage!!, color = Color.Red)
                         }
-                    } else if (attendanceMap.isEmpty()) {
+                    } else if (filteredAttendance.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                            Text(text = "No attendance records found.", color = Color.Gray)
+                            Text(text = if(searchQuery.isNotEmpty()) "No matching records found." else "No attendance records found.", color = Color.Gray)
                         }
                     } else {
-                        attendanceMap.forEach { (date, items) ->
+                        filteredAttendance.forEach { (date, items) ->
                             AttendanceDateGroup(date, items)
                         }
                     }
