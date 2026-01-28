@@ -18,6 +18,7 @@ data class UserProfile(
     val id: String = "",
     val name: String = "",
     val email: String = "",
+    val password: String = "",
     val employeeId: String = "",
     val department: String = "",
     val employment: String = "",
@@ -67,12 +68,46 @@ object FirebaseEmployeeManager {
     suspend fun signIn(email: String, pass: String): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
+                val isFirestoreValid = verifyFirestorePassword(email, pass)
+                if (!isFirestoreValid) {
+                    return@withContext Result.failure(Exception("Invalid Credentials (Firestore Check)"))
+                }
+
                 auth.signInWithEmailAndPassword(email, pass).await()
-                getCurrentUser()
+                getCurrentUser(forceRefresh = true)
                 Result.success(true)
             } catch (e: Exception) {
                 Result.failure(e)
             }
+        }
+    }
+
+    private suspend fun verifyFirestorePassword(email: String, plainTextParams: String): Boolean {
+        return try {
+            val empQuery = db.collection("user_employee_data")
+                .whereEqualTo("email", email).get().await()
+
+            if (!empQuery.isEmpty) {
+                val doc = empQuery.documents[0]
+                val encryptedPasswordFromDB = doc.getString("pass") ?: ""
+                val decryptedDbPass = CryptoUtils.decrypt(encryptedPasswordFromDB)
+                return decryptedDbPass == plainTextParams
+            }
+
+            val adminQuery = db.collection("user_admin_data")
+                .whereEqualTo("email", email).get().await()
+
+            if (!adminQuery.isEmpty) {
+                val doc = adminQuery.documents[0]
+                val encryptedPasswordFromDB = doc.getString("pass") ?: ""
+                val decryptedDbPass = CryptoUtils.decrypt(encryptedPasswordFromDB)
+                return decryptedDbPass == plainTextParams
+            }
+
+            false
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Manual Auth Check Failed", e)
+            false
         }
     }
 
@@ -92,6 +127,7 @@ object FirebaseEmployeeManager {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         email = doc.getString("email") ?: "",
+                        password = doc.getString("pass") ?: "",
                         employeeId = doc.getString("employeeId") ?: "",
                         department = doc.getString("department") ?: "",
                         employment = doc.getString("employment") ?: "",
@@ -110,6 +146,7 @@ object FirebaseEmployeeManager {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         email = doc.getString("email") ?: "",
+                        password = doc.getString("pass") ?: "",
                         department = doc.getString("department") ?: "",
                         employment = doc.getString("employment") ?: "",
                         collectionName = "user_admin_data"
