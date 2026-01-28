@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -84,6 +85,8 @@ fun DashboardScreen(
     onLogout: () -> Unit,
     onProfileClick: () -> Unit
 ) {
+    val context = LocalContext.current
+
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
@@ -99,6 +102,23 @@ fun DashboardScreen(
     LaunchedEffect(Unit) {
         notifications = FirebaseEmployeeManager.getNotifications()
         isLoadingNotifs = false
+
+        // Only show NEW notifications (ones that haven't been shown before)
+        val newNotifications = NotificationTracker.filterNewNotifications(notifications)
+
+        newNotifications.forEach { notif ->
+            NotificationManager.show(
+                header = notif.header,
+                message = notif.message,
+                duration = 5000L // Show for 5 seconds
+            )
+
+            // Mark this notification as shown
+            NotificationTracker.markAsShown(context, notif.notifId)
+        }
+
+        // Cleanup old tracked IDs periodically
+        NotificationTracker.cleanup(context)
     }
 
     LaunchedEffect(Unit) {

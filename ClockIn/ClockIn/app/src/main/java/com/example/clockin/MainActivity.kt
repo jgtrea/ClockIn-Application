@@ -88,6 +88,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Initialize notification tracker to track which notifications have been shown
+        NotificationTracker.init(this)
+
         setContent {
             val navController = rememberNavController()
             val context = LocalContext.current
@@ -123,42 +126,50 @@ class MainActivity : ComponentActivity() {
 
             val startDestination = if (FirebaseEmployeeManager.isLoggedIn()) "home" else "login"
 
-            NavHost(navController = navController, startDestination = startDestination) {
-                composable("login") {
-                    LoginScreen(onLoginSuccess = {
-                        navController.navigate("home") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                    })
-                }
-                composable("home") {
-                    DashboardScreen(
-                        navController = navController,
-                        beaconDistance = beaconDistance,
-                        isBeaconFound = isBeaconFound,
-                        deviceName = targetBleName,
-                        onTargetBleChanged = { newBleName ->
-                            targetBleName = newBleName
-                            isBeaconFound = false
-                        },
-                        onLogout = {
-                            FirebaseEmployeeManager.signOut()
-                            navController.navigate("login") { popUpTo("home") { inclusive = true } }
-                        },
-                        onProfileClick = { navController.navigate("profile") }
-                    )
-                }
-                composable("profile") {
-                    ProfileDetailsScreen(onBack = { navController.popBackStack() })
-                }
-                composable("scan_qr") {
-                    ScannerScreen(navController = navController)
-                }
-                composable("schedule") {
-                    ScheduleScreen(navController = navController)
-                }
-                composable("attendance") {
-                    AttendanceScreen(navController = navController)
+            // Background notification listener - checks for new notifications every 30 seconds
+            NotificationListener(
+                checkIntervalMs = 30000L,
+                enabled = FirebaseEmployeeManager.isLoggedIn()
+            )
+
+            NotificationOverlay {
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable("login") {
+                        LoginScreen(onLoginSuccess = {
+                            navController.navigate("home") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        })
+                    }
+                    composable("home") {
+                        DashboardScreen(
+                            navController = navController,
+                            beaconDistance = beaconDistance,
+                            isBeaconFound = isBeaconFound,
+                            deviceName = targetBleName,
+                            onTargetBleChanged = { newBleName ->
+                                targetBleName = newBleName
+                                isBeaconFound = false
+                            },
+                            onLogout = {
+                                FirebaseEmployeeManager.signOut()
+                                navController.navigate("login") { popUpTo("home") { inclusive = true } }
+                            },
+                            onProfileClick = { navController.navigate("profile") }
+                        )
+                    }
+                    composable("profile") {
+                        ProfileDetailsScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable("scan_qr") {
+                        ScannerScreen(navController = navController)
+                    }
+                    composable("schedule") {
+                        ScheduleScreen(navController = navController)
+                    }
+                    composable("attendance") {
+                        AttendanceScreen(navController = navController)
+                    }
                 }
             }
         }

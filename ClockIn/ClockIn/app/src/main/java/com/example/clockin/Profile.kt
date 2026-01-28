@@ -95,9 +95,17 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
                         "Email" -> profile.copy(email = newValue)
                         else -> profile
                     }
-                    Toast.makeText(context, "Updated Successfully", Toast.LENGTH_SHORT).show()
+                    NotificationManager.show(
+                        header = "Profile Updated",
+                        message = "Your $editField has been updated successfully",
+                        duration = 3000L
+                    )
                 } else {
-                    Toast.makeText(context, "Update Failed", Toast.LENGTH_SHORT).show()
+                    NotificationManager.show(
+                        header = "Update Failed",
+                        message = "Could not update $editField. Please try again.",
+                        duration = 3000L
+                    )
                 }
             }
         }
