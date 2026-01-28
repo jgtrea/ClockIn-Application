@@ -1,53 +1,16 @@
 package com.example.clockin
 
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.delay
-
-@Composable
-fun NotificationListener(
-    checkIntervalMs: Long = 30000L,
-    enabled: Boolean = true
-) {
-    val context = LocalContext.current
-    var lastCheckTime by remember { mutableStateOf(System.currentTimeMillis()) }
-
-    LaunchedEffect(enabled) {
-        if (!enabled) return@LaunchedEffect
-
-        while (enabled) {
-            try {
-                if (FirebaseEmployeeManager.isLoggedIn()) {
-
-                    val notifications = FirebaseEmployeeManager.getNotifications()
-
-                    val newNotifications = NotificationTracker.filterNewNotifications(notifications)
-
-                    newNotifications.forEach { notif ->
-                        NotificationManager.show(
-                            header = notif.header,
-                            message = notif.message,
-                            duration = 5000L
-                        )
-
-                        NotificationTracker.markAsShown(context, notif.notifId)
-                    }
-
-                    lastCheckTime = System.currentTimeMillis()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("NotificationListener", "Error checking notifications", e)
-            }
-
-            delay(checkIntervalMs)
-        }
-    }
-}
+import com.google.firebase.firestore.DocumentChange
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 
 @Composable
 fun RealtimeNotificationListener() {
@@ -58,10 +21,10 @@ fun RealtimeNotificationListener() {
         if (!FirebaseEmployeeManager.isLoggedIn() || currentUserEmail == null) return@LaunchedEffect
 
         try {
-            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            val db = FirebaseFirestore.getInstance()
 
             db.collection("notifications")
-                .orderBy("dateCreated", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .orderBy("dateCreated", Query.Direction.DESCENDING)
                 .limit(1)
                 .addSnapshotListener { snapshots, error ->
                     if (error != null) {
@@ -71,7 +34,7 @@ fun RealtimeNotificationListener() {
 
                     if (snapshots != null && !snapshots.isEmpty) {
                         for (doc in snapshots.documentChanges) {
-                            if (doc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
+                            if (doc.type == DocumentChange.Type.ADDED) {
                                 val notif = doc.document.toObject(NotificationItem::class.java)
 
                                 val targets = notif.endNotif.split(",").map { it.trim() }
@@ -82,6 +45,21 @@ fun RealtimeNotificationListener() {
                                 }
 
                                 if (isRelevant && !NotificationTracker.hasBeenShown(notif.notifId)) {
+
+                                    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                                        vibratorManager.defaultVibrator
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                                    }
+
+                                    if (vibrator.hasVibrator()) {
+                                        vibrator.vibrate(
+                                            VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+                                        )
+                                    }
+
                                     NotificationManager.show(
                                         header = notif.header,
                                         message = notif.message,

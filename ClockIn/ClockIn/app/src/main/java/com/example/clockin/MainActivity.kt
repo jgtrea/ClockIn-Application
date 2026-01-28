@@ -127,7 +127,6 @@ class MainActivity : ComponentActivity() {
 
             val startDestination = if (FirebaseEmployeeManager.isLoggedIn()) "home" else "login"
 
-            // Real-time notification listener - shows notifications instantly
             RealtimeNotificationListener()
 
             NotificationOverlay {

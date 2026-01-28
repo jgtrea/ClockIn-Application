@@ -27,11 +27,6 @@ object NotificationTracker {
         return notifications.filter { !hasBeenShown(it.notifId) }
     }
 
-    fun clear(context: Context) {
-        shownNotificationIds.clear()
-        saveToPreferences(context)
-    }
-
     fun cleanup(context: Context) {
         if (shownNotificationIds.size > 100) {
             val sortedIds = shownNotificationIds.sorted()
