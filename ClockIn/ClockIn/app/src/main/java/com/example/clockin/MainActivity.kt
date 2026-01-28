@@ -40,6 +40,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -293,15 +294,16 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                     Column {
                         Text("Email", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
+
                         ExposedDropdownMenuBox(
                             expanded = expanded && filteredEmails.isNotEmpty(),
-                            onExpandedChange = { expanded = !expanded }
+                            onExpandedChange = {
+                            }
                         ) {
                             OutlinedTextField(
                                 value = emailInput,
                                 onValueChange = {
                                     emailInput = it
-                                    expanded = true
                                 },
                                 placeholder = { Text("Enter Email") },
                                 modifier = Modifier
@@ -310,7 +312,11 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                                 shape = RoundedCornerShape(8.dp),
                                 singleLine = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                trailingIcon = {
+                                    IconButton(onClick = { expanded = !expanded }) {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                    }
+                                },
                                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                             )
 
