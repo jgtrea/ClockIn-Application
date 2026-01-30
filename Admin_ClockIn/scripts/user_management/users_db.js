@@ -5,6 +5,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const db = window.db;
   const USERS_COLLECTION = 'user_employee_data';
 
+  let filteredUsers = [];
+  let searchTerm = '';
+
+  function applySearch() {
+    if (!searchTerm) {
+      filteredUsers = [...users];
+    } else {
+      filteredUsers = users.filter(user => {
+        const searchText = `${user.name || ''} ${user.id || ''} ${user.email || ''} ${user.department || ''} ${user.employment || ''}`.toLowerCase();
+        return searchText.includes(searchTerm.toLowerCase());
+      });
+    }
+    allUsers = [...filteredUsers];
+    currentPage = 1;
+    renderUsers();
+  }
+
+  window.performUserSearch = function(term) {
+    searchTerm = term || '';
+    applySearch();
+  };
+
   let users = [];
   let allUsers = [];
   let currentPage = 1;
@@ -136,8 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             return remoteUser;
           });
-          allUsers = [...users];
-          renderUsers();
+          applySearch();
         }, err => { console.error('users_db: snapshot error', err); });
     } else {
       unsubscribe = db.collection(USERS_COLLECTION)
@@ -153,8 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             employment: doc.data().employment || ''
           }));
           users = remoteData;
-          allUsers = [...users];
-          renderUsers();
+          applySearch();
         }, err => { console.error('users_db: snapshot error', err); });
     }
   }
@@ -274,19 +294,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentPage = 1;
     renderUsers();
   };
-});
-window.addEventListener('message', function(event) {
-  if (event.data.type === 'search') {
-    const searchTerm = event.data.term;
-    const rows = document.querySelectorAll('.user-row');
-    
-    rows.forEach(row => {
-      const text = row.textContent.toLowerCase();
-      if (!searchTerm || text.includes(searchTerm)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
-  }
+  
+  window.addEventListener('message', function(event) {
+    if (event.data.type === 'search') {
+      window.performUserSearch(event.data.term);
+    }
+  });
 });

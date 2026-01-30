@@ -4,12 +4,33 @@ const SUB_COLLECTION = 'user_attendance';
 
 let userAttendance = []; 
 let allUserAttendance = [];
+let filteredAttendance = [];
+let searchTerm = '';
 let currentPage = 1;
 const usersPerPage = 10;
 let expandedRows = {};   
 let expandedAddForms = {}; 
 let editingRecordId = null;
 let sortAscending = true;
+
+function applyAttendanceSearch() {
+  if (!searchTerm) {
+    filteredAttendance = [...userAttendance];
+  } else {
+    filteredAttendance = userAttendance.filter(user => {
+      const searchText = `${user.name || ''} ${user.subtitle || ''}`.toLowerCase();
+      return searchText.includes(searchTerm.toLowerCase());
+    });
+  }
+  allUserAttendance = [...filteredAttendance];
+  currentPage = 1;
+  render();
+}
+
+window.performAttendanceSearch = function(term) {
+  searchTerm = term || '';
+  applyAttendanceSearch();
+};
 
 function loadUsersFromDB() {
   if (!window.db) {
@@ -47,8 +68,7 @@ function loadUsersFromDB() {
       });
 
       userAttendance = await Promise.all(userPromises);
-      allUserAttendance = [...userAttendance];
-      render();
+      applyAttendanceSearch();
     })
     .catch(err => {
       console.error(err);
@@ -273,3 +293,9 @@ function sortAttendance(field) {
 }
 
 loadUsersFromDB();
+
+window.addEventListener('message', function(event) {
+  if (event.data.type === 'search') {
+    window.performAttendanceSearch(event.data.term);
+  }
+});

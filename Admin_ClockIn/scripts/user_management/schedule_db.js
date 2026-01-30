@@ -4,12 +4,34 @@ const SUB_COLLECTION = 'user_schedule';
 
 let userSchedules = []; 
 let allUserSchedules = [];
+let filteredSchedules = [];
+let searchTerm = '';
 let currentPage = 1;
 const usersPerPage = 10;
 let expandedRows = {};   
 let expandedAddForms = {}; 
 let editingSlotId = null;
 let sortAscending = true;
+
+function applyScheduleSearch() {
+  if (!searchTerm) {
+    filteredSchedules = [...userSchedules];
+  } else {
+    filteredSchedules = userSchedules.filter(user => {
+      const searchText = `${user.name || ''} ${user.subtitle || ''}`.toLowerCase();
+      return searchText.includes(searchTerm.toLowerCase());
+    });
+  }
+  allUserSchedules = [...filteredSchedules];
+  currentPage = 1;
+  render();
+}
+
+window.performScheduleSearch = function(term) {
+  searchTerm = term || '';
+  console.log('Schedule search called with term:', searchTerm, 'userSchedules length:', userSchedules.length);
+  applyScheduleSearch();
+};
 
 function loadUsersFromDB() {
   if (!window.db) {
@@ -47,8 +69,7 @@ function loadUsersFromDB() {
       });
 
       userSchedules = await Promise.all(userPromises);
-      allUserSchedules = [...userSchedules];
-      render();
+      applyScheduleSearch();
     })
     .catch(err => {
       console.error(err);
@@ -262,3 +283,9 @@ function sortSchedules(field) {
 }
 
 loadUsersFromDB();
+
+window.addEventListener('message', function(event) {
+  if (event.data.type === 'search') {
+    window.performScheduleSearch(event.data.term);
+  }
+});
