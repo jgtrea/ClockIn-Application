@@ -9,7 +9,7 @@ import {
   browserSessionPersistence,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { adminEmails } from "../../Firebase/administrator_permissions.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDUnpdDMr0E6r-lohCNJKKKdUJfbVqzayM",
@@ -23,15 +23,30 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-// Check if user is already logged in and redirect
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   console.log('onAuthStateChanged ->', user);
   if (user) {
-    const isAdmin = adminEmails.includes(user.email);
-    if (isAdmin) {
-      window.location.href = '../Admin_ClockIn/index.html';
-    } else {
+    try {
+      const ref = doc(db, 'ad_privileges', 'ad_users');
+      const snap = await getDoc(ref);
+      let isAdmin = false;
+      if (snap.exists()) {
+        const data = snap.data();
+        if (Array.isArray(data.users)) {
+          isAdmin = data.users.includes(user.email);
+        } else if (typeof data.user === 'string') {
+          isAdmin = data.user === user.email;
+        }
+      }
+      if (isAdmin) {
+        window.location.href = '../Admin_ClockIn/index.html';
+      } else {
+        window.location.href = '../User_ClockIn/index_user.html';
+      }
+    } catch (e) {
+      console.error('Privilege check failed', e);
       window.location.href = '../User_ClockIn/index_user.html';
     }
   }
@@ -63,7 +78,21 @@ if (loginForm) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      const isAdmin = adminEmails.includes(user.email);
+      let isAdmin = false;
+      try {
+        const ref = doc(db, 'ad_privileges', 'ad_users');
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (Array.isArray(data.users)) {
+            isAdmin = data.users.includes(user.email);
+          } else if (typeof data.user === 'string') {
+            isAdmin = data.user === user.email;
+          }
+        }
+      } catch (e) {
+        console.error('Privilege check failed', e);
+      }
 
       const storageKey = remember ? localStorage : sessionStorage;
       storageKey.setItem('userEmail', user.email);

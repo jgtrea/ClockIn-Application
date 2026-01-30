@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sectionsContainer = document.getElementById('sectionsContainer');
   const searchInput = document.getElementById('sectionSearch');
   
-  // Profile functionality
+  // Profile function
   const profileCircle = document.getElementById('profileCircle');
   const profileMenu = document.getElementById('profileMenu');
   const profileName = document.getElementById('profileName');
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
               return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
             });
             
-            // Calculate proper end times
+            // Calculation for end times
             for (let i = 0; i < subjects.length; i++) {
               if (subjects[i + 1]) {
                 subjects[i].endTime = subjects[i + 1].startTime;
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
                 currentSubject = subjectName;
                 timeRange = `${subject.startTime} - ${subject.endTime}`;
-                // Only show teacher when there's an active class - get teacher for this specific time
+                // Only show teacher when there's an active class 
                 currentTeacher = await getTeacherForSection(sectionName, subject.startTime, subject.endTime);
                 found = true;
                 break;
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (currentMinutes < firstStartMinutes) {
                 currentSubject = firstSubject.Subject || 'Class';
                 timeRange = `${firstSubject.startTime} - ${firstSubject.endTime}`;
-                currentTeacher = ''; // Clear teacher for upcoming classes
+                currentTeacher = ''; 
               }
             }
             
