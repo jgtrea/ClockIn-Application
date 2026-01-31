@@ -60,7 +60,8 @@
 }
 
 .schedule-table-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr 100px;
   width: 100%;
   border-bottom: 1px solid #d1d5db;
   padding-bottom: 10px;
@@ -68,24 +69,26 @@
   color: #9ca3af;
   font-size: 14px;
   font-weight: 600;
+  gap: 10px;
 }
 
 .schedule-table-header span, .slot-row span {
-  flex: 1;
   text-align: center;
 }
 
-.schedule-table-header .actions-header, .slot-row .actions-cell {
-  flex: 0 0 100px;
+.schedule-table-header span:first-child, .slot-row span:first-child {
+  text-align: left;
 }
 
 .slot-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr 100px;
   padding: 12px 0;
   border-bottom: 1px solid #f9fafb;
   font-size: 14px;
   color: #374151;
   align-items: center;
+  gap: 10px;
 }
 
 .slot-row.editing-row {

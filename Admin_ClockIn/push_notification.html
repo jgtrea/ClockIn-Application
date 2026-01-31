@@ -3,47 +3,121 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Push Notification</title>
+  <title>Notifications — ClockIn</title>
   <link rel="stylesheet" href="styles/user_ui.css" />
+  <link rel="stylesheet" href="styles/topbar.css" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="../Firebase/firebase_config.js"></script>
+  <script src="scripts/home.js" defer></script>
   <link rel="stylesheet" href="styles/notif.css" />
 </head>
-<body>
-  <div class="pn-wrapper">
-    <div class="card">
-      <div class="card-header">
-        <span class="material-symbols-outlined">notifications_active</span>
-        <div class="title">New Push Notification</div>
-      </div>
-      <div class="separator"></div>
-      <div class="card-body">
-        <div class="field recipients">
-          <div class="label">Send To</div>
-          <div class="recipient-input-row">
-            <input id="pn-recipient-input" class="input" type="text" placeholder="Type a name, email, or 'everyone'" autocomplete="off">
-          </div>
-          <div id="pn-chips" class="chips"></div>
-          <div id="pn-suggestions" class="suggestions"></div>
-        </div>
+<body data-page="notifications">
 
-        <div class="field">
-          <div class="label">Header (optional)</div>
-          <input id="pn-header" class="input" type="text" placeholder="Short title for the notification" />
-        </div>
-        <div class="field">
-          <div class="label">Message</div>
-          <textarea id="pn-message" class="textarea" placeholder="Write your message..."></textarea>
+<div class="app">
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar">
+        <input type="text" placeholder="Search..." id="globalSearch">
+        <button class="material-symbols-outlined" onclick="performSearch()">search</button>   
+      </div>
+      <div class="top-actions">
+        <div class="profile-wrapper">
+          <div class="profile-circle" id="profileCircle">A</div>
+          <div class="profile-menu" id="profileMenu">
+            <div class="profile-header">
+              <div class="profile-circle small" id="profileCircleMenu">A</div>
+              <div>
+                <div class="profile-name" id="profileName">User</div>
+                <div class="profile-email" id="profileEmail"></div>
+              </div>
+            </div>
+            <hr>
+            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
+            <a class="menu-item">Send Feedback</a>
+            <button class="menu-item logout" id="logoutBtn">Logout</button>
+          </div>
         </div>
       </div>
-      <div class="actions">
-        <button id="pn-send-primary" class="btn-primary">Send notification</button>
+    </header>
+
+    <main class="content">
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Notifications</h1>
+            <p class="tagline">Send and manage push notifications.</p>
+          </div>
+          <button class="export-btn" id="sendNotificationBtn" onclick="openNotificationModal()">Send Notification</button>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+      
+      <div id="notificationsList"></div>
+      <div id="pagination" style="display: none; text-align: center; margin-top: 20px;">
+        <button id="prevBtn" onclick="changePage(-1)" class="btn-outline" style="margin: 0 5px;">Previous</button>
+        <span id="pageInfo" style="margin: 0 15px; color: #6b7280;"></span>
+        <button id="nextBtn" onclick="changePage(1)" class="btn-outline" style="margin: 0 5px;">Next</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Notification Modal -->
+<div id="notificationModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: 12px; padding: 0; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 24px 24px 0 24px; border-bottom: 1px solid #e5e7eb; margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="material-symbols-outlined" style="color: #3b82f6; font-size: 24px;">notifications_active</span>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #111827;">New Push Notification</h2>
+      </div>
+      <button onclick="closeNotificationModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #9ca3af; padding: 4px;">&times;</button>
+    </div>
+    
+    <div style="padding: 0 24px 24px 24px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px;">
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Send To</label>
+          <input id="pn-recipient-input" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;" type="text" placeholder="Type a name, email, or 'everyone'" autocomplete="off">
+          <div id="pn-chips" style="margin-top: 8px;"></div>
+          <div id="pn-suggestions" style="position: absolute; z-index: 1001; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none;"></div>
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Header (optional)</label>
+          <input id="pn-header" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;" type="text" placeholder="Short title for the notification" />
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Message</label>
+        <textarea id="pn-message" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; min-height: 120px; resize: vertical;" placeholder="Write your message..."></textarea>
+      </div>
+      
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button onclick="closeNotificationModal()" style="padding: 12px 24px; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
+        <button id="pn-send-primary" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Send notification</button>
       </div>
     </div>
   </div>
-  <script src="scripts/notif.js"></script>
+</div>
+
+<script>
+function openNotificationModal() {
+  document.getElementById('notificationModal').style.display = 'flex';
+}
+
+function closeNotificationModal() {
+  document.getElementById('notificationModal').style.display = 'none';
+  // Clear form
+  document.getElementById('pn-recipient-input').value = '';
+  document.getElementById('pn-header').value = '';
+  document.getElementById('pn-message').value = '';
+  document.getElementById('pn-chips').innerHTML = '';
+}
+</script>
+<script src="scripts/notif.js"></script>
 </body>
 </html>

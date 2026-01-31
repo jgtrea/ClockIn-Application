@@ -131,7 +131,9 @@
       sugg.style.display = 'none';
       selected = [];
       renderChips();
-      alert('Notification saved');
+      closeNotificationModal(); // Close modal after sending
+      loadNotificationHistory(); // Refresh history
+      alert('Notification sent successfully!');
     } catch (err) {
       console.error('push_notification: failed to send', err);
       alert('Failed to save notification');
@@ -149,4 +151,120 @@
 
   window.__pn_getSelection = () => selected.slice();
   window.__pn_send = sendNotification;
+
+  // Notification History Functionality
+  let notifications = [];
+  let currentPage = 1;
+  const notificationsPerPage = 10;
+
+  function loadNotificationHistory() {
+    if (!window.db) {
+      setTimeout(loadNotificationHistory, 500);
+      return;
+    }
+
+    window.db.collection(NOTIFS_COLLECTION)
+      .orderBy('dateCreated', 'desc')
+      .get()
+      .then(snapshot => {
+        notifications = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        renderNotificationHistory();
+      })
+      .catch(err => {
+        console.error('Error loading notification history:', err);
+        document.getElementById('notificationsList').innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading notifications.</p>';
+      });
+  }
+
+  function renderNotificationHistory() {
+    const notificationsList = document.getElementById('notificationsList');
+    if (!notificationsList) return;
+
+    if (notifications.length === 0) {
+      notificationsList.innerHTML = '<p style="text-align: center; color: #9ca3af;">No notifications sent yet.</p>';
+      return;
+    }
+
+    const totalPages = Math.ceil(notifications.length / notificationsPerPage);
+    const startIndex = (currentPage - 1) * notificationsPerPage;
+    const endIndex = startIndex + notificationsPerPage;
+    const pageNotifications = notifications.slice(startIndex, endIndex);
+
+    notificationsList.innerHTML = pageNotifications.map(notif => {
+      const date = notif.dateCreated ? new Date(notif.dateCreated.seconds * 1000).toLocaleString() : 'Unknown';
+      return `
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 16px; padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+            <div>
+              <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">${notif.header || 'Notification'}</h3>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">To: ${notif.endNotif}</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 12px; color: #9ca3af;">${date}</span>
+              <button onclick="deleteNotification('${notif.id}')" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 4px; display: flex; align-items: center;" title="Delete notification">
+                <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+              </button>
+            </div>
+          </div>
+          <p style="margin: 0; color: #374151; line-height: 1.5;">${notif.message}</p>
+        </div>
+      `;
+    }).join('');
+
+    updatePagination(totalPages);
+  }
+
+  function updatePagination(totalPages) {
+    const pagination = document.getElementById('pagination');
+    const pageInfo = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    
+    if (!pagination || !pageInfo || !prevBtn || !nextBtn) return;
+    
+    if (totalPages > 1) {
+      pagination.style.display = 'block';
+      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+      prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
+      nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
+    } else {
+      pagination.style.display = 'none';
+    }
+  }
+
+  window.changePage = function(direction) {
+    const totalPages = Math.ceil(notifications.length / notificationsPerPage);
+    const newPage = currentPage + direction;
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+      currentPage = newPage;
+      renderNotificationHistory();
+    }
+  };
+
+  window.deleteNotification = async function(notificationId) {
+    if (!confirm('Are you sure you want to delete this notification?')) {
+      return;
+    }
+
+    try {
+      await window.db.collection(NOTIFS_COLLECTION).doc(notificationId).delete();
+      loadNotificationHistory(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      alert('Error deleting notification. Please try again.');
+    }
+  };
+
+  // Load notification history when page loads
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadNotificationHistory);
+  } else {
+    loadNotificationHistory();
+  }
 })();
