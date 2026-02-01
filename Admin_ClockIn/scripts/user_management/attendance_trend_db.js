@@ -20,7 +20,7 @@ function updateChart(attendanceData, trend = 'weekly') {
     const label = document.createElement('div');
     label.className = 'y-label';
     label.style.cssText = `position: absolute; left: 10px; ${labelPosition}; font-size: 12px; color: #6b7280;`;
-    label.textContent = value;
+    label.textContent = Number.isInteger(value) ? value : value.toFixed(2);
     chart.appendChild(label);
     
     const line = document.createElement('div');

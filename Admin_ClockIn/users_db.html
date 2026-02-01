@@ -60,18 +60,18 @@
             <p class="tagline">Manage personnel profiles and access.</p>
           </div>
           <div style="display: flex; gap: 8px;">
+            <button class="export-btn" id="addUserBtn">Add User</button>
             <div style="position: relative;">
               <button id="sortBtn" onclick="toggleSortMenu()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; color: #111827; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 4px;">
                 <span class="material-symbols-outlined" style="font-size: 20px;">sort</span>
                 <span class="material-symbols-outlined" id="sortIndicator" style="font-size: 16px;">keyboard_arrow_down</span>
-              </button>
+              </button>              
               <div id="sortMenu" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; min-width: 150px;">
                 <button onclick="sortUsers('name')" style="display: block; width: 100%; padding: 8px 12px; border: none; background: none; text-align: left; cursor: pointer; font-size: 14px;">Sort by Name</button>
                 <button onclick="sortUsers('id')" style="display: block; width: 100%; padding: 8px 12px; border: none; background: none; text-align: left; cursor: pointer; font-size: 14px;">Sort by ID</button>
                 <button onclick="sortUsers('createdAt')" style="display: block; width: 100%; padding: 8px 12px; border: none; background: none; text-align: left; cursor: pointer; font-size: 14px;">Sort by Date</button>
               </div>
-            </div>
-            <button class="export-btn" id="addUserBtn">Add User</button>
+            </div>            
           </div>
         </div>
       </div>
