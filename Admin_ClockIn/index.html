@@ -55,17 +55,15 @@
         <span class="material-symbols-outlined">group</span>
         <span class="label">Users</span>
       </a>
+      <!--
       <a href="schedule_db.html" target="contentFrame" onclick="setActive(this)">
         <span class="material-symbols-outlined">calendar_month</span>
         <span class="label">Schedule</span>
       </a>
+      -->
       <a href="attendance_db.html" target="contentFrame" onclick="setActive(this)">
         <span class="material-symbols-outlined">how_to_reg</span>
         <span class="label">Attendance</span>
-      </a>
-      <a href="policy.html" target="contentFrame" onclick="setActive(this)">
-        <span class="material-symbols-outlined">policy</span>
-        <span class="label">Policy</span>
       </a>
       <a href="push_notification.html" target="contentFrame" onclick="setActive(this)">
         <span class="material-symbols-outlined">notifications_active</span>
@@ -74,6 +72,10 @@
     </nav>
 
     <div class="sidebar-footer">
+      <a href="policy.html" target="contentFrame" onclick="setActive(this)">
+        <span class="material-symbols-outlined">policy</span>
+        <span class="label">Policy</span>
+      </a>
       <a href="#" id="sidebarLogout">
         <span class="material-symbols-outlined">logout</span>
         <span class="label">Logout</span>
@@ -90,7 +92,7 @@
 </html>
 <script>
 function setActive(clickedLink) {
-  document.querySelectorAll('.menu a').forEach(link => {
+  document.querySelectorAll('#sidebar a').forEach(link => {
     link.classList.remove('active');
   });
   clickedLink.classList.add('active');

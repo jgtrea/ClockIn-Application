@@ -152,7 +152,8 @@ body {
 
 .menu {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .menu a {
@@ -211,10 +212,12 @@ body {
 .sidebar-footer a {
   display: flex;
   align-items: center;
+  padding: 12px 0;
   cursor: pointer;
-  color: #374151;
+  color: var(--sidebar-text);
   text-decoration: none;
-  transition: color 0.2s ease;
+  position: relative;
+  transition: 0.2s ease;
 }
 
 .sidebar-footer a .material-symbols-outlined {
@@ -235,6 +238,12 @@ body {
   white-space: nowrap;
   transition: opacity 0.2s ease, width 0.4s ease;
 }
+
+.sidebar-footer a:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
 
 .sidebar.expanded .sidebar-footer a .label {
   opacity: 1;
