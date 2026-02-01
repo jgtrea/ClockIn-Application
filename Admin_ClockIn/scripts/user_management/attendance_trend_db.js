@@ -1,10 +1,17 @@
 let currentTrend = 'weekly';
 
 function updateChart(attendanceData, trend = 'weekly') {
+  const chart = document.getElementById('attendanceChart');
+  
+  if (!chart) return;
+  
   const maxValue = Math.max(...attendanceData);
   const [step, topValue, lineCount] = ((m)=>{let r=m/5,p=10**Math.floor(Math.log10(r)),s=[1,2,5,10].find(x=>r<=x*p)*p,t=Math.ceil(m/s)*s;return[s,t,t/s]})(maxValue || 1);
-  const chart = document.getElementById('attendanceChart');
   chart.innerHTML = '';
+  
+  if (chart.offsetWidth === 0) {
+    return;
+  }
   
   for (let i = 0; i <= lineCount; i++) {
     const value = topValue - (i * step);
@@ -34,6 +41,12 @@ function updateChart(attendanceData, trend = 'weekly') {
   const spacing = chartHeight / lineCount;
   const zeroLineTop = 20 + (lineCount * spacing) + 6;
   
+  // Get total users 
+  let totalUsers = window.dashboardStats?.totalTeachers || 0;
+  if (totalUsers === 0) {
+    totalUsers = maxValue > 0 ? maxValue : 1;
+  }
+  
   attendanceData.forEach((value, index) => {
     const height = Math.max((value / topValue) * chartHeight, 3);
     let date, isToday = false;
@@ -59,10 +72,10 @@ function updateChart(attendanceData, trend = 'weekly') {
     bar.className = 'chart-bar';
     const hasData = value > 0;
     const barColor = isToday ? '#3b82f6' : (hasData ? '#d1d5db' : '#f3f4f6');
-    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${barColor}; border-radius: 4px 4px 0 0; ${!hasData ? 'opacity: 0.5;' : ''} display: flex; align-items: center; justify-content: center; color: ${isToday ? '#fff' : '#6b7280'}; font-size: 12px; font-weight: 600;`;
+    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${barColor}; border-radius: 4px 4px 0 0; ${!hasData ? 'opacity: 0.5;' : ''} display: flex; align-items: center; justify-content: center; color: ${isToday ? '#fff' : '#6b7280'}; font-size: 11px; font-weight: 600;`;
     
-    if (hasData) {
-      const percentage = dashboardStats.totalUsers > 0 ? Math.round((value / dashboardStats.totalUsers) * 100) : 0;
+    if (hasData && value > 0) {
+      const percentage = totalUsers > 0 ? Math.round((value / totalUsers) * 100) : 0;
       bar.textContent = percentage + '%';
     }
     
@@ -86,12 +99,13 @@ function updateChart(attendanceData, trend = 'weekly') {
       const date = new Date(today);
       date.setDate(today.getDate() - (3 - index));
       const dayNumber = date.getDate();
+      const monthShort = date.toLocaleDateString('en-US', { month: 'short' });
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
       isToday = date.toDateString() === today.toDateString();
       
       const dayNumberSpan = document.createElement('span');
       dayNumberSpan.style.cssText = `font-size: 12px; color: ${isToday ? '#000' : '#6b7280'}; font-weight: ${isToday ? 'bold' : '500'};`;
-      dayNumberSpan.textContent = dayNumber;
+      dayNumberSpan.textContent = `${monthShort} ${dayNumber}`;
       
       const dayNameSpan = document.createElement('span');
       dayNameSpan.style.cssText = `font-size: 12px; color: ${isToday ? '#000' : '#6b7280'}; font-weight: ${isToday ? 'bold' : '500'};`;

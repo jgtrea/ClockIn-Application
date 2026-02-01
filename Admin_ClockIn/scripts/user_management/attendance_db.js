@@ -189,6 +189,7 @@ function render() {
                           <option value="Present" ${r.status==='Present'?'selected':''}>Present</option>
                           <option value="Late" ${r.status==='Late'?'selected':''}>Late</option>
                           <option value="Absent" ${r.status==='Absent'?'selected':''}>Absent</option>
+                          <option value="Excused" ${r.status==='Excused'?'selected':''}>Excused</option>
                         </select>
                       </span>
                       <span class="actions-cell">
@@ -208,7 +209,7 @@ function render() {
               }).join('') : '<p style="text-align:center; color:#999; padding:10px;">No records found.</p>'}
             </div>
 
-            <button class="add-record-btn ${isAddFormOpen ? 'hidden' : ''}" onclick="toggleAddForm('${user.uid}')">+</button>
+            <button class="btn-outline" onclick="toggleAddForm('${user.uid}')">Add Attendance</button>
 
             <div class="add-record-ui ${isAddFormOpen ? '' : 'hidden'}">
               <div class="edit-grid">
@@ -221,6 +222,7 @@ function render() {
                   <option value="Present">Present</option>
                   <option value="Late">Late</option>
                   <option value="Absent">Absent</option>
+                  <option value="Excused">Excused</option>
                 </select>
               </div>
               <div class="btn-group" style="margin-top: 20px;">

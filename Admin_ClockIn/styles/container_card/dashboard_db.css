@@ -1,7 +1,7 @@
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
   margin-bottom: 24px;
 }
 
@@ -9,19 +9,20 @@
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px 12px;
   text-align: center;
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
 }
 
-.stat-value.today-attendance { color: #059669; }
 .stat-value.total-users { color: #3b82f6; }
-.stat-value.currently-active { color: #f59e0b; }
+.stat-value.on-schedule { color: #059669; }
 .stat-value.late-today { color: #ef4444; }
+.stat-value.absent-today { color: #f59e0b; }
+.stat-value.excused-today { color: #8b5cf6; }
 
 .stat-label {
   font-size: 14px;
@@ -160,4 +161,64 @@
   border: 1px solid #FF725E;
   background: #FF725E;
   color: white;
+}
+
+/* Stats Toggle */
+.stats-toggle-container {
+  margin-bottom: 24px;
+}
+
+.stats-toggle-btn {
+  width: 100%;
+  padding: 12px 20px;
+  background: #FF725E;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.stats-toggle-btn:hover {
+  background: #F1563F;
+}
+
+.stats-toggle-btn .arrow {
+  transition: transform 0.3s;
+}
+
+.stats-toggle-btn .arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.stats-toggle-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+  padding: 0;
+}
+
+.stats-toggle-content.expanded {
+  max-height: 600px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.chart-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
 }

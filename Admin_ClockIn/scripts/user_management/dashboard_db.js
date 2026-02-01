@@ -8,28 +8,25 @@ let currentPage = 1;
 const recordsPerPage = 10;
 let currentSearchTerm = '';
 let dashboardStats = {
-  totalUsers: 0,
-  todayPresent: 0,
-  todayTotal: 0,
-  currentlyActive: 0,
-  lateToday: 0
+  totalTeachers: 0,
+  onSchedule: 0,
+  late: 0,
+  absent: 0,
+  excused: 0
 };
 
 function updateDashboardStats() {
-  const todayAttendanceEl = document.getElementById('todayAttendance');
-  const totalUsersEl = document.getElementById('totalUsers');
-  const currentlyActiveEl = document.getElementById('currentlyActive');
+  const totalTeachersEl = document.getElementById('totalTeachers');
+  const onScheduleEl = document.getElementById('onSchedule');
   const lateTodayEl = document.getElementById('lateToday');
+  const absentTodayEl = document.getElementById('absentToday');
+  const excusedTodayEl = document.getElementById('excusedToday');
   
-  if (todayAttendanceEl) {
-    const percentage = dashboardStats.todayTotal > 0 ? Math.round((dashboardStats.todayPresent / dashboardStats.todayTotal) * 100) : 0;
-    todayAttendanceEl.textContent = `${dashboardStats.todayPresent}/${dashboardStats.todayTotal}`;
-    todayAttendanceEl.nextElementSibling.nextElementSibling.textContent = `${percentage}% Present`;
-  }
-  
-  if (totalUsersEl) totalUsersEl.textContent = dashboardStats.totalUsers;
-  if (currentlyActiveEl) currentlyActiveEl.textContent = dashboardStats.currentlyActive;
-  if (lateTodayEl) lateTodayEl.textContent = dashboardStats.lateToday;
+  if (totalTeachersEl) totalTeachersEl.textContent = dashboardStats.totalTeachers;
+  if (onScheduleEl) onScheduleEl.textContent = dashboardStats.onSchedule;
+  if (lateTodayEl) lateTodayEl.textContent = dashboardStats.late;
+  if (absentTodayEl) absentTodayEl.textContent = dashboardStats.absent;
+  if (excusedTodayEl) excusedTodayEl.textContent = dashboardStats.excused;
 }
 
 function loadRecentActivity() {
@@ -47,19 +44,23 @@ function loadRecentActivity() {
       console.log('Found users:', usersSnapshot.docs.length);
       allRecords = [];
       
-      dashboardStats.totalUsers = usersSnapshot.docs.length;
-      dashboardStats.todayPresent = 0;
-      dashboardStats.todayTotal = usersSnapshot.docs.length;
-      dashboardStats.currentlyActive = 0;
-      dashboardStats.lateToday = 0;
+      dashboardStats.totalTeachers = usersSnapshot.docs.length;
+      dashboardStats.onSchedule = 0;
+      dashboardStats.late = 0;
+      dashboardStats.absent = 0;
+      dashboardStats.excused = 0;
       
       const today = new Date().toISOString().split('T')[0];
+
+      // Track today's records per user
+      const todayRecordsByUser = {};
 
       for (const userDoc of usersSnapshot.docs) {
         const userData = userDoc.data();
         const userName = userData.name || 'Unknown User';
         
         try {
+          // Attendance records for chart and recent activity
           const attendanceSnap = await window.db
             .collection('user_employee_data')
             .doc(userDoc.id)
@@ -68,45 +69,55 @@ function loadRecentActivity() {
 
           console.log(`${userName} has ${attendanceSnap.docs.length} attendance records`);
           
-          let userPresentToday = false;
-          let userLateToday = false;
-          let userActiveToday = false;
+          let userHasRecordToday = false;
 
           attendanceSnap.docs.forEach(doc => {
             const data = doc.data();
             const recordDate = data.date;
-            
-            if (recordDate === today) {
-              userPresentToday = true;
-              
-              const timeIn = data.timeIn || data.time_in;
-              if (timeIn && timeIn > '09:00') {
-                userLateToday = true;
-              }
-              
-              const timeOut = data.timeOut || data.time_out;
-              if (timeIn && (!timeOut || timeOut === '')) {
-                userActiveToday = true;
-              }
-            }
+            const status = data.status || 'Present';
             
             allRecords.push({
               userName: userName,
               timeIn: data.timeIn || data.time_in || 'N/A',
               date: data.date || 'N/A',
               room: data.room || 'N/A',
+              status: status,
               timestamp: data.timestamp || null
             });
+            
+            if (recordDate === today) {
+              userHasRecordToday = true;
+              if (!todayRecordsByUser[userDoc.id]) {
+                todayRecordsByUser[userDoc.id] = [];
+              }
+              todayRecordsByUser[userDoc.id].push(status);
+            }
           });
-          
-          if (userPresentToday) dashboardStats.todayPresent++;
-          if (userLateToday) dashboardStats.lateToday++;
-          if (userActiveToday) dashboardStats.currentlyActive++;
           
         } catch (e) {
           console.log('Error for', userName, ':', e);
         }
       }
+
+      usersSnapshot.docs.forEach(userDoc => {
+        const userStatuses = todayRecordsByUser[userDoc.id] || [];
+        
+        if (userStatuses.length === 0) {
+          dashboardStats.absent++;
+        } else {
+          userStatuses.forEach(status => {
+            if (status === 'Present') {
+              dashboardStats.onSchedule++;
+            } else if (status === 'Late') {
+              dashboardStats.late++;
+            } else if (status === 'Excused') {
+              dashboardStats.excused++;
+            } else if (status === 'Absent') {
+              dashboardStats.absent++;
+            }
+          });
+        }
+      });
 
       console.log('Total records:', allRecords.length);
       
@@ -174,7 +185,7 @@ function renderPage() {
         <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.date} • Room ${record.room}</div>
       </div>
       <div style="text-align: right;">
-        <div style="font-weight: 600; color: #059669;">${record.timeIn}</div>
+        <div style="font-weight: 600; color: #FF725E;">${record.timeIn}</div>
         <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Clocked in</div>
       </div>
     </div>
@@ -230,10 +241,14 @@ window.addEventListener('message', function(event) {
     const searchTerm = event.data.term.toLowerCase();
     currentSearchTerm = searchTerm;
     
+    let baseRecords = currentDateFilter 
+      ? allRecords.filter(record => record.date === currentDateFilter)
+      : [...allRecords];
+    
     if (!searchTerm) {
-      filteredRecords = [...allRecords];
+      filteredRecords = baseRecords;
     } else {
-      filteredRecords = allRecords.filter(record => {
+      filteredRecords = baseRecords.filter(record => {
         const text = `${record.userName} ${record.date} ${record.room}`.toLowerCase();
         return text.includes(searchTerm);
       });
@@ -255,3 +270,92 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('keyup', performSearch);
   }
 });
+
+let currentDateFilter = null;
+
+function openDatePicker() {
+  const modal = document.getElementById('datePickerModal');
+  const dateInput = document.getElementById('selectedDate');
+  
+  dateInput.value = new Date().toISOString().split('T')[0];
+  modal.style.display = 'block';
+}
+
+function closeDatePicker() {
+  const modal = document.getElementById('datePickerModal');
+  modal.style.display = 'none';
+}
+
+function filterByDate(selectedDate) {
+  if (!selectedDate) {
+    clearDateFilter();
+    return;
+  }
+  
+  currentDateFilter = selectedDate;
+  
+  filteredRecords = allRecords.filter(record => record.date === selectedDate);
+  currentPage = 1;
+  
+  const dateFilterLabel = document.getElementById('dateFilterLabel');
+  const clearDateFilter = document.getElementById('clearDateFilter');
+  
+  dateFilterLabel.textContent = `Filtered: ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  dateFilterLabel.style.display = 'inline';
+  clearDateFilter.style.display = 'inline';
+  
+  renderPage();
+}
+
+function clearDateFilter() {
+  currentDateFilter = null;
+  
+  filteredRecords = [...allRecords];
+  currentPage = 1;
+  
+  const dateFilterLabel = document.getElementById('dateFilterLabel');
+  const clearDateFilter = document.getElementById('clearDateFilter');
+  
+  dateFilterLabel.style.display = 'none';
+  clearDateFilter.style.display = 'none';
+  
+  renderPage();
+}
+
+function showAttendanceByDate() {
+  const dateInput = document.getElementById('selectedDate');
+  const selectedDate = dateInput.value;
+  
+  if (!selectedDate) {
+    alert('Please select a date');
+    return;
+  }
+  
+  closeDatePicker();
+  filterByDate(selectedDate);
+}
+
+window.onclick = function(event) {
+  if (event.target.classList.contains('modal')) {
+    event.target.style.display = 'none';
+  }
+};
+
+let statsExpanded = false;
+function toggleStats() {
+  const statsContent = document.getElementById('statsToggleContent');
+  const arrow = document.querySelector('.stats-toggle-btn .arrow');
+  
+  statsContent.classList.toggle('expanded');
+  arrow.classList.toggle('rotated');
+  statsExpanded = !statsExpanded;
+  
+  if (statsExpanded) {
+    setTimeout(async () => {
+      const weeklyData = await getWeeklyAttendanceData();
+      if (typeof updateChart === 'function') {
+        updateChart(weeklyData, 'weekly');
+      }
+    }, 100);
+  }
+}
