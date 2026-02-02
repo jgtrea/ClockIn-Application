@@ -34,8 +34,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import java.util.Locale
 
-data class ScheduleItem(val title: String, val details: String)
+data class ScheduleItem(
+    val title: String,
+    val details: String,
+    val sectionHeader: String
+)
 
 @Composable
 fun ScheduleScreen(navController: NavController) {
@@ -57,15 +62,16 @@ fun ScheduleScreen(navController: NavController) {
 
             if (records.isNotEmpty()) {
                 val items = records.map { record ->
+                    val sectionName = formatSectionName(record.documentId)
+
                     ScheduleItem(
-                        title = "${record.schedId} - ${record.room}",
-                        details = "Room ${record.room} | ${record.start_time} - ${record.end_time}"
-                    ) to record.weekday
+                        title = record.subject,
+                        details = "${record.startTime} - ${record.endTime}",
+                        sectionHeader = sectionName
+                    )
                 }
 
-                val dayOrder = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-                scheduleMap = items.groupBy({ it.second }, { it.first })
-                    .toSortedMap(compareBy { dayOrder.indexOf(it) })
+                scheduleMap = items.groupBy { it.sectionHeader }.toSortedMap()
             } else {
                 scheduleMap = emptyMap()
             }
@@ -124,7 +130,6 @@ fun ScheduleScreen(navController: NavController) {
             } else if (showFAQ) {
                 FAQView(onBack = { showFAQ = false })
             } else {
-
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -133,7 +138,7 @@ fun ScheduleScreen(navController: NavController) {
                 ) {
                     Text("Schedules", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "View and track class/work schedules.",
+                        "View and track class schedules.",
                         color = Color.Gray,
                         fontSize = 14.sp
                     )
@@ -155,8 +160,8 @@ fun ScheduleScreen(navController: NavController) {
                             Text(text = if(searchQuery.isNotEmpty()) "No matching schedules found." else "No schedules found.", color = Color.Gray)
                         }
                     } else {
-                        filteredSchedule.forEach { (day, items) ->
-                            ScheduleDateGroup(day, items)
+                        filteredSchedule.forEach { (section, items) ->
+                            ScheduleDateGroup(section, items)
                         }
                     }
                 }
@@ -165,11 +170,23 @@ fun ScheduleScreen(navController: NavController) {
     }
 }
 
+fun formatSectionName(rawId: String): String {
+    val parts = rawId.split("-")
+    if (parts.size >= 2) {
+        val gradePart = parts[0].replace("G", "Grade ")
+        val sectionPart = parts[1].lowercase()
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
+        return "$gradePart $sectionPart"
+    }
+    return rawId
+}
+
 @Composable
-fun ScheduleDateGroup(date: String, items: List<ScheduleItem>) {
+fun ScheduleDateGroup(sectionName: String, items: List<ScheduleItem>) {
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
         Text(
-            text = date,
+            text = sectionName,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -193,7 +210,19 @@ fun ScheduleCard(item: ScheduleItem) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(45.dp).border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)))
+            Box(
+                modifier = Modifier
+                    .size(45.dp)
+                    .background(Color(0xFFFF7F66), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = item.title.take(1).uppercase(),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 

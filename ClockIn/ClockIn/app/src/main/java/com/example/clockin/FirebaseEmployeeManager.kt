@@ -26,20 +26,21 @@ data class UserProfile(
 )
 
 data class AttendanceRecord(
-    val date: String = "",
-    val room: String = "",
+    val documentId: String = "",
     val status: String = "",
-    val time_in: String = "",
-    val time_out: String = "",
+    val timeIn: String = "",
+    val timeOut: String = "",
+    val date: String = "",
     val timestamp: Timestamp? = null
 )
 
 data class ScheduleRecord(
-    val schedId: String = "",
-    val room: String = "",
+    val documentId: String = "",
+    val subject: String = "",
+    val startTime: String = "",
+    val endTime: String = "",
     val weekday: String = "",
-    val start_time: String = "",
-    val end_time: String = ""
+    val room: String = ""
 )
 
 data class NotificationItem(
@@ -89,7 +90,7 @@ object FirebaseEmployeeManager {
 
             if (!empQuery.isEmpty) {
                 val doc = empQuery.documents[0]
-                val encryptedPasswordFromDB = doc.getString("pass") ?: ""
+                val encryptedPasswordFromDB = doc.getString("password") ?: ""
                 val decryptedDbPass = CryptoUtils.decrypt(encryptedPasswordFromDB)
                 return decryptedDbPass == plainTextParams
             }
@@ -99,7 +100,7 @@ object FirebaseEmployeeManager {
 
             if (!adminQuery.isEmpty) {
                 val doc = adminQuery.documents[0]
-                val encryptedPasswordFromDB = doc.getString("pass") ?: ""
+                val encryptedPasswordFromDB = doc.getString("password") ?: ""
                 val decryptedDbPass = CryptoUtils.decrypt(encryptedPasswordFromDB)
                 return decryptedDbPass == plainTextParams
             }
@@ -127,7 +128,7 @@ object FirebaseEmployeeManager {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         email = doc.getString("email") ?: "",
-                        password = doc.getString("pass") ?: "",
+                        password = doc.getString("password") ?: "",
                         employeeId = doc.getString("employeeId") ?: "",
                         department = doc.getString("department") ?: "",
                         employment = doc.getString("employment") ?: "",
@@ -146,7 +147,7 @@ object FirebaseEmployeeManager {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         email = doc.getString("email") ?: "",
-                        password = doc.getString("pass") ?: "",
+                        password = doc.getString("password") ?: "",
                         department = doc.getString("department") ?: "",
                         employment = doc.getString("employment") ?: "",
                         collectionName = "user_admin_data"
@@ -191,7 +192,7 @@ object FirebaseEmployeeManager {
                 if (qrQuery.isEmpty) return@withContext false
 
                 val qrDoc = qrQuery.documents[0]
-                val schedId = qrDoc.getString("schedId") ?: return@withContext false
+                val targetSubjectOrId = qrDoc.getString("scheduleId") ?: return@withContext false
 
                 qrDoc.reference.update("scanCount", FieldValue.increment(1))
 
@@ -200,21 +201,20 @@ object FirebaseEmployeeManager {
 
                 val scheduleQuery = db.collection("user_employee_data")
                     .document(currentUser.id)
-                    .collection("user_schedule")
-                    .whereEqualTo("schedId", schedId)
+                    .collection("Schedule")
+                    .whereEqualTo("subject", targetSubjectOrId)
                     .get()
                     .await()
 
                 if (scheduleQuery.isEmpty) return@withContext false
 
                 val scheduleDoc = scheduleQuery.documents[0]
-                val roomNumber = scheduleDoc.getString("room") ?: ""
-                val startTimeStr = scheduleDoc.getString("start_time") ?: "00:00"
+                val startTimeStr = scheduleDoc.getString("startTime") ?: "00:00"
 
                 val activeSessionQuery = db.collection("user_employee_data")
                     .document(currentUser.id)
-                    .collection("user_attendance")
-                    .whereEqualTo("room", roomNumber)
+                    .collection("Attendance")
+                    .whereEqualTo("subject", targetSubjectOrId)
                     .whereIn("status", listOf("Present", "Late"))
                     .get()
                     .await()
@@ -222,14 +222,14 @@ object FirebaseEmployeeManager {
                 if (!activeSessionQuery.isEmpty) {
                     val attendanceDoc = activeSessionQuery.documents[0]
                     val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-                    attendanceDoc.reference.update(mapOf("status" to "Completed", "time_out" to currentTime)).await()
+                    attendanceDoc.reference.update(mapOf("status" to "Completed", "timeOut" to currentTime)).await()
                     return@withContext true
                 }
 
                 val unattendedQuery = db.collection("user_employee_data")
                     .document(currentUser.id)
-                    .collection("user_attendance")
-                    .whereEqualTo("room", roomNumber)
+                    .collection("Attendance")
+                    .whereEqualTo("subject", targetSubjectOrId)
                     .whereEqualTo("status", "Unattended")
                     .get()
                     .await()
@@ -252,7 +252,7 @@ object FirebaseEmployeeManager {
                     attendanceDoc.reference.update(
                         mapOf(
                             "status" to newStatus,
-                            "time_in" to currentTimeStr,
+                            "timeIn" to currentTimeStr,
                             "timestamp" to FieldValue.serverTimestamp()
                         )
                     ).await()
@@ -271,13 +271,13 @@ object FirebaseEmployeeManager {
             try {
                 val snapshot = db.collection("user_employee_data")
                     .document(userId)
-                    .collection("user_attendance")
-                    .orderBy("timestamp", Query.Direction.DESCENDING)
-                    .limit(50)
+                    .collection("Attendance")
                     .get()
                     .await()
 
-                snapshot.toObjects(AttendanceRecord::class.java)
+                snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(AttendanceRecord::class.java)?.copy(documentId = doc.id)
+                }
             } catch (e: Exception) {
                 emptyList()
             }
@@ -289,11 +289,13 @@ object FirebaseEmployeeManager {
             try {
                 val snapshot = db.collection("user_employee_data")
                     .document(userId)
-                    .collection("user_schedule")
+                    .collection("Schedule")
                     .get()
                     .await()
 
-                snapshot.toObjects(ScheduleRecord::class.java)
+                snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(ScheduleRecord::class.java)?.copy(documentId = doc.id)
+                }
             } catch (e: Exception) {
                 emptyList()
             }

@@ -35,14 +35,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class AttendanceItem(
     val title: String,
-    val details: String,
+    val status: String,
     val timeIn: String,
     val timeOut: String,
-    val isLate: Boolean = false,
-    val isPresent: Boolean = false
+    val date: String,
+    val sortTime: String
 )
 
 @Composable
@@ -61,20 +64,85 @@ fun AttendanceScreen(navController: NavController) {
         val userProfile = FirebaseEmployeeManager.getCurrentUser()
 
         if (userProfile != null && userProfile.collectionName == "user_employee_data") {
-            val records = FirebaseEmployeeManager.getAttendanceHistory(userProfile.id)
+            val attendanceRecords = FirebaseEmployeeManager.getAttendanceHistory(userProfile.id)
+            val scheduleRecords = FirebaseEmployeeManager.getUserSchedule(userProfile.id)
 
-            if (records.isNotEmpty()) {
-                val items = records.map { record ->
+            val scheduleMap = scheduleRecords.associate { it.documentId to it.startTime }
+
+            if (attendanceRecords.isNotEmpty()) {
+                val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                val currentTimeStr = dateFormat.format(Date())
+                val currentTime = dateFormat.parse(currentTimeStr)
+
+                var items = attendanceRecords.map { record ->
+                    val startTimeStr = scheduleMap[record.documentId] ?: "00:00"
+
+                    val parts = record.documentId.split("-")
+                    val subject = parts.lastOrNull() ?: record.documentId
+                    var formattedTitle = subject
+
+                    if (parts.size >= 3) {
+                        val gradePart = parts[0].replace("G", "Grade ")
+                        val sectionPart = parts[1].lowercase()
+                            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                        formattedTitle = "$subject - $gradePart $sectionPart"
+                    }
+
+                    val rawLabel = if (record.date.isNotEmpty()) {
+                        record.date
+                    } else if (record.timestamp != null) {
+                        val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                        sdf.format(record.timestamp.toDate())
+                    } else {
+                        try {
+                            val startTime = dateFormat.parse(startTimeStr)
+                            if (currentTime != null && startTime != null && currentTime.before(startTime)) {
+                                "Upcoming"
+                            } else {
+                                "Today"
+                            }
+                        } catch (e: Exception) {
+                            "Today"
+                        }
+                    }
+
                     AttendanceItem(
-                        title = "Room: ${record.room}",
-                        details = "Status: ${record.status}",
-                        timeIn = record.time_in,
-                        timeOut = if (record.time_out.isNotEmpty()) record.time_out else "--:--",
-                        isLate = record.status == "Late",
-                        isPresent = record.status == "Present"
-                    ) to record.date
+                        title = formattedTitle,
+                        status = record.status,
+                        timeIn = record.timeIn,
+                        timeOut = if (record.timeOut.isNotEmpty()) record.timeOut else "--:--",
+                        date = rawLabel,
+                        sortTime = startTimeStr
+                    )
                 }
-                attendanceMap = items.groupBy({ it.second }, { it.first })
+
+                items = items.sortedBy { it.sortTime }
+
+                val upcomingItems = items.filter { it.date == "Upcoming" }
+
+                if (upcomingItems.size > 1) {
+                    val firstUpcoming = upcomingItems.first()
+
+                    items = items.map { item ->
+                        if (item.date == "Upcoming" && item != firstUpcoming) {
+                            item.copy(date = "Today")
+                        } else {
+                            item
+                        }
+                    }
+                }
+
+                attendanceMap = items
+                    .groupBy { it.date }
+                    .toSortedMap { d1, d2 ->
+                        when {
+                            d1 == "Upcoming" -> -1
+                            d2 == "Upcoming" -> 1
+                            d1 == "Today" -> -1
+                            d2 == "Today" -> 1
+                            else -> d2.compareTo(d1)
+                        }
+                    }
             } else {
                 attendanceMap = emptyMap()
             }
@@ -92,7 +160,7 @@ fun AttendanceScreen(navController: NavController) {
             attendanceMap.mapValues { (_, items) ->
                 items.filter {
                     it.title.contains(searchQuery, true) ||
-                            it.details.contains(searchQuery, true) ||
+                            it.status.contains(searchQuery, true) ||
                             it.timeIn.contains(searchQuery, true)
                 }
             }.filterValues { it.isNotEmpty() }
@@ -201,16 +269,22 @@ fun AttendanceCard(item: AttendanceItem) {
             Box(
                 modifier = Modifier
                     .size(45.dp)
-                    .border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)),
+                    .background(Color(0xFFFF7F66), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
+                Text(
+                    text = item.title.take(1).uppercase(),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column {
                 Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(text = item.details, color = Color.Gray, fontSize = 12.sp)
+                Text(text = "Status: ${item.status}", color = Color.Gray, fontSize = 12.sp)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -222,42 +296,37 @@ fun AttendanceCard(item: AttendanceItem) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(item.timeIn, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-
-                            if (item.isLate) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    color = Color.Red,
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text(
-                                        "Late",
-                                        color = Color.White,
-                                        fontSize = 10.sp,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            } else if (item.isPresent) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    color = Color(0xFF4CAF50),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text(
-                                        "Present",
-                                        color = Color.White,
-                                        fontSize = 10.sp,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                            val displayTimeIn = if (item.timeIn.isNotEmpty()) item.timeIn else "--:--"
+                            Text(displayTimeIn, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            StatusChip(item.status)
                         }
-                        Text(item.timeOut, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        val displayTimeOut = if (item.timeOut.isNotEmpty() && item.timeOut != "--:--") item.timeOut else "--:--"
+                        Text(displayTimeOut, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun StatusChip(status: String) {
+    val color = when(status.lowercase()) {
+        "late" -> Color.Red
+        "present" -> Color(0xFF4CAF50)
+        else -> Color.Gray
+    }
+    Surface(
+        color = color,
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        Text(
+            text = status,
+            color = Color.White,
+            fontSize = 10.sp,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            fontWeight = FontWeight.Bold
+        )
     }
 }

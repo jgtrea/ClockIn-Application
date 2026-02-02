@@ -9,29 +9,27 @@ object CryptoUtils {
     private const val TRANSFORMATION = "AES/ECB/PKCS5Padding"
     private const val SECRET_KEY = "CSclockinapp2026"
 
-    private fun getKey(): SecretKeySpec {
-        return SecretKeySpec(SECRET_KEY.toByteArray(Charsets.UTF_8), ALGORITHM)
-    }
-
     fun encrypt(input: String): String {
         return try {
+            val key = SecretKeySpec(SECRET_KEY.toByteArray(), ALGORITHM)
             val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.ENCRYPT_MODE, getKey())
-            val cipherText = cipher.doFinal(input.toByteArray(Charsets.UTF_8))
-            Base64.encodeToString(cipherText, Base64.NO_WRAP)
+            cipher.init(Cipher.ENCRYPT_MODE, key)
+            val encryptedBytes = cipher.doFinal(input.toByteArray())
+            Base64.encodeToString(encryptedBytes, Base64.DEFAULT).trim()
         } catch (e: Exception) {
             e.printStackTrace()
             ""
         }
     }
 
-    fun decrypt(cipherText: String): String {
+    fun decrypt(input: String): String {
         return try {
+            val key = SecretKeySpec(SECRET_KEY.toByteArray(), ALGORITHM)
             val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.DECRYPT_MODE, getKey())
-            val decodedBytes = Base64.decode(cipherText, Base64.NO_WRAP)
-            val plainText = cipher.doFinal(decodedBytes)
-            String(plainText, Charsets.UTF_8)
+            cipher.init(Cipher.DECRYPT_MODE, key)
+            val decodedBytes = Base64.decode(input, Base64.DEFAULT)
+            val decryptedBytes = cipher.doFinal(decodedBytes)
+            String(decryptedBytes)
         } catch (e: Exception) {
             e.printStackTrace()
             ""
