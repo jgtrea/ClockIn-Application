@@ -39,7 +39,6 @@ async function loadSchedule(userId) {
   scheduleTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">Loading...</p>';
 
   try {
-    // Get the teacher's schedule from their user document (using 'Schedule' collection)
     const scheduleSnapshot = await window.db
       .collection('user_employee_data')
       .doc(userId)
@@ -54,7 +53,7 @@ async function loadSchedule(userId) {
     let teacherSchedule = [];
     scheduleSnapshot.docs.forEach(timeDoc => {
       const timeData = timeDoc.data();
-      console.log('Time document data:', timeData); // Debug log
+      console.log('Time document data:', timeData); 
       
       teacherSchedule.push({
         time: timeDoc.id,
@@ -63,7 +62,6 @@ async function loadSchedule(userId) {
       });
     });
 
-    // Sort by time
     teacherSchedule.sort((a, b) => {
       const timeA = a.time.split(':').map(Number);
       const timeB = b.time.split(':').map(Number);
@@ -118,14 +116,13 @@ function loadUsersFromDB() {
 }
 
 function formatTime(time) {
-  return time.replace(/^0/, ''); // Remove leading zero
+  return time.replace(/^0/, '');
 }
 
 function toggleUser(uid) {
   expandedRows[uid] = !expandedRows[uid];
   render();
   
-  // Auto-load schedule when expanding
   if (expandedRows[uid]) {
     loadSchedule(uid);
   }
@@ -137,7 +134,6 @@ function toggleAddSchedule(uid) {
   form.style.display = isVisible ? 'none' : 'block';
   
   if (!isVisible) {
-    // Clear form when opening
     document.getElementById(`add-time-${uid}`).value = '';
     document.getElementById(`add-section-${uid}`).value = '';
     document.getElementById(`add-subject-${uid}`).value = '';
@@ -154,7 +150,6 @@ async function saveSchedule(uid) {
     return;
   }
   
-  // Format time to remove leading zero
   const formattedTime = formatTime(time);
   
   try {
@@ -168,7 +163,6 @@ async function saveSchedule(uid) {
         subject: subject
       });
     
-    // Hide form and refresh schedule
     toggleAddSchedule(uid);
     loadSchedule(uid);
     
@@ -254,7 +248,6 @@ function render() {
           </div>
           <div class="btn-group">
             <button class="btn-outline" onclick="toggleUser('${user.uid}')">View</button>
-            <button class="btn-outline">Delete</button>
           </div>
         </div>`;
     } else {
@@ -299,7 +292,6 @@ function render() {
           <div class="sidebar-actions">
             <div class="btn-group">
               <button class="btn-outline" onclick="toggleUser('${user.uid}')">Close</button>
-              <button class="btn-outline">Delete</button>
             </div>
           </div>
         </div>`;
