@@ -75,24 +75,6 @@ function loadUsersFromDB() {
     });
 }
 
-function saveRecord(uid) {
-  const db = window.db;
-  const newRecord = {
-    date: document.getElementById(`in-date-${uid}`).value,
-    time_in: document.getElementById(`in-in-${uid}`).value,
-    time_out: document.getElementById(`in-out-${uid}`).value,
-    room: document.getElementById(`in-room-${uid}`).value,
-    status: document.getElementById(`in-status-${uid}`).value,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  db.collection(USERS_COLLECTION).doc(uid).collection(SUB_COLLECTION).add(newRecord)
-    .then(() => {
-      expandedAddForms[uid] = false;
-      loadUsersFromDB(); 
-    });
-}
-
 function updateRecord(uid, recordId) {
   const updatedData = {
     date: document.getElementById(`edit-date-${recordId}`).value,
@@ -114,18 +96,29 @@ function toggleEdit(recordId) {
   render();
 }
 
+function toggleStatusEdit(recordId) {
+  editingRecordId = (editingRecordId === recordId) ? null : recordId;
+  render();
+}
+
+function updateStatus(uid, recordId) {
+  const updatedData = {
+    status: document.getElementById(`edit-status-${recordId}`).value
+  };
+
+  window.db.collection(USERS_COLLECTION).doc(uid).collection(SUB_COLLECTION).doc(recordId).update(updatedData)
+    .then(() => {
+      editingRecordId = null;
+      loadUsersFromDB();
+    });
+}
+
 function toggleUser(uid) {
   expandedRows[uid] = !expandedRows[uid];
   if (!expandedRows[uid]) {
     expandedAddForms[uid] = false;
     editingRecordId = null;
   }
-  render();
-}
-
-function toggleAddForm(uid) {
-  expandedAddForms[uid] = !expandedAddForms[uid];
-  if (expandedAddForms[uid]) editingRecordId = null;
   render();
 }
 
@@ -172,10 +165,10 @@ function render() {
                 if (isEditing) {
                   return `
                     <div class="record-row editing-row">
-                      <span><input type="date" id="edit-date-${r.recordId}" value="${r.date}"></span>
-                      <span><input type="time" id="edit-in-${r.recordId}" value="${r.time_in}"></span>
-                      <span><input type="time" id="edit-out-${r.recordId}" value="${r.time_out}"></span>
-                      <span><input type="text" id="edit-room-${r.recordId}" value="${r.room || ''}"></span>
+                      <span><input type="date" id="edit-date-${r.recordId}" value="${r.date}" disabled></span>
+                      <span><input type="time" id="edit-in-${r.recordId}" value="${r.time_in}" disabled></span>
+                      <span><input type="time" id="edit-out-${r.recordId}" value="${r.time_out}" disabled></span>
+                      <span><input type="text" id="edit-room-${r.recordId}" value="${r.room || ''}" disabled></span>
                       <span>
                         <select id="edit-status-${r.recordId}">
                           <option value="Present" ${r.status==='Present'?'selected':''}>Present</option>
@@ -185,8 +178,8 @@ function render() {
                         </select>
                       </span>
                       <span class="actions-cell">
-                        <button class="action-icon-btn" onclick="updateRecord('${user.uid}', '${r.recordId}')"><span class="material-symbols-outlined">check</span></button>
-                        <button class="action-icon-btn" onclick="toggleEdit(null)"><span class="material-symbols-outlined">close</span></button>
+                        <button class="action-icon-btn" onclick="updateStatus('${user.uid}', '${r.recordId}')"><span class="material-symbols-outlined">check</span></button>
+                        <button class="action-icon-btn" onclick="toggleStatusEdit(null)"><span class="material-symbols-outlined">close</span></button>
                       </span>
                     </div>`;
                 }
@@ -194,32 +187,10 @@ function render() {
                   <div class="record-row">
                     <span>${r.date || '-'}</span><span>${r.time_in || '-'}</span><span>${r.time_out || '-'}</span><span>${r.room || '-'}</span><span>${r.status || '-'}</span>
                     <span class="actions-cell">
-                      <button class="action-icon-btn" onclick="toggleEdit('${r.recordId}')"><span class="material-symbols-outlined">edit</span></button>
+                      <button class="action-icon-btn" onclick="toggleStatusEdit('${r.recordId}')"><span class="material-symbols-outlined">edit</span></button>
                     </span>
                   </div>`;
               }).join('') : '<p style="text-align:center; color:#999; padding:10px;">No records found.</p>'}
-            </div>
-
-            <button class="btn-outline" onclick="toggleAddForm('${user.uid}')">Add Attendance</button>
-
-            <div class="add-record-ui ${isAddFormOpen ? '' : 'hidden'}">
-              <div class="edit-grid">
-                <label>Date</label><input type="date" id="in-date-${user.uid}">
-                <label>Time In</label><input type="time" id="in-in-${user.uid}">
-                <label>Room</label><input type="text" id="in-room-${user.uid}" placeholder="e.g. 101">
-                <label>Time Out</label><input type="time" id="in-out-${user.uid}">
-                <label>Status</label>
-                <select id="in-status-${user.uid}">
-                  <option value="Present">Present</option>
-                  <option value="Late">Late</option>
-                  <option value="Absent">Absent</option>
-                  <option value="Excused">Excused</option>
-                </select>
-              </div>
-              <div class="btn-group" style="margin-top: 20px;">
-                <button class="btn-outline" onclick="toggleAddForm('${user.uid}')">Close</button>
-                <button class="btn-outline" onclick="saveRecord('${user.uid}')">Add</button>
-              </div>
             </div>
           </div>
 
