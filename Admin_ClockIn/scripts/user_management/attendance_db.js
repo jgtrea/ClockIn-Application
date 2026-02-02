@@ -109,13 +109,6 @@ function updateRecord(uid, recordId) {
     });
 }
 
-function deleteRecord(uid, recordId) {
-  if(confirm("Delete this attendance record?")) {
-    window.db.collection(USERS_COLLECTION).doc(uid).collection(SUB_COLLECTION).doc(recordId).delete()
-      .then(() => loadUsersFromDB());
-  }
-}
-
 function toggleEdit(recordId) {
   editingRecordId = (editingRecordId === recordId) ? null : recordId;
   render();
@@ -158,7 +151,6 @@ function render() {
           </div>
           <div class="btn-group">
             <button class="btn-outline" onclick="toggleUser('${user.uid}')">View</button>
-            <button class="btn-outline">Delete</button>
           </div>
         </div>`;
     } else {
@@ -203,7 +195,6 @@ function render() {
                     <span>${r.date || '-'}</span><span>${r.time_in || '-'}</span><span>${r.time_out || '-'}</span><span>${r.room || '-'}</span><span>${r.status || '-'}</span>
                     <span class="actions-cell">
                       <button class="action-icon-btn" onclick="toggleEdit('${r.recordId}')"><span class="material-symbols-outlined">edit</span></button>
-                      <button class="action-icon-btn delete" onclick="deleteRecord('${user.uid}', '${r.recordId}')"><span class="material-symbols-outlined">delete</span></button>
                     </span>
                   </div>`;
               }).join('') : '<p style="text-align:center; color:#999; padding:10px;">No records found.</p>'}
@@ -235,7 +226,6 @@ function render() {
           <div class="sidebar-actions">
             <div class="btn-group">
               <button class="btn-outline" onclick="toggleUser('${user.uid}')">Close</button>
-              <button class="btn-outline">Delete</button>
             </div>
           </div>
         </div>`;
