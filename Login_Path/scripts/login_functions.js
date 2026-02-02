@@ -9,7 +9,14 @@ import {
   browserSessionPersistence,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDUnpdDMr0E6r-lohCNJKKKdUJfbVqzayM",
@@ -25,21 +32,22 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+async function isUserAdmin(email) {
+  const q = query(
+    collection(db, 'user_admin_data'),
+    where('email', '==', email)
+  );
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
+}
+
 onAuthStateChanged(auth, async (user) => {
   console.log('onAuthStateChanged ->', user);
+
   if (user) {
     try {
-      const ref = doc(db, 'ad_privileges', 'ad_users');
-      const snap = await getDoc(ref);
-      let isAdmin = false;
-      if (snap.exists()) {
-        const data = snap.data();
-        if (Array.isArray(data.users)) {
-          isAdmin = data.users.includes(user.email);
-        } else if (typeof data.user === 'string') {
-          isAdmin = data.user === user.email;
-        }
-      }
+      const isAdmin = await isUserAdmin(user.email);
+
       if (isAdmin) {
         window.location.href = '../Admin_ClockIn/index.html';
       } else {
@@ -80,16 +88,7 @@ if (loginForm) {
 
       let isAdmin = false;
       try {
-        const ref = doc(db, 'ad_privileges', 'ad_users');
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          if (Array.isArray(data.users)) {
-            isAdmin = data.users.includes(user.email);
-          } else if (typeof data.user === 'string') {
-            isAdmin = data.user === user.email;
-          }
-        }
+        isAdmin = await isUserAdmin(user.email);
       } catch (e) {
         console.error('Privilege check failed', e);
       }
