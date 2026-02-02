@@ -4,8 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const emailEl = document.getElementById("email");
   const username = document.getElementById("username");
   const emailField = document.getElementById("emailField");
-  const organization = document.getElementById("organization");
-  const department = document.getElementById("department");
   const passwordField = document.getElementById("passwordField");
 
   auth.onAuthStateChanged(async user => {
@@ -23,20 +21,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!docSnap.exists) {
       await docRef.set({
-        organization: "",
-        department: "",
         passwordLength: 12
       });
     }
 
     const data = (await docRef.get()).data();
-    organization.textContent = data.organization || "Add organization";
-    department.textContent = data.department || "Add department";
     passwordField.textContent = "*".repeat(data.passwordLength || 12);
   });
 
   const editButtons = document.querySelectorAll(".edit");
-  const fields = ["username", "emailField", "password", "organization", "department"];
+  const fields = ["username", "emailField", "password"];
 
   async function handleEdit(field) {
     const user = auth.currentUser;
@@ -75,16 +69,6 @@ document.addEventListener("DOMContentLoaded", () => {
           passwordField.textContent = "*".repeat(newValue.length);
           await docRef.set({ passwordLength: newValue.length }, { merge: true });
           alert("Password updated successfully!");
-          break;
-
-        case "organization":
-          organization.textContent = newValue;
-          await docRef.set({ organization: newValue }, { merge: true });
-          break;
-
-        case "department":
-          department.textContent = newValue;
-          await docRef.set({ department: newValue }, { merge: true });
           break;
       }
     } catch (err) {

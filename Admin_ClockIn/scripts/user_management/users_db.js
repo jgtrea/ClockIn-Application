@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       filteredUsers = [...users];
     } else {
       filteredUsers = users.filter(user => {
-        const searchText = `${user.name || ''} ${user.id || ''} ${user.email || ''} ${user.department || ''} ${user.employment || ''}`.toLowerCase();
+        const searchText = `${user.name || ''} ${user.id || ''} ${user.email || ''} ${user.employment || ''}`.toLowerCase();
         return searchText.includes(searchTerm.toLowerCase());
       });
     }
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const row = document.createElement('div');
       row.className = `user-row ${isExpanded ? 'expanded' : ''}`;
 
-      const subtitle = `${user.id || 'ID'} | ${user.department || 'Dept'} | ${user.employment || 'Status'}`;
+      const subtitle = `${user.id || 'ID'} | ${user.email || 'Email'} | ${user.employment || 'Status'}`;
 
       row.innerHTML = `
         <div class="user-collapsed-content" onclick="window.toggleUser('${user.uid}')" style="${isExpanded ? 'display: none;' : ''}">
@@ -83,7 +83,6 @@ document.addEventListener('DOMContentLoaded', async () => {
               <label>Name</label><input type="text" id="name-${user.uid}" value="${user.name || ''}">
               <label>Email</label><input type="text" id="email-${user.uid}" value="${user.email || ''}">
               <label>Password</label><input type="password" id="password-${user.uid}" value="${user.password || ''}">
-              <label>Department</label><input type="text" id="dept-${user.uid}" value="${user.department || ''}">
               <label>Employment</label><select id="emp-${user.uid}">
                 <option value="Full-time" ${user.employment === 'Full-time' ? 'selected' : ''}>Full-time</option>
                 <option value="Part-time" ${user.employment === 'Part-time' ? 'selected' : ''}>Part-time</option>
@@ -92,8 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="sidebar-actions">
             <div class="btn-group">
-              <button class="btn-outline" onclick="window.closeAndSave('${user.uid}')">Close</button>
-              <button class="btn-outline" onclick="window.deleteUser('${user.uid}')">Delete</button>
+              <button class="btn-outline" onclick="window.saveUser('${user.uid}')">Save</button>
+              <button class="btn-outline" onclick="window.closeNoSave('${user.uid}')">Close</button>
             </div>
           </div>
         </div>
@@ -147,7 +146,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             name: doc.data().name || '',
             email: doc.data().email || '',
             password: doc.data().password || '',
-            department: doc.data().department || '',
             employment: doc.data().employment || ''
           }));
 
@@ -170,7 +168,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             name: doc.data().name || '',
             email: doc.data().email || '',
             password: doc.data().password || '',
-            department: doc.data().department || '',
             employment: doc.data().employment || ''
           }));
           users = remoteData;
@@ -184,7 +181,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderUsers();
   };
 
-  window.closeAndSave = async (uid) => {
+  window.closeNoSave = (uid) => {
+    expandedRows[uid] = false;
+    renderUsers();
+    console.log('users_db: Closed without saving.');
+  };
+
+  window.saveUser = async (uid) => {
     const idVal = document.getElementById(`id-${uid}`).value;
     const nameVal = document.getElementById(`name-${uid}`).value;
     const emailVal = document.getElementById(`email-${uid}`).value;
@@ -194,14 +197,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const userInArray = users.find(u => u.uid === uid) || {};
 
-    expandedRows[uid] = false;
-    renderUsers();
-
     const hasChanged = idVal !== (userInArray.id || '') ||
       nameVal !== (userInArray.name || '') ||
       emailVal !== (userInArray.email || '') ||
       passwordVal !== (userInArray.password || '') ||
-      deptVal !== (userInArray.department || '') ||
       empVal !== (userInArray.employment || '');
 
     if (hasChanged) {
@@ -211,16 +210,33 @@ document.addEventListener('DOMContentLoaded', async () => {
           name: nameVal,
           email: emailVal,
           password: passwordVal,
-          department: deptVal,
           employment: empVal
         });
-        console.log('users_db: Changes saved to database.');
+        console.log('users_db: User data saved successfully.');
+        
+        // Update local data so card shows updated info
+        const userIndex = users.findIndex(u => u.uid === uid);
+        if (userIndex !== -1) {
+          users[userIndex] = {
+            ...users[userIndex],
+            id: idVal,
+            name: nameVal,
+            email: emailVal,
+            password: passwordVal,
+            employment: empVal
+          };
+          applySearch();
+        }
       } catch (err) {
         console.error('users_db: Save error:', err);
       }
     } else {
-      console.log('users_db: No changes detected, just collapsed.');
+      console.log('users_db: No changes detected.');
     }
+    
+    // Close the expanded view after saving
+    expandedRows[uid] = false;
+    renderUsers();
   };
 
   window.deleteUser = async (uid) => {
@@ -236,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   addUserBtn.addEventListener('click', async () => {
     try {
       const docRef = await db.collection(USERS_COLLECTION).add({
-        name: 'New User', employeeId: '', email: '', password: '', department: '', employment: '',
+        name: 'New User', employeeId: '', email: '', password: '', employment: '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       expandedRows[docRef.id] = true;

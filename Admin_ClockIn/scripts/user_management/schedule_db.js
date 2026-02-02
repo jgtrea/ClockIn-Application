@@ -103,7 +103,7 @@ function loadUsersFromDB() {
         return {
           uid: userId,
           name: userData.name || '',
-          subtitle: `${userData.employeeId || 'T000'} | ${userData.department || 'N/A'} | ${userData.employment || 'N/A'}`
+          subtitle: `${userData.employeeId || 'T000'} | ${userData.email || 'N/A'} | ${userData.employment || 'N/A'}`
         };
       });
 
