@@ -61,8 +61,6 @@ data class NotificationItem(
 
 object SupabaseManager {
     private const val SUPABASE_URL = "https://ckgvtzsslrxklmbkztxe.supabase.co"
-
-    // REPLACE WITH CORRECT ANON KEY? I THINK?
     private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo"
 
     private var cachedUser: UserProfile? = null
@@ -85,11 +83,26 @@ object SupabaseManager {
         }
     }
 
+    suspend fun loadSession(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val session = client.auth.loadFromStorage()
+                session
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
+
     fun isLoggedIn(): Boolean = client.auth.currentSessionOrNull() != null
 
     suspend fun signOut() {
         cachedUser = null
-        client.auth.signOut()
+        try {
+            client.auth.signOut()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     suspend fun signIn(email: String, pass: String): Result<Boolean> {
@@ -126,7 +139,6 @@ object SupabaseManager {
                 cachedUser = result
                 result
             } catch (e: Exception) {
-                Log.e("SupabaseManager", "Error fetching profile", e)
                 null
             }
         }
@@ -154,7 +166,6 @@ object SupabaseManager {
 
                 result.decodeList<Attendance>()
             } catch (e: Exception) {
-                Log.e("SupabaseManager", "Error fetching attendance", e)
                 emptyList()
             }
         }
@@ -168,7 +179,6 @@ object SupabaseManager {
                     .select { filter { eq("employeeid", user.id) } }
                     .decodeList<Schedule>()
             } catch (e: Exception) {
-                Log.e("SupabaseManager", "Error fetching schedule", e)
                 emptyList()
             }
         }
@@ -237,7 +247,6 @@ object SupabaseManager {
                 return@withContext Result.success("Successfully Clocked In: $status")
 
             } catch (e: Exception) {
-                Log.e("SupabaseManager", "QR Verify Error", e)
                 Result.failure(e)
             }
         }

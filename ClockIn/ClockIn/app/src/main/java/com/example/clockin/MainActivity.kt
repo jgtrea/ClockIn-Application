@@ -93,6 +93,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val context = LocalContext.current
+
+            var isCheckingSession by remember { mutableStateOf(true) }
+            var startDestination by remember { mutableStateOf("login") }
+
             val locationPermissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission()
             ) { isGranted ->
@@ -102,6 +106,16 @@ class MainActivity : ComponentActivity() {
                         message = "Location permission is needed to detect WiFi Name."
                     )
                 }
+            }
+
+            LaunchedEffect(Unit) {
+                val sessionRestored = SupabaseManager.loadSession()
+                if (sessionRestored) {
+                    startDestination = "home"
+                } else {
+                    startDestination = "login"
+                }
+                isCheckingSession = false
             }
 
             LaunchedEffect(Unit) {
@@ -125,50 +139,57 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val startDestination = if (SupabaseManager.isLoggedIn()) "home" else "login"
+            if (isCheckingSession) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = ButtonOrange)
+                }
+            } else {
+                RealtimeNotificationListener()
 
-            RealtimeNotificationListener()
-
-            NotificationOverlay {
-                NavHost(navController = navController, startDestination = startDestination) {
-                    composable("login") {
-                        LoginScreen(onLoginSuccess = {
-                            navController.navigate("home") {
-                                popUpTo("login") { inclusive = true }
-                            }
-                        })
-                    }
-                    composable("home") {
-                        DashboardScreen(
-                            navController = navController,
-                            beaconDistance = beaconDistance,
-                            isBeaconFound = isBeaconFound,
-                            deviceName = targetBleName,
-                            onTargetBleChanged = { newBleName ->
-                                targetBleName = newBleName
-                                isBeaconFound = false
-                            },
-                            onLogout = {
-                                val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
-                                scope.launch {
-                                    SupabaseManager.signOut()
-                                    navController.navigate("login") { popUpTo("home") { inclusive = true } }
+                NotificationOverlay {
+                    NavHost(navController = navController, startDestination = startDestination) {
+                        composable("login") {
+                            LoginScreen(onLoginSuccess = {
+                                navController.navigate("home") {
+                                    popUpTo("login") { inclusive = true }
                                 }
-                            },
-                            onProfileClick = { navController.navigate("profile") }
-                        )
-                    }
-                    composable("profile") {
-                        ProfileDetailsScreen(onBack = { navController.popBackStack() })
-                    }
-                    composable("scan_qr") {
-                        ScannerScreen(navController = navController)
-                    }
-                    composable("schedule") {
-                        ScheduleScreen(navController = navController)
-                    }
-                    composable("attendance") {
-                        AttendanceScreen(navController = navController)
+                            })
+                        }
+                        composable("home") {
+                            DashboardScreen(
+                                navController = navController,
+                                beaconDistance = beaconDistance,
+                                isBeaconFound = isBeaconFound,
+                                deviceName = targetBleName,
+                                onTargetBleChanged = { newBleName ->
+                                    targetBleName = newBleName
+                                    isBeaconFound = false
+                                },
+                                onLogout = {
+                                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                                    scope.launch {
+                                        SupabaseManager.signOut()
+                                        navController.navigate("login") { popUpTo("home") { inclusive = true } }
+                                    }
+                                },
+                                onProfileClick = { navController.navigate("profile") }
+                            )
+                        }
+                        composable("profile") {
+                            ProfileDetailsScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("scan_qr") {
+                            ScannerScreen(navController = navController)
+                        }
+                        composable("schedule") {
+                            ScheduleScreen(navController = navController)
+                        }
+                        composable("attendance") {
+                            AttendanceScreen(navController = navController)
+                        }
                     }
                 }
             }
@@ -186,7 +207,6 @@ class MainActivity : ComponentActivity() {
             try {
                 scanner.stopScan(it)
             } catch (e: Exception) {
-                android.util.Log.e("BLE", "Error stopping scan: ${e.message}")
             }
         }
 
