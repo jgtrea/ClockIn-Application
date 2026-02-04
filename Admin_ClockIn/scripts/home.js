@@ -71,6 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const timeEl = document.getElementById('currentTime');
     if (timeEl) timeEl.textContent = `${hours}:${minutes}:${seconds}`;
+    
+    // Update date
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayName = days[now.getDay()];
+    const month = months[now.getMonth()];
+    const date = now.getDate();
+    const year = now.getFullYear();
+    const dateEl = document.getElementById('currentDate');
+    if (dateEl) dateEl.textContent = `${dayName}, ${month} ${date}, ${year}`;
   }
   
   updateTime();
