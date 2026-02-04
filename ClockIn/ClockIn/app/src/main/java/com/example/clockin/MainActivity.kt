@@ -152,11 +152,23 @@ class MainActivity : ComponentActivity() {
                 NotificationOverlay {
                     NavHost(navController = navController, startDestination = startDestination) {
                         composable("login") {
-                            LoginScreen(onLoginSuccess = {
-                                navController.navigate("home") {
-                                    popUpTo("login") { inclusive = true }
+                            LoginScreen(
+                                onLoginSuccess = {
+                                    navController.navigate("home") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                },
+                                onForgotPassword = {
+                                    navController.navigate("forgotPassword")
                                 }
-                            })
+                            )
+                        }
+                        composable("forgotPassword") {
+                            ForgotPasswordScreen(
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
                         }
                         composable("home") {
                             DashboardScreen(
@@ -242,7 +254,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    onForgotPassword: () -> Unit = {}
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("AccountHistory", Context.MODE_PRIVATE) }
@@ -407,6 +422,18 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         ) {
                             Text("Login", color = Color.White)
                         }
+                    }
+
+                    // Forgot Password Button
+                    androidx.compose.material3.TextButton(
+                        onClick = onForgotPassword,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Forgot Password?",
+                            color = ButtonOrange,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }

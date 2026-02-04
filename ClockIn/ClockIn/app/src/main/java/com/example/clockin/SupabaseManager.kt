@@ -120,6 +120,18 @@ object SupabaseManager {
         }
     }
 
+    suspend fun sendPasswordResetEmail(email: String): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.auth.resetPasswordForEmail(email)
+                Result.success(true)
+            } catch (e: Exception) {
+                Log.e("SupabaseManager", "Password reset error", e)
+                Result.failure(e)
+            }
+        }
+    }
+
     suspend fun getCurrentUser(): UserProfile? {
         if (cachedUser != null) return cachedUser
 
