@@ -43,7 +43,7 @@ async function loadUsersFromDB() {
     const { data: usersData, error: usersError } = await supabase
       .from(USERS_TABLE)
       .select('*')
-      .order('createdat', { ascending: false });
+      .order('createdAt', { ascending: false });
 
     if (usersError) {
       console.error('Error loading users:', usersError);
@@ -382,8 +382,8 @@ function sortAttendance(field) {
       valueA = (a.uid || '').toLowerCase();
       valueB = (b.uid || '').toLowerCase();
     } else if (field === 'createdAt') {
-      valueA = a.createdat || 0;
-      valueB = b.createdat || 0;
+      valueA = a.createdAt || 0;
+      valueB = b.createdAt || 0;
     }
     return sortAscending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
   });

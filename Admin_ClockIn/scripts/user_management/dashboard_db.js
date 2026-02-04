@@ -44,7 +44,7 @@ async function loadRecentActivity() {
     const { data: usersData, error: usersError } = await supabase
       .from('user_employee_data')
       .select('*')
-      .order('createdat', { ascending: false });
+      .order('createdAt', { ascending: false });
 
     if (usersError) throw usersError;
 

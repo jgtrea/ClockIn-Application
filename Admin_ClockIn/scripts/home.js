@@ -111,7 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
       const { data: schedulesData, error: schedulesError } = await supabase
         .from('schedule')
-        .select('*');
+        .select('*')
+        .eq('weekday', today);
 
       if (schedulesError) throw schedulesError;
 
@@ -121,8 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sectionName = section.sectionName;
         
         const sectionSchedules = schedulesData.filter(s => 
-          s.sectionName === sectionName && 
-          s.weekday === today
+          s.sectId === section.sectId
         ).sort((a, b) => {
           const timeA = (a.startTime || '').split(':').map(Number);
           const timeB = (b.startTime || '').split(':').map(Number);
@@ -132,43 +132,32 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentSubject = 'No class';
         let timeRange = '';
         
-        for (let i = 0; i < sectionSchedules.length; i++) {
-          if (sectionSchedules[i + 1]) {
-            sectionSchedules[i].endTime = sectionSchedules[i + 1].startTime;
-          } else {
-            const startParts = (sectionSchedules[i].startTime || '').split(':');
-            const startHour = parseInt(startParts[0]) || 0;
-            const startMin = parseInt(startParts[1]) || 0;
-            const endHour = startHour + 1;
-            sectionSchedules[i].endTime = `${String(endHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
-          }
-        }
-        
         const now = new Date();
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         const currentMinutes = parseInt(currentTime.split(':')[0]) * 60 + parseInt(currentTime.split(':')[1]);
         
         let found = false;
         for (let i = 0; i < sectionSchedules.length; i++) {
-          const subject = sectionSchedules[i];
-          const subjectName = subject.subject || 'Class';
+          const schedule = sectionSchedules[i];
+          const subjectName = schedule.subject || 'Class';
           
-          const startMinutes = parseInt((subject.startTime || '').split(':')[0]) * 60 + parseInt((subject.startTime || '').split(':')[1]);
-          const endMinutes = parseInt((subject.endTime || '').split(':')[0]) * 60 + parseInt((subject.endTime || '').split(':')[1]);
+          const startMinutes = parseInt((schedule.startTime || '').split(':')[0]) * 60 + parseInt((schedule.startTime || '').split(':')[1]);
+          const endMinutes = parseInt((schedule.endTime || '').split(':')[0]) * 60 + parseInt((schedule.endTime || '').split(':')[1]);
           
           if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
             currentSubject = subjectName;
-            timeRange = `${subject.startTime} - ${subject.endTime}`;
+            timeRange = `${schedule.startTime} - ${schedule.endTime}`;
             found = true;
             break;
           }
         }
         
         if (!found && sectionSchedules.length > 0) {
-          const firstStartMinutes = parseInt((sectionSchedules[0].startTime || '').split(':')[0]) * 60 + parseInt((sectionSchedules[0].startTime || '').split(':')[1]);
+          const firstSchedule = sectionSchedules[0];
+          const firstStartMinutes = parseInt((firstSchedule.startTime || '').split(':')[0]) * 60 + parseInt((firstSchedule.startTime || '').split(':')[1]);
           if (currentMinutes < firstStartMinutes) {
-            currentSubject = sectionSchedules[0].subject || 'Class';
-            timeRange = `${sectionSchedules[0].startTime} - ${sectionSchedules[0].endTime}`;
+            currentSubject = 'No class';
+            timeRange = `Next: ${firstSchedule.subject || 'Class'} at ${firstSchedule.startTime}`;
           }
         }
 
@@ -247,18 +236,10 @@ async function loadDaySchedule(sectionId, day) {
   if (!supabase) return;
   
   try {
-    const { data: sectionData, error: sectionError } = await supabase
-      .from('sections')
-      .select('sectionName')
-      .eq('sectId', sectionId)
-      .single();
-
-    if (sectionError) throw sectionError;
-
     const { data: schedulesData, error: schedulesError } = await supabase
       .from('schedule')
       .select('*')
-      .eq('sectionName', sectionData.sectionName)
+      .eq('sectId', sectionId)
       .eq('weekday', day);
 
     if (schedulesError) throw schedulesError;
@@ -271,18 +252,6 @@ async function loadDaySchedule(sectionId, day) {
         const timeB = (b.startTime || '').split(':').map(Number);
         return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
       });
-
-      for (let i = 0; i < schedulesData.length; i++) {
-        if (schedulesData[i + 1]) {
-          schedulesData[i].endTime = schedulesData[i + 1].startTime;
-        } else {
-          const startParts = (schedulesData[i].startTime || '').split(':');
-          const startHour = parseInt(startParts[0]) || 0;
-          const startMin = parseInt(startParts[1]) || 0;
-          const endHour = startHour + 1;
-          schedulesData[i].endTime = `${String(endHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
-        }
-      }
       
       contentEl.innerHTML = `
         <h4 style="margin: 0 0 12px 0; color: #111827;">${day} Schedule</h4>

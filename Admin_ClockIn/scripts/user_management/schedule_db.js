@@ -88,7 +88,7 @@ async function loadUsersFromDB() {
     const { data: usersData, error } = await supabase
       .from(USERS_TABLE)
       .select('*')
-      .order('createdat', { ascending: false });
+      .order('createdAt', { ascending: false });
 
     if (error) {
       console.error('Error loading users:', error);

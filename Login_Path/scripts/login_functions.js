@@ -11,22 +11,22 @@ window.supabaseClient = supabaseClient;
 async function getUserIdByEmail(email) {
   const { data: adminData, error: adminError } = await supabaseClient
     .from('user_admin_data')
-    .select('adminid, email')
+    .select('adminId, email')
     .eq('email', email)
     .single();
   
   if (!adminError && adminData) {
-    return { id: adminData.adminid, type: 'admin' };
+    return { id: adminData.adminId, type: 'admin' };
   }
   
   const { data: empData, error: empError } = await supabaseClient
     .from('user_employee_data')
-    .select('employeeid, email')
+    .select('employeeId, email')
     .eq('email', email)
     .single();
   
   if (!empError && empData) {
-    return { id: empData.employeeid, type: 'employee' };
+    return { id: empData.employeeId, type: 'employee' };
   }
   
   return null;
