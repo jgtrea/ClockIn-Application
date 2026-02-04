@@ -1,12 +1,12 @@
-#  ClockIn - Employee Attendance System
+# ClockIn - Employee Attendance System
 
 **ClockIn** is a modern Android application built with **Kotlin** and **Jetpack Compose** that streamlines employee attendance tracking. It utilizes **QR Code scanning**, **Bluetooth Low Energy (BLE) beacons**, and **WiFi SSID restrictions** to ensure secure and accurate logging of work hours.
 
 ---
 
-##  Features
+## Features
 
-* **Secure Authentication:** Employee login using Firebase Authentication.
+* **Secure Authentication:** Employee login using Supabase Authentication.
 * **QR Code Clock-In/Out:**
     * Scans secure QR codes to log attendance.
     * **Smart Logic:** Automatically toggles between "Clock In" and "Clock Out".
@@ -25,7 +25,8 @@
 
 * **Language:** Kotlin
 * **UI Framework:** Jetpack Compose (Material3)
-* **Backend:** Firebase (Firestore & Authentication)
+* **Backend:** Supabase (PostgreSQL & Authentication)
+* **Networking:** Ktor Client & Kotlin Serialization
 * **Hardware Integration:**
     * **CameraX & ML Kit:** For high-speed QR code scanning.
     * **Android Bluetooth LE:** For beacon proximity detection.
@@ -34,13 +35,13 @@
 
 ---
 
-##  Getting Started
+## Getting Started
 
 ### Prerequisites
 
 * Android Studio (Koala or newer recommended).
 * A physical Android device (Emulator cannot test Bluetooth/WiFi features accurately).
-* Firebase Project setup.
+* A Supabase Project setup.
 
 ### Installation
 
@@ -49,17 +50,18 @@
     git clone [https://github.com/yourusername/ClockIn.git](https://github.com/yourusername/ClockIn.git)
     ```
 
-2.  **Firebase Setup**
-    * Go to the [Firebase Console](https://console.firebase.google.com/).
-    * Create a project and add an Android App.
-    * Download the `google-services.json` file.
-    * Place the file in the `app/` directory of the project:
-        ```text
-        ClockIn/
-        ├── app/
-        │   ├── google-services.json  <-- PLACE HERE
-        │   ├── src/
-        │   └── build.gradle.kts
+2.  **Supabase Setup**
+    * Go to the [Supabase Dashboard](https://supabase.com/dashboard).
+    * Create a new project.
+    * Navigate to **Project Settings** -> **API**.
+    * Copy your `Project URL` and `anon public` Key.
+    * Open `app/src/main/java/com/example/clockin/SupabaseManager.kt` and update the constants:
+        ```kotlin
+        object SupabaseManager {
+            private const val SUPABASE_URL = "YOUR_SUPABASE_URL"
+            private const val SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
+            ...
+        }
         ```
 
 3.  **Build and Run**
@@ -69,7 +71,7 @@
 
 ---
 
-##  Configuration
+## Configuration
 
 ### 1. WiFi Restriction
 The app strictly enforces clock-in only on a specific WiFi network. To change the allowed WiFi, open `com/example/clockin/WifiChecker.kt`:
