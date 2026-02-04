@@ -5,8 +5,10 @@ import android.util.Log
 import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.gotrue.Auth
+import io.github.jan.supabase.gotrue.OtpType
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
+import io.github.jan.supabase.gotrue.providers.builtin.OTP
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
@@ -86,8 +88,7 @@ object SupabaseManager {
     suspend fun loadSession(): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val session = client.auth.loadFromStorage()
-                session
+                client.auth.loadFromStorage()
             } catch (e: Exception) {
                 false
             }
@@ -120,13 +121,43 @@ object SupabaseManager {
         }
     }
 
-    suspend fun sendPasswordResetEmail(email: String): Result<Boolean> {
+    suspend fun sendOTP(email: String): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
-                client.auth.resetPasswordForEmail(email)
+                client.auth.signInWith(OTP) {
+                    this.email = email
+                }
                 Result.success(true)
             } catch (e: Exception) {
-                Log.e("SupabaseManager", "Password reset error", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun verifyOTP(email: String, token: String): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.auth.verifyEmailOtp(
+                    type = OtpType.Email.EMAIL,
+                    email = email,
+                    token = token
+                )
+                Result.success(true)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun updateUserPassword(newPassword: String): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.auth.updateUser {
+                    password = newPassword
+                }
+                Result.success(true)
+            } catch (e: Exception) {
+                Log.e("SupabaseManager", "Update password error", e)
                 Result.failure(e)
             }
         }
@@ -135,9 +166,7 @@ object SupabaseManager {
     suspend fun getCurrentUser(): UserProfile? {
         if (cachedUser != null) return cachedUser
 
-        val session = client.auth.currentSessionOrNull()
-        if (session == null) return null
-
+        val session = client.auth.currentSessionOrNull() ?: return null
         val userEmail = session.user?.email ?: ""
 
         return withContext(Dispatchers.IO) {
@@ -157,8 +186,7 @@ object SupabaseManager {
     }
 
     suspend fun getAttendanceWithSchedule(): List<Attendance> {
-        val user = getCurrentUser()
-        if (user == null) return emptyList()
+        val user = getCurrentUser() ?: return emptyList()
 
         return withContext(Dispatchers.IO) {
             try {

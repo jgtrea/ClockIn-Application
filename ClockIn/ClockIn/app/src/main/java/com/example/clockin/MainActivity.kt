@@ -59,13 +59,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import io.github.jan.supabase.gotrue.handleDeeplinks
 import kotlinx.coroutines.launch
 import kotlin.math.pow
 
@@ -109,11 +110,22 @@ class MainActivity : ComponentActivity() {
             }
 
             LaunchedEffect(Unit) {
-                val sessionRestored = SupabaseManager.loadSession()
-                if (sessionRestored) {
-                    startDestination = "home"
+                val isResetLink = intent?.data?.host == "reset-callback"
+
+                if (isResetLink) {
+                    startDestination = "resetPassword"
+                    try {
+                        SupabaseManager.client.handleDeeplinks(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 } else {
-                    startDestination = "login"
+                    val sessionRestored = SupabaseManager.loadSession()
+                    if (sessionRestored) {
+                        startDestination = "home"
+                    } else {
+                        startDestination = "login"
+                    }
                 }
                 isCheckingSession = false
             }
@@ -167,6 +179,15 @@ class MainActivity : ComponentActivity() {
                             ForgotPasswordScreen(
                                 onBack = {
                                     navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("resetPassword") {
+                            ResetPasswordScreen(
+                                onNavigateToLogin = {
+                                    navController.navigate("login") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
                                 }
                             )
                         }
@@ -424,7 +445,6 @@ fun LoginScreen(
                         }
                     }
 
-                    // Forgot Password Button
                     androidx.compose.material3.TextButton(
                         onClick = onForgotPassword,
                         modifier = Modifier.fillMaxWidth()
@@ -438,30 +458,5 @@ fun LoginScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun LabeledInput(
-    label: String,
-    placeholder: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    isPassword: Boolean = false
-) {
-    Column {
-        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(placeholder) },
-            modifier = Modifier.fillMaxWidth(),
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Email
-            ),
-            shape = RoundedCornerShape(8.dp),
-            singleLine = true
-        )
     }
 }
