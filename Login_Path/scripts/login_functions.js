@@ -8,23 +8,28 @@ const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 window.supabaseClient = supabaseClient;
 
-async function isUserAdmin(email) {
-  try {
-    const { data, error } = await supabaseClient
-      .from('user_admin_data')
-      .select('adminid')
-      .eq('email', email)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error checking admin status:', error);
-      return false;
-    }
-    return !!data;
-  } catch (e) {
-    console.error('Error in isUserAdmin:', e);
-    return false;
+async function getUserIdByEmail(email) {
+  const { data: adminData, error: adminError } = await supabaseClient
+    .from('user_admin_data')
+    .select('adminid, email')
+    .eq('email', email)
+    .single();
+  
+  if (!adminError && adminData) {
+    return { id: adminData.adminid, type: 'admin' };
   }
+  
+  const { data: empData, error: empError } = await supabaseClient
+    .from('user_employee_data')
+    .select('employeeid, email')
+    .eq('email', email)
+    .single();
+  
+  if (!empError && empData) {
+    return { id: empData.employeeid, type: 'employee' };
+  }
+  
+  return null;
 }
 
 async function checkExistingSession() {
@@ -32,8 +37,8 @@ async function checkExistingSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
       const email = session.user.email;
-      const isAdmin = await isUserAdmin(email);
-      if (isAdmin) {
+      const userInfo = await getUserIdByEmail(email);
+      if (userInfo && userInfo.type === 'admin') {
         window.location.href = '../Admin_ClockIn/index.html';
       } else {
         window.location.href = '../User_ClockIn/index_user.html';
@@ -50,9 +55,9 @@ function setupAuthListener() {
 
     if (session && session.user) {
       try {
-        const isAdmin = await isUserAdmin(session.user.email);
+        const userInfo = await getUserIdByEmail(session.user.email);
 
-        if (isAdmin) {
+        if (userInfo && userInfo.type === 'admin') {
           window.location.href = '../Admin_ClockIn/index.html';
         } else {
           window.location.href = '../User_ClockIn/index_user.html';
@@ -88,51 +93,26 @@ if (loginForm) {
     const remember = rememberCheckbox ? rememberCheckbox.checked : false;
 
     try {
-      const { data: adminData, error: adminError } = await supabaseClient
-        .from('user_admin_data')
-        .select('adminid, email, pass')
-        .eq('email', email)
-        .single();
-
-      let isAdmin = false;
-      let userData = null;
-
-      if (!adminError && adminData) {
-        if (adminData.pass !== password) {
-          throw new Error('Invalid password');
-        }
-        isAdmin = true;
-        userData = { adminId: adminData.adminid, email: adminData.email, pass: adminData.pass };
-      } else {
-        const { data: empData, error: empError } = await supabaseClient
-          .from('user_employee_data')
-          .select('employeeid, email, pass')
-          .eq('email', email)
-          .single();
-
-        if (empError || !empData) {
-          throw new Error('User not found');
-        }
-
-        if (empData.pass !== password) {
-          throw new Error('Invalid password');
-        }
-        userData = { employeeId: empData.employeeid, email: empData.email, pass: empData.pass };
-      }
-
       const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
         email,
         password
       });
 
       if (authError) {
-        console.log('Supabase Auth note:', authError.message);
+        throw authError;
       }
 
+      const userInfo = await getUserIdByEmail(email);
+
+      if (!userInfo) {
+        throw new Error('User not found in system');
+      }
+
+      const isAdmin = userInfo.type === 'admin';
       const storageKey = remember ? localStorage : sessionStorage;
       storageKey.setItem('userEmail', email);
       storageKey.setItem('userType', isAdmin ? 'admin' : 'employee');
-      storageKey.setItem('userId', isAdmin ? userData.adminId : userData.employeeId);
+      storageKey.setItem('userId', userInfo.id);
 
       if (isAdmin) {
         window.location.href = '../Admin_ClockIn/index.html';

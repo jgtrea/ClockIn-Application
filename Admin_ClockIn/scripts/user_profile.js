@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const emailEl = document.getElementById("email");
   const username = document.getElementById("username");
   const emailField = document.getElementById("emailField");
-  const passwordField = document.getElementById("passwordField");
+  const employmentField = document.getElementById("employmentField");
 
   const supabase = window.supabaseClient;
   if (!supabase) {
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       emailEl.textContent = userEmail;
       username.textContent = displayName;
       emailField.textContent = userEmail;
-      passwordField.textContent = "************";
+      employmentField.textContent = "N/A";
     }
     return;
   }
@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       .single();
 
     if (adminData) {
-      passwordField.textContent = "*".repeat(adminData.pass?.length || 12);
+      employmentField.textContent = adminData.employment || 'Administrator';
     } else {
       const { data: empData } = await supabase
         .from('user_employee_data')
@@ -55,14 +55,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         .single();
 
       if (empData) {
-        passwordField.textContent = "*".repeat(empData.pass?.length || 12);
+        employmentField.textContent = empData.employment || 'Employee';
       } else {
-        passwordField.textContent = "************";
+        employmentField.textContent = 'N/A';
       }
     }
   } catch (error) {
     console.error('Error fetching user data:', error);
-    passwordField.textContent = "************";
+    employmentField.textContent = 'N/A';
   }
 
   // Listen for auth state changes
@@ -76,6 +76,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         emailEl.textContent = userEmail;
         username.textContent = displayName;
         emailField.textContent = userEmail;
+        employmentField.textContent = "N/A";
       }
     } else if (event === 'SIGNED_IN' && session) {
       window.location.reload();
@@ -83,7 +84,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   const editButtons = document.querySelectorAll(".edit");
-  const fields = ["username", "emailField", "password"];
+  const fields = ["username", "emailField", "employmentField"];
 
   async function handleEdit(field) {
     const { data: { session } } = await supabase.auth.getSession();
@@ -96,7 +97,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     switch(field) {
       case "username": currentValue = username.textContent; break;
       case "emailField": currentValue = emailField.textContent; break;
-      case "password": currentValue = ""; break;
+      case "employmentField": currentValue = employmentField.textContent; break;
     }
 
     const newValue = prompt(`Edit ${field}`, currentValue);
@@ -140,8 +141,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           alert('Email cannot be changed. Please contact administrator.');
           break;
 
-        case "password":
-          // Update password in database
+        case "employmentField":
+          // Update employment in user_admin_data or user_employee_data
           const { data: adminData2 } = await supabase
             .from('user_admin_data')
             .select('adminId')
@@ -151,7 +152,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (adminData2) {
             await supabase
               .from('user_admin_data')
-              .update({ pass: newValue })
+              .update({ employment: newValue })
               .eq('adminId', adminData2.adminId);
           } else {
             const { data: empData2 } = await supabase
@@ -163,12 +164,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (empData2) {
               await supabase
                 .from('user_employee_data')
-                .update({ pass: newValue })
+                .update({ employment: newValue })
                 .eq('employeeId', empData2.employeeId);
             }
           }
-          passwordField.textContent = "*".repeat(newValue.length);
-          alert("Password updated successfully!");
+          employmentField.textContent = newValue;
+          alert("Employment updated successfully!");
           break;
       }
     } catch (err) {

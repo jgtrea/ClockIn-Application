@@ -82,7 +82,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="edit-grid">
               <label>Name</label><input type="text" id="name-${user.employeeId}" value="${user.name || ''}">
               <label>Email</label><input type="text" id="email-${user.employeeId}" value="${user.email || ''}">
-              <label>Password</label><input type="password" id="password-${user.employeeId}" value="${user.pass || ''}">
               <label>Employment</label><select id="emp-${user.employeeId}">
                 <option value="Full-time" ${user.employment === 'Full-time' ? 'selected' : ''}>Full-time</option>
                 <option value="Part-time" ${user.employment === 'Part-time' ? 'selected' : ''}>Part-time</option>
@@ -146,7 +145,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         employeeId: user.employeeId,
         name: user.name || '',
         email: user.email || '',
-        pass: user.pass || '',
         employment: user.employment || '',
         createdat: user.createdat
       }));
@@ -171,14 +169,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.saveUser = async (uid) => {
     const nameVal = document.getElementById(`name-${uid}`).value;
     const emailVal = document.getElementById(`email-${uid}`).value;
-    const passwordVal = document.getElementById(`password-${uid}`).value;
     const empVal = document.getElementById(`emp-${uid}`).value;
 
     const userInArray = users.find(u => u.employeeId === uid) || {};
 
     const hasChanged = nameVal !== (userInArray.name || '') ||
       emailVal !== (userInArray.email || '') ||
-      passwordVal !== (userInArray.pass || '') ||
       empVal !== (userInArray.employment || '');
 
     if (hasChanged) {
@@ -188,7 +184,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           .update({
             name: nameVal,
             email: emailVal,
-            pass: passwordVal,
             employment: empVal
           })
           .eq('employeeId', uid);
@@ -203,7 +198,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             ...users[userIndex],
             name: nameVal,
             email: emailVal,
-            pass: passwordVal,
             employment: empVal
           };
           applySearch();
@@ -243,7 +237,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         .insert({
           name: 'New User',
           email: '',
-          pass: '',
           employment: 'Full-time'
         })
         .select()
