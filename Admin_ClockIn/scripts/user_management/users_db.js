@@ -62,14 +62,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const subtitle = `${user.employeeId || 'ID'} | ${user.email || 'Email'} | ${user.employment || 'Status'}`;
 
       row.innerHTML = `
-        <div class="user-collapsed-content" onclick="window.toggleUser('${user.employeeId}')" style="${isExpanded ? 'display: none;' : ''}">
+        <div class="user-collapsed-content" style="${isExpanded ? 'display: none;' : ''}">
           <div class="user-text-details">
             <div class="user-name">${user.name || 'New User'}</div>
             <div class="user-subtitle">${subtitle}</div>
           </div>
           <div class="btn-group">
-            <button class="btn-outline" onclick="event.stopPropagation(); window.toggleUser('${user.employeeId}')">Edit</button>
-            <button class="btn-outline" onclick="event.stopPropagation(); window.deleteUser('${user.employeeId}')">Delete</button>
+            <button class="btn-outline" onclick="window.toggleUser('${user.employeeId}')">Edit</button>
+            <button class="btn-outline" onclick="window.deleteUser('${user.employeeId}')">Delete</button>
           </div>
         </div>
 
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { data, error } = await supabase
         .from(USERS_TABLE)
         .select('*')
-        .order('createdat', { ascending: false });
+        .order('createdAt', { ascending: false });
 
       if (error) throw error;
 
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         name: user.name || '',
         email: user.email || '',
         employment: user.employment || '',
-        createdat: user.createdat
+        createdAt: user.createdAt
       }));
 
       applySearch();
@@ -156,6 +156,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   window.toggleUser = (uid) => {
+    // Close all other expanded rows first
+    Object.keys(expandedRows).forEach(key => {
+      if (key !== uid) {
+        expandedRows[key] = false;
+      }
+    });
+    // Toggle the clicked user
     expandedRows[uid] = !expandedRows[uid];
     renderUsers();
   };
@@ -268,11 +275,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (userEmail) {
       const { data: adminData, error } = await supabase
         .from('user_admin_data')
-        .select('adminId')
-        .eq('email', userEmail)
-        .single();
+        .select('*')
+        .eq('email', userEmail);
 
-      const isAdmin = !error && !!adminData;
+      const isAdmin = !error && adminData && adminData.length > 0;
       addUserBtn.style.display = isAdmin ? '' : 'none';
       console.log('users_db: signed in as', userEmail, 'admin?', isAdmin);
     }
@@ -303,8 +309,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         valueA = (a.employeeId || '').toLowerCase();
         valueB = (b.employeeId || '').toLowerCase();
       } else if (field === 'createdAt') {
-        valueA = a.createdat || 0;
-        valueB = b.createdat || 0;
+        valueA = a.createdAt || 0;
+        valueB = b.createdAt || 0;
       }
       return sortAscending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
     });

@@ -20,7 +20,7 @@
     selected.forEach((u, idx) => {
       const el = document.createElement('div');
       el.className = 'chip';
-      el.innerHTML = `${u.name || u.email} <span class="sub">· ${u.email || 'all users'}</span>`;
+      el.innerHTML = `${u.name || u.email} <span class="sub"> • ${u.email || 'all users'}</span>`;
       el.title = u.uid === '*everyone*' ? 'Everyone' : (u.email || '');
       el.style.cursor = 'default';
       el.addEventListener('click', () => {
@@ -41,7 +41,7 @@
     list.forEach(u => {
       const row = document.createElement('div');
       row.className = 'suggestion';
-      row.innerHTML = `<div class="name">${u.name || u.email || 'Unknown'}</div><div class="email">${u.email || ''}</div>`;
+      row.innerHTML = `<div><div class="name">${u.name || u.email || 'Unknown'}</div><div class="email">${u.email || ''}</div></div>`;
       row.addEventListener('click', () => {
         if (!selected.some(s => s.uid === u.uid)) {
           selected.push(u);
@@ -127,7 +127,6 @@
     const payload = {
       header: header || '',
       message: message,
-      endnotif: endNotif,
       dataCreated: new Date().toISOString()
     };
 
@@ -136,7 +135,9 @@
     }
 
     try {
-      await window.supabaseClient.from(NOTIFS_TABLE).insert(payload);
+      const { data, error } = await window.supabaseClient.from(NOTIFS_TABLE).insert(payload).select();
+      if (error) throw error;
+      
       headerEl.value = '';
       messageEl.value = '';
       input.value = '';
@@ -184,6 +185,7 @@
           document.getElementById('notificationsList').innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading notifications.</p>';
           return;
         }
+        console.log('Loaded notifications:', data);
         notifications = data || [];
         renderNotificationHistory();
       })
@@ -193,7 +195,7 @@
       });
   }
 
-  function renderNotificationHistory() {
+  async function renderNotificationHistory() {
     const notificationsList = document.getElementById('notificationsList');
     if (!notificationsList) return;
 
@@ -207,14 +209,37 @@
     const endIndex = startIndex + notificationsPerPage;
     const pageNotifications = notifications.slice(startIndex, endIndex);
 
+    // Get employee emails for notifications with employeeId
+    const employeeIds = pageNotifications.filter(n => n.employeeId).map(n => n.employeeId);
+    let employeeEmails = {};
+    
+    if (employeeIds.length > 0) {
+      try {
+        const { data } = await window.supabaseClient
+          .from(USERS_TABLE)
+          .select('employeeId, email')
+          .in('employeeId', employeeIds);
+        
+        if (data) {
+          employeeEmails = data.reduce((acc, emp) => {
+            acc[emp.employeeId] = emp.email;
+            return acc;
+          }, {});
+        }
+      } catch (error) {
+        console.error('Error loading employee emails:', error);
+      }
+    }
+
     notificationsList.innerHTML = pageNotifications.map(notif => {
       const date = notif.dataCreated ? new Date(notif.dataCreated).toLocaleString() : 'Unknown';
+      const recipient = notif.employeeId ? (employeeEmails[notif.employeeId] || `Employee ID: ${notif.employeeId}`) : 'All Users';
       return `
         <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 16px; padding: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
             <div>
               <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">${notif.header || 'Notification'}</h3>
-              <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">To: ${notif.endnotif || 'All Users'}</p>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">To: ${recipient}</p>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
               <span style="font-size: 12px; color: #9ca3af;">${date}</span>
@@ -267,7 +292,8 @@
     }
 
     try {
-      await window.supabaseClient.from(NOTIFS_TABLE).delete().eq('notifId', notificationId);
+      const { error } = await window.supabaseClient.from(NOTIFS_TABLE).delete().eq('notifId', notificationId);
+      if (error) throw error;
       loadNotificationHistory();
     } catch (error) {
       console.error('Error deleting notification:', error);
