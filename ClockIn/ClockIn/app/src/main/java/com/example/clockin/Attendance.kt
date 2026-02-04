@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -59,98 +60,92 @@ fun AttendanceScreen(navController: NavController) {
     var attendanceMap by remember { mutableStateOf<Map<String, List<AttendanceItem>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var userName by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        val userProfile = FirebaseEmployeeManager.getCurrentUser()
+        val user = SupabaseManager.getCurrentUser()
+        userName = user?.name ?: "User"
 
-        if (userProfile != null && userProfile.collectionName == "user_employee_data") {
-            val attendanceRecords = FirebaseEmployeeManager.getAttendanceHistory(userProfile.id)
-            val scheduleRecords = FirebaseEmployeeManager.getUserSchedule(userProfile.id)
+        val attendanceRecords = SupabaseManager.getAttendanceWithSchedule()
 
-            val scheduleMap = scheduleRecords.associate { it.documentId to it.startTime }
+        if (attendanceRecords.isNotEmpty()) {
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            val displayDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
-            if (attendanceRecords.isNotEmpty()) {
-                val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-                val currentTimeStr = dateFormat.format(Date())
-                val currentTime = dateFormat.parse(currentTimeStr)
+            val currentTimeStr = timeFormat.format(Date())
+            val currentTime = timeFormat.parse(currentTimeStr)
 
-                var items = attendanceRecords.map { record ->
-                    val startTimeStr = scheduleMap[record.documentId] ?: "00:00"
+            var items = attendanceRecords.map { record ->
+                val schedule = record.schedule
+                val subject = schedule?.subject ?: "Unknown"
+                val section = schedule?.sectionName ?: "Unknown"
+                val startTimeStr = schedule?.startTime ?: "00:00"
 
-                    val parts = record.documentId.split("-")
-                    val subject = parts.lastOrNull() ?: record.documentId
-                    var formattedTitle = subject
+                val formattedTitle = "$subject - $section"
 
-                    if (parts.size >= 3) {
-                        val gradePart = parts[0].replace("G", "Grade ")
-                        val sectionPart = parts[1].lowercase()
-                            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-                        formattedTitle = "$subject - $gradePart $sectionPart"
+                val displayTimeIn = formatTime(record.timeIn)
+                val displayTimeOut = formatTime(record.timeOut)
+
+                val rawLabel = if (record.timeIn != null) {
+                    try {
+                        val dateObj = isoFormat.parse(record.timeIn)
+                        if (dateObj != null) displayDateFormat.format(dateObj) else "Recent"
+                    } catch (e: Exception) {
+                        "Recent"
                     }
-
-                    val rawLabel = if (record.date.isNotEmpty()) {
-                        record.date
-                    } else if (record.timestamp != null) {
-                        val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                        sdf.format(record.timestamp.toDate())
-                    } else {
-                        try {
-                            val startTime = dateFormat.parse(startTimeStr)
-                            if (currentTime != null && startTime != null && currentTime.before(startTime)) {
-                                "Upcoming"
-                            } else {
-                                "Today"
-                            }
-                        } catch (e: Exception) {
+                } else {
+                    try {
+                        val startTime = timeFormat.parse(startTimeStr)
+                        if (currentTime != null && startTime != null && currentTime.before(startTime)) {
+                            "Upcoming"
+                        } else {
                             "Today"
                         }
-                    }
-
-                    AttendanceItem(
-                        title = formattedTitle,
-                        status = record.status,
-                        timeIn = record.timeIn,
-                        timeOut = if (record.timeOut.isNotEmpty()) record.timeOut else "--:--",
-                        date = rawLabel,
-                        sortTime = startTimeStr
-                    )
-                }
-
-                items = items.sortedBy { it.sortTime }
-
-                val upcomingItems = items.filter { it.date == "Upcoming" }
-
-                if (upcomingItems.size > 1) {
-                    val firstUpcoming = upcomingItems.first()
-
-                    items = items.map { item ->
-                        if (item.date == "Upcoming" && item != firstUpcoming) {
-                            item.copy(date = "Today")
-                        } else {
-                            item
-                        }
+                    } catch (e: Exception) {
+                        "Today"
                     }
                 }
 
-                attendanceMap = items
-                    .groupBy { it.date }
-                    .toSortedMap { d1, d2 ->
-                        when {
-                            d1 == "Upcoming" -> -1
-                            d2 == "Upcoming" -> 1
-                            d1 == "Today" -> -1
-                            d2 == "Today" -> 1
-                            else -> d2.compareTo(d1)
-                        }
-                    }
-            } else {
-                attendanceMap = emptyMap()
+                AttendanceItem(
+                    title = formattedTitle,
+                    status = record.status,
+                    timeIn = displayTimeIn,
+                    timeOut = displayTimeOut,
+                    date = rawLabel,
+                    sortTime = startTimeStr
+                )
             }
-            isLoading = false
+
+            items = items.sortedBy { it.sortTime }
+
+            val upcomingItems = items.filter { it.date == "Upcoming" }
+            if (upcomingItems.size > 1) {
+                val firstUpcoming = upcomingItems.first()
+                items = items.map { item ->
+                    if (item.date == "Upcoming" && item != firstUpcoming) {
+                        item.copy(date = "Today")
+                    } else {
+                        item
+                    }
+                }
+            }
+
+            attendanceMap = items
+                .groupBy { it.date }
+                .toSortedMap { d1, d2 ->
+                    when {
+                        d1 == "Upcoming" -> -1
+                        d2 == "Upcoming" -> 1
+                        d1 == "Today" -> -1
+                        d2 == "Today" -> 1
+                        else -> d2.compareTo(d1)
+                    }
+                }
         } else {
-            errorMessage = "No Employee Record Found."
-            isLoading = false
+            attendanceMap = emptyMap()
         }
+        isLoading = false
     }
 
     val filteredAttendance = remember(attendanceMap, searchQuery) {
@@ -181,24 +176,30 @@ fun AttendanceScreen(navController: NavController) {
                 .background(Color.White)
         ) {
             DashboardHeader(
+                userName = userName,
                 onProfileClick = { navController.navigate("profile") },
                 onSendFeedbackClick = { showFeedbackDialog = true },
                 onPoliciesClick = { showPolicies = true },
                 onFAQClick = { showFAQ = true },
                 onLogout = {
-                    FirebaseEmployeeManager.signOut()
-                    navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                    scope.launch {
+                        SupabaseManager.signOut()
+                        navController.navigate("login") {
+                            popUpTo("home") { inclusive = true }
+                        }
                     }
                 },
                 searchQuery = searchQuery,
                 onSearchChange = { searchQuery = it }
             )
 
-            HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+            HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
 
             if (showPolicies) {
                 PoliciesView(onBack = { showPolicies = false })
+            } else if (showFAQ) {
+                FAQView(onBack = { showFAQ = false })
             } else {
                 Column(
                     modifier = Modifier
@@ -210,12 +211,12 @@ fun AttendanceScreen(navController: NavController) {
                     Text("View your time ins and time outs", color = Color.Gray, fontSize = 14.sp)
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                    HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (isLoading) {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Color(0xFFFF7F66))
+                            CircularProgressIndicator(color = PrimaryOrange)
                         }
                     } else if (errorMessage != null) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
@@ -233,6 +234,18 @@ fun AttendanceScreen(navController: NavController) {
                 }
             }
         }
+    }
+}
+
+fun formatTime(isoString: String?): String {
+    if (isoString.isNullOrEmpty()) return "--:--"
+    return try {
+        val input = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val output = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val d = input.parse(isoString)
+        if (d != null) output.format(d) else isoString
+    } catch (e: Exception) {
+        "--:--"
     }
 }
 
@@ -269,7 +282,7 @@ fun AttendanceCard(item: AttendanceItem) {
             Box(
                 modifier = Modifier
                     .size(45.dp)
-                    .background(Color(0xFFFF7F66), RoundedCornerShape(8.dp)),
+                    .background(PrimaryOrange, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -296,13 +309,11 @@ fun AttendanceCard(item: AttendanceItem) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            val displayTimeIn = if (item.timeIn.isNotEmpty()) item.timeIn else "--:--"
-                            Text(displayTimeIn, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text(item.timeIn, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.width(8.dp))
                             StatusChip(item.status)
                         }
-                        val displayTimeOut = if (item.timeOut.isNotEmpty() && item.timeOut != "--:--") item.timeOut else "--:--"
-                        Text(displayTimeOut, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(item.timeOut, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

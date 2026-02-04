@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val startDestination = if (FirebaseEmployeeManager.isLoggedIn()) "home" else "login"
+            val startDestination = if (SupabaseManager.isLoggedIn()) "home" else "login"
 
             RealtimeNotificationListener()
 
@@ -149,8 +149,11 @@ class MainActivity : ComponentActivity() {
                                 isBeaconFound = false
                             },
                             onLogout = {
-                                FirebaseEmployeeManager.signOut()
-                                navController.navigate("login") { popUpTo("home") { inclusive = true } }
+                                val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                                scope.launch {
+                                    SupabaseManager.signOut()
+                                    navController.navigate("login") { popUpTo("home") { inclusive = true } }
+                                }
                             },
                             onProfileClick = { navController.navigate("profile") }
                         )
@@ -304,8 +307,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                 },
                                 placeholder = { Text("Enter Email") },
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
+                                    .fillMaxWidth(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                                 shape = RoundedCornerShape(8.dp),
                                 singleLine = true,
@@ -358,7 +360,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                 isLoading = true
 
                                 scope.launch {
-                                    val result = FirebaseEmployeeManager.signIn(emailInput, passwordInput)
+                                    val result = SupabaseManager.signIn(emailInput, passwordInput)
                                     isLoading = false
 
                                     if (result.isSuccess) {

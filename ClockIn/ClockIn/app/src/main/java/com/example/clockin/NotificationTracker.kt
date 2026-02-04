@@ -6,19 +6,19 @@ object NotificationTracker {
     private const val PREFS_NAME = "notification_tracker"
     private const val KEY_SHOWN_NOTIFICATIONS = "shown_notification_ids"
 
-    private var shownNotificationIds = mutableSetOf<Int>()
+    private var shownNotificationIds = mutableSetOf<String>()
 
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedIds = prefs.getStringSet(KEY_SHOWN_NOTIFICATIONS, emptySet()) ?: emptySet()
-        shownNotificationIds = savedIds.mapNotNull { it.toIntOrNull() }.toMutableSet()
+        shownNotificationIds = savedIds.toMutableSet()
     }
 
-    fun hasBeenShown(notifId: Int): Boolean {
+    fun hasBeenShown(notifId: String): Boolean {
         return shownNotificationIds.contains(notifId)
     }
 
-    fun markAsShown(context: Context, notifId: Int) {
+    fun markAsShown(context: Context, notifId: String) {
         shownNotificationIds.add(notifId)
         saveToPreferences(context)
     }
@@ -29,15 +29,14 @@ object NotificationTracker {
 
     fun cleanup(context: Context) {
         if (shownNotificationIds.size > 100) {
-            val sortedIds = shownNotificationIds.sorted()
-            shownNotificationIds = sortedIds.takeLast(100).toMutableSet()
+            val keepIds = shownNotificationIds
+            shownNotificationIds = keepIds
             saveToPreferences(context)
         }
     }
 
     private fun saveToPreferences(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val idsAsStrings = shownNotificationIds.map { it.toString() }.toSet()
-        prefs.edit().putStringSet(KEY_SHOWN_NOTIFICATIONS, idsAsStrings).apply()
+        prefs.edit().putStringSet(KEY_SHOWN_NOTIFICATIONS, shownNotificationIds).apply()
     }
 }

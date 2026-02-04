@@ -34,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import java.util.Locale
+import kotlinx.coroutines.launch
 
 data class ScheduleItem(
     val title: String,
@@ -52,34 +52,27 @@ fun ScheduleScreen(navController: NavController) {
 
     var scheduleMap by remember { mutableStateOf<Map<String, List<ScheduleItem>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var userName by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        val userProfile = FirebaseEmployeeManager.getCurrentUser()
+        val user = SupabaseManager.getCurrentUser()
+        userName = user?.name ?: "User"
 
-        if (userProfile != null && userProfile.collectionName == "user_employee_data") {
-            val records = FirebaseEmployeeManager.getUserSchedule(userProfile.id)
+        val records = SupabaseManager.getEmployeeSchedule()
 
-            if (records.isNotEmpty()) {
-                val items = records.map { record ->
-                    val sectionName = formatSectionName(record.documentId)
-
-                    ScheduleItem(
-                        title = record.subject,
-                        details = "${record.startTime} - ${record.endTime}",
-                        sectionHeader = sectionName
-                    )
-                }
-
-                scheduleMap = items.groupBy { it.sectionHeader }.toSortedMap()
-            } else {
-                scheduleMap = emptyMap()
+        if (records.isNotEmpty()) {
+            val items = records.map { record ->
+                ScheduleItem(
+                    title = record.subject,
+                    details = formatScheduleTime(record.startTime, record.endTime),
+                    sectionHeader = record.sectionName
+                )
             }
-            isLoading = false
+            scheduleMap = items.groupBy { it.sectionHeader }.toSortedMap()
         } else {
-            errorMessage = "No Employee Record Found."
-            isLoading = false
+            scheduleMap = emptyMap()
         }
+        isLoading = false
     }
 
     val filteredSchedule = remember(scheduleMap, searchQuery) {
@@ -109,21 +102,25 @@ fun ScheduleScreen(navController: NavController) {
                 .background(Color.White)
         ) {
             DashboardHeader(
+                userName = userName,
                 onProfileClick = { navController.navigate("profile") },
                 onSendFeedbackClick = { showFeedbackDialog = true },
                 onPoliciesClick = { showPolicies = true },
                 onFAQClick = { showFAQ = true },
                 onLogout = {
-                    FirebaseEmployeeManager.signOut()
-                    navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                    scope.launch {
+                        SupabaseManager.signOut()
+                        navController.navigate("login") {
+                            popUpTo("home") { inclusive = true }
+                        }
                     }
                 },
                 searchQuery = searchQuery,
                 onSearchChange = { searchQuery = it }
             )
 
-            HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+            HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
 
             if (showPolicies) {
                 PoliciesView(onBack = { showPolicies = false })
@@ -144,16 +141,12 @@ fun ScheduleScreen(navController: NavController) {
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                    HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (isLoading) {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Color(0xFFFF7F66))
-                        }
-                    } else if (errorMessage != null) {
-                        Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                            Text(text = errorMessage!!, color = Color.Red)
+                            CircularProgressIndicator(color = PrimaryOrange)
                         }
                     } else if (filteredSchedule.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
@@ -170,16 +163,11 @@ fun ScheduleScreen(navController: NavController) {
     }
 }
 
-fun formatSectionName(rawId: String): String {
-    val parts = rawId.split("-")
-    if (parts.size >= 2) {
-        val gradePart = parts[0].replace("G", "Grade ")
-        val sectionPart = parts[1].lowercase()
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-
-        return "$gradePart $sectionPart"
+fun formatScheduleTime(start: String, end: String): String {
+    fun cleanTime(t: String): String {
+        return if (t.count { it == ':' } == 2) t.substringBeforeLast(':') else t
     }
-    return rawId
+    return "${cleanTime(start)} - ${cleanTime(end)}"
 }
 
 @Composable
@@ -213,7 +201,7 @@ fun ScheduleCard(item: ScheduleItem) {
             Box(
                 modifier = Modifier
                     .size(45.dp)
-                    .background(Color(0xFFFF7F66), RoundedCornerShape(8.dp)),
+                    .background(PrimaryOrange, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

@@ -61,7 +61,7 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
     var editValue by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        val profile = FirebaseEmployeeManager.getCurrentUser()
+        val profile = SupabaseManager.getCurrentUser()
         if (profile != null) {
             userProfile = profile
         } else {
@@ -73,36 +73,25 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
     fun saveField(newValue: String) {
         val profile = userProfile ?: return
 
-        val dbField = when (editField) {
-            "Name" -> "name"
-            "Employment" -> "employment"
-            "Department" -> "department"
-            "Employee ID" -> "employeeId"
-            "Email" -> "email"
-            else -> ""
-        }
-
-        if (dbField.isNotEmpty()) {
+        if (editField == "Name") {
             scope.launch {
-                val success = FirebaseEmployeeManager.updateUser(profile, dbField, newValue)
+                // TODO: Implement updateUser in SupabaseManager if edits are required
+                // val success = SupabaseManager.updateUser(profile.id, "name", newValue)
+
+                // For now, simulate success or show message that editing is read-only in this demo
+                val success = false
+
                 if (success) {
-                    userProfile = when (editField) {
-                        "Name" -> profile.copy(name = newValue)
-                        "Employment" -> profile.copy(employment = newValue)
-                        "Department" -> profile.copy(department = newValue)
-                        "Employee ID" -> profile.copy(employeeId = newValue)
-                        "Email" -> profile.copy(email = newValue)
-                        else -> profile
-                    }
+                    userProfile = profile.copy(name = newValue)
                     NotificationManager.show(
                         header = "Profile Updated",
-                        message = "Your $editField has been updated successfully",
+                        message = "Your name has been updated successfully",
                         duration = 3000L
                     )
                 } else {
                     NotificationManager.show(
-                        header = "Update Failed",
-                        message = "Could not update $editField. Please try again.",
+                        header = "Update Not Implemented",
+                        message = "Profile editing requires backend configuration.",
                         duration = 3000L
                     )
                 }
@@ -129,8 +118,6 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
         }
         return
     }
-
-    val isEmployeeCollection = userProfile?.collectionName == "user_employee_data"
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Box(
@@ -170,10 +157,6 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
             Text(text = userProfile?.name ?: "User", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text(text = userProfile?.email ?: "", color = Color.Gray, fontSize = 16.sp)
 
-            if (!isEmployeeCollection) {
-                Text("ADMINISTRATOR", color = Color(0xFFFF7F66), fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(top=4.dp))
-            }
-
             Spacer(modifier = Modifier.height(32.dp))
 
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -184,31 +167,13 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
                     showEditDialog = true
                 }
 
-                ProfileEditItem("Email", userProfile?.email ?: "", isEditable = !isEmployeeCollection) {
-                    editField = "Email"
-                    editValue = userProfile?.email ?: ""
-                    showEditDialog = true
-                }
+                ProfileEditItem("Email", userProfile?.email ?: "", isEditable = false) {}
 
-                if (isEmployeeCollection || userProfile?.employeeId!!.isNotEmpty()) {
-                    ProfileEditItem("Employee ID", userProfile?.employeeId ?: "", isEditable = !isEmployeeCollection) {
-                        editField = "Employee ID"
-                        editValue = userProfile?.employeeId ?: ""
-                        showEditDialog = true
-                    }
-                }
+                ProfileEditItem("Employee ID", userProfile?.id ?: "", isEditable = false) {}
 
-                ProfileEditItem("Department", userProfile?.department ?: "None", isEditable = !isEmployeeCollection) {
-                    editField = "Department"
-                    editValue = userProfile?.department ?: ""
-                    showEditDialog = true
-                }
+                ProfileEditItem("Department", userProfile?.department ?: "None", isEditable = false) {}
 
-                ProfileEditItem("Employment", userProfile?.employment ?: "", isEditable = !isEmployeeCollection) {
-                    editField = "Employment"
-                    editValue = userProfile?.employment ?: ""
-                    showEditDialog = true
-                }
+                ProfileEditItem("Employment", userProfile?.employment ?: "None", isEditable = false) {}
             }
         }
     }

@@ -71,11 +71,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import com.google.firebase.firestore.FirebaseFirestore
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 val PrimaryOrange = Color(0xFFFF7F66)
+
+@Serializable
+data class SectionItem(
+    @SerialName("sectionname") val sectionName: String = "",
+    @SerialName("yearlevel") val yearLevel: String = "",
+    val ble: String? = ""
+)
 
 @Composable
 fun DashboardScreen(
@@ -98,40 +108,63 @@ fun DashboardScreen(
     var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
     var isLoadingNotifs by remember { mutableStateOf(true) }
 
-    var sections by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var sections by remember { mutableStateOf<List<SectionItem>>(emptyList()) }
     var selectedDisplayTitle by remember { mutableStateOf("Select Section") }
     var isDropdownExpanded by remember { mutableStateOf(false) }
     var isLoadingSections by remember { mutableStateOf(true) }
 
+    var userName by remember { mutableStateOf("User") }
+
     LaunchedEffect(Unit) {
-        notifications = FirebaseEmployeeManager.getNotifications()
-        isLoadingNotifs = false
+        val user = SupabaseManager.getCurrentUser()
+        val userEmail = user?.email ?: ""
+        userName = user?.name ?: "User"
 
-        val newNotifications = NotificationTracker.filterNewNotifications(notifications)
+        try {
+            val result = SupabaseManager.client.from("notification")
+                .select {
+                    order("datacreated", Order.DESCENDING)
+                    limit(10)
+                }
+                .decodeList<NotificationItem>()
 
-        newNotifications.forEach { notif ->
-            NotificationManager.show(
-                header = notif.header,
-                message = notif.message,
-                duration = 5000L
-            )
+            val userNotifications = result.filter {
+                val targets = it.target?.split(",")?.map { t -> t.trim() } ?: emptyList()
+                targets.any { t ->
+                    t.equals("everyone", ignoreCase = true) ||
+                            t.equals(userEmail, ignoreCase = true)
+                }
+            }
 
-            NotificationTracker.markAsShown(context, notif.notifId)
+            notifications = userNotifications
+
+            val newNotifications = NotificationTracker.filterNewNotifications(userNotifications)
+            newNotifications.forEach { notif ->
+                NotificationManager.show(
+                    header = notif.header,
+                    message = notif.message,
+                    duration = 5000L
+                )
+                NotificationTracker.markAsShown(context, notif.notifId)
+            }
+            NotificationTracker.cleanup(context)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            isLoadingNotifs = false
         }
 
-        NotificationTracker.cleanup(context)
-    }
-
-    LaunchedEffect(Unit) {
-        FirebaseFirestore.getInstance().collection("Sections")
-            .get()
-            .addOnSuccessListener { result ->
-                sections = result.documents.map { it.data ?: emptyMap<String, Any>() }
-                isLoadingSections = false
-            }
-            .addOnFailureListener {
-                isLoadingSections = false
-            }
+        try {
+            val result = SupabaseManager.client.from("sections")
+                .select()
+                .decodeList<SectionItem>()
+            sections = result
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            isLoadingSections = false
+        }
     }
 
     val filteredNotifications = remember(notifications, searchQuery) {
@@ -159,6 +192,7 @@ fun DashboardScreen(
                 .background(Color.White)
         ) {
             DashboardHeader(
+                userName = userName, // Pass the userName here
                 onProfileClick = { navController.navigate("profile") },
                 onLogout = onLogout,
                 onPoliciesClick = { showPolicies = true },
@@ -180,6 +214,7 @@ fun DashboardScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
+                        // Section Dropdown
                         Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                             OutlinedButton(
                                 onClick = { isDropdownExpanded = true },
@@ -201,17 +236,14 @@ fun DashboardScreen(
                                 modifier = Modifier.fillMaxWidth(0.9f)
                             ) {
                                 sections.forEach { section ->
-                                    val year = section["YearLevel"] as? String ?: ""
-                                    val sectionName = section["SectionName"] as? String ?: ""
-                                    val bleTarget = section["ble"] as? String ?: ""
-                                    val fullTitle = "$year - $sectionName"
+                                    val fullTitle = "${section.yearLevel} - ${section.sectionName}"
 
                                     DropdownMenuItem(
                                         text = { Text(fullTitle) },
                                         onClick = {
                                             selectedDisplayTitle = fullTitle
                                             isDropdownExpanded = false
-                                            onTargetBleChanged(bleTarget)
+                                            onTargetBleChanged(section.ble ?: "")
                                         }
                                     )
                                 }
@@ -242,12 +274,9 @@ fun DashboardScreen(
                             )
                         } else {
                             filteredNotifications.forEach { item ->
-                                val dateStr = item.dateCreated?.toDate()?.let {
-                                    SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(it)
-                                } ?: ""
-
+                                val dateStr = formatNotificationDate(item.dateCreated ?: "")
                                 InfoCard(
-                                    title = "${item.header} $dateStr:",
+                                    title = "${item.header} ($dateStr):",
                                     text = item.message
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
@@ -262,12 +291,13 @@ fun DashboardScreen(
 
 @Composable
 fun UserMenuHeader() {
-    val userEmail = FirebaseEmployeeManager.getCurrentUserEmail()
+    var userEmail by remember { mutableStateOf("") }
     var userName by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        val userProfile = FirebaseEmployeeManager.getCurrentUser()
+        val userProfile = SupabaseManager.getCurrentUser()
         userName = userProfile?.name ?: "Guest User"
+        userEmail = userProfile?.email ?: ""
     }
 
     Row(
@@ -298,7 +328,7 @@ fun UserMenuHeader() {
                 fontSize = 14.sp
             )
             Text(
-                text = userEmail ?: "No active session",
+                text = userEmail,
                 color = Color.Gray,
                 fontSize = 10.sp
             )
@@ -308,6 +338,7 @@ fun UserMenuHeader() {
 
 @Composable
 fun DashboardHeader(
+    userName: String,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
     onSendFeedbackClick: () -> Unit,
@@ -317,14 +348,6 @@ fun DashboardHeader(
     onSearchChange: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var userName by remember { mutableStateOf("") }
-
-    LaunchedEffect(Unit) {
-        val user = FirebaseEmployeeManager.getCurrentUser()
-        if (user != null) {
-            userName = user.name
-        }
-    }
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -646,5 +669,16 @@ fun FAQItem(question: String, answer: String, initialExpanded: Boolean = false, 
                 )
             }
         }
+    }
+}
+
+fun formatNotificationDate(isoString: String): String {
+    return try {
+        val input = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val output = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
+        val date = input.parse(isoString)
+        if (date != null) output.format(date) else ""
+    } catch (e: Exception) {
+        ""
     }
 }

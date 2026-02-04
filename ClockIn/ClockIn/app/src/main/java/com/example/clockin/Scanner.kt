@@ -136,17 +136,17 @@ fun ScannerScreen(navController: NavController) {
                             }
 
                             scope.launch {
-                                val isValid = FirebaseEmployeeManager.verifyQrCode(code, context)
-                                if (isValid) {
+                                val result = SupabaseManager.verifyQrCode(code, context)
+                                if (result.isSuccess) {
                                     NotificationManager.show(
                                         header = "Success ✓",
-                                        message = "Clock In/Out Recorded!",
+                                        message = result.getOrNull() ?: "Clock In/Out Recorded!",
                                         duration = 3000L
                                     )
                                 } else {
                                     NotificationManager.show(
                                         header = "Failed ✗",
-                                        message = "Invalid QR or Not Allowed",
+                                        message = result.exceptionOrNull()?.message ?: "Invalid QR or Not Allowed",
                                         duration = 3000L
                                     )
                                 }
