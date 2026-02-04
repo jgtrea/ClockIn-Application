@@ -7,7 +7,7 @@ let filteredRecords = [];
 let currentPage = 1;
 const recordsPerPage = 10;
 let currentSearchTerm = '';
-let dashboardStats = {
+window.dashboardStats = {
   totalTeachers: 0,
   onSchedule: 0,
   late: 0,
@@ -22,142 +22,137 @@ function updateDashboardStats() {
   const absentTodayEl = document.getElementById('absentToday');
   const excusedTodayEl = document.getElementById('excusedToday');
   
-  if (totalTeachersEl) totalTeachersEl.textContent = dashboardStats.totalTeachers;
-  if (onScheduleEl) onScheduleEl.textContent = dashboardStats.onSchedule;
-  if (lateTodayEl) lateTodayEl.textContent = dashboardStats.late;
-  if (absentTodayEl) absentTodayEl.textContent = dashboardStats.absent;
-  if (excusedTodayEl) excusedTodayEl.textContent = dashboardStats.excused;
+  if (totalTeachersEl) totalTeachersEl.textContent = window.dashboardStats.totalTeachers;
+  if (onScheduleEl) onScheduleEl.textContent = window.dashboardStats.onSchedule;
+  if (lateTodayEl) lateTodayEl.textContent = window.dashboardStats.late;
+  if (absentTodayEl) absentTodayEl.textContent = window.dashboardStats.absent;
+  if (excusedTodayEl) excusedTodayEl.textContent = window.dashboardStats.excused;
 }
 
-function loadRecentActivity() {
+async function loadRecentActivity() {
   const activityFeed = document.getElementById('activityFeed');
-  if (!activityFeed || !window.db) {
+  const supabase = window.supabaseClient;
+  
+  if (!activityFeed || !supabase) {
     setTimeout(loadRecentActivity, 1000);
     return;
   }
 
   console.log('Loading recent activity...');
 
-  window.db.collection('user_employee_data')
-    .get()
-    .then(async (usersSnapshot) => {
-      console.log('Found users:', usersSnapshot.docs.length);
-      allRecords = [];
-      
-      dashboardStats.totalTeachers = usersSnapshot.docs.length;
-      dashboardStats.onSchedule = 0;
-      dashboardStats.late = 0;
-      dashboardStats.absent = 0;
-      dashboardStats.excused = 0;
-      
-      const today = new Date().toISOString().split('T')[0];
+  try {
+    const { data: usersData, error: usersError } = await supabase
+      .from('user_employee_data')
+      .select('*')
+      .order('createdat', { ascending: false });
 
-      // Track today's records per user
-      const todayRecordsByUser = {};
+    if (usersError) throw usersError;
 
-      for (const userDoc of usersSnapshot.docs) {
-        const userData = userDoc.data();
-        const userName = userData.name || 'Unknown User';
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*');
+
+    if (attendanceError) throw attendanceError;
+
+    console.log('Found users:', usersData.length);
+    allRecords = [];
+    
+    window.dashboardStats.totalTeachers = usersData.length;
+    window.dashboardStats.onSchedule = 0;
+    window.dashboardStats.late = 0;
+    window.dashboardStats.absent = 0;
+    window.dashboardStats.excused = 0;
+    
+    const today = new Date().toISOString().split('T')[0];
+
+    const todayRecordsByUser = {};
+
+    usersData.forEach(user => {
+      const userName = user.name || 'Unknown User';
+      const userId = user.employeeId;
+
+      const userAttendance = attendanceData.filter(a => a.employeeId === userId);
+
+      userAttendance.forEach(record => {
+        const recordDate = record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : null;
+        const status = record.status || 'Present';
         
-        try {
-          // Attendance records for chart and recent activity
-          const attendanceSnap = await window.db
-            .collection('user_employee_data')
-            .doc(userDoc.id)
-            .collection('user_attendance')
-            .get();
-
-          console.log(`${userName} has ${attendanceSnap.docs.length} attendance records`);
-          
-          let userHasRecordToday = false;
-
-          attendanceSnap.docs.forEach(doc => {
-            const data = doc.data();
-            const recordDate = data.date;
-            const status = data.status || 'Present';
-            
-            allRecords.push({
-              userName: userName,
-              timeIn: data.timeIn || data.time_in || 'N/A',
-              date: data.date || 'N/A',
-              room: data.room || 'N/A',
-              status: status,
-              timestamp: data.timestamp || null
-            });
-            
-            if (recordDate === today) {
-              userHasRecordToday = true;
-              if (!todayRecordsByUser[userDoc.id]) {
-                todayRecordsByUser[userDoc.id] = [];
-              }
-              todayRecordsByUser[userDoc.id].push(status);
-            }
-          });
-          
-        } catch (e) {
-          console.log('Error for', userName, ':', e);
-        }
-      }
-
-      usersSnapshot.docs.forEach(userDoc => {
-        const userStatuses = todayRecordsByUser[userDoc.id] || [];
+        allRecords.push({
+          userName: userName,
+          timeIn: record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : 'N/A',
+          date: recordDate || 'N/A',
+          status: status,
+          timestamp: record.timeIn || null
+        });
         
-        if (userStatuses.length === 0) {
-          dashboardStats.absent++;
-        } else {
-          userStatuses.forEach(status => {
-            if (status === 'Present') {
-              dashboardStats.onSchedule++;
-            } else if (status === 'Late') {
-              dashboardStats.late++;
-            } else if (status === 'Excused') {
-              dashboardStats.excused++;
-            } else if (status === 'Absent') {
-              dashboardStats.absent++;
-            }
-          });
+        if (recordDate === today) {
+          if (!todayRecordsByUser[userId]) {
+            todayRecordsByUser[userId] = [];
+          }
+          todayRecordsByUser[userId].push(status);
         }
       });
-
-      console.log('Total records:', allRecords.length);
-      
-      allRecords.forEach(r => console.log('Date:', r.date, 'Time:', r.timeIn));
-
-      allRecords.sort((a, b) => {
-        const aValid = a.date && a.date !== 'N/A';
-        const bValid = b.date && b.date !== 'N/A';
-        
-        if (!aValid && !bValid) return 0;
-        if (!aValid) return 1;
-        if (!bValid) return -1;
-        
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        
-        if (dateB - dateA !== 0) {
-          return dateB - dateA;
-        }
-        if (a.timeIn !== b.timeIn) {
-          return b.timeIn.localeCompare(a.timeIn);
-        }
-        return 0;
-      });
-      
-      console.log('Dashboard Stats:', dashboardStats);
-      updateDashboardStats();
-      
-      const weeklyData = await getWeeklyAttendanceData();
-      loadChart(() => {
-        updateChart(weeklyData, 'weekly');
-      });
-      
-      filteredRecords = [...allRecords];
-      renderPage();
-    })
-    .catch(err => {
-      console.error('Error loading activity:', err);
-      activityFeed.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading activity</p>';
     });
+
+    usersData.forEach(user => {
+      const userId = user.employeeId;
+      const userStatuses = todayRecordsByUser[userId] || [];
+      
+      if (userStatuses.length === 0) {
+        window.dashboardStats.absent++;
+      } else {
+        userStatuses.forEach(status => {
+          if (status === 'Present') {
+            window.dashboardStats.onSchedule++;
+          } else if (status === 'Late') {
+            window.dashboardStats.late++;
+          } else if (status === 'Excused') {
+            window.dashboardStats.excused++;
+          } else if (status === 'Absent') {
+            window.dashboardStats.absent++;
+          }
+        });
+      }
+    });
+
+    allRecords.sort((a, b) => {
+      const aValid = a.date && a.date !== 'N/A';
+      const bValid = b.date && b.date !== 'N/A';
+      
+      if (!aValid && !bValid) return 0;
+      if (!aValid) return 1;
+      if (!bValid) return -1;
+      
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      
+      if (dateB - dateA !== 0) {
+        return dateB - dateA;
+      }
+      if (a.timeIn !== b.timeIn) {
+        return b.timeIn.localeCompare(a.timeIn);
+      }
+      return 0;
+    });
+    
+    console.log('Total records:', allRecords.length);
+    console.log('Dashboard Stats:', window.dashboardStats);
+    updateDashboardStats();
+    
+    const weeklyData = await getWeeklyAttendanceData();
+    
+    window.allRecords = allRecords;
+    
+    loadChart(() => {
+      updateChart(weeklyData, 'weekly');
+    });
+    
+    filteredRecords = [...allRecords];
+    renderPage();
+  } catch (err) {
+    console.error('Error loading activity:', err);
+    activityFeed.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading activity</p>';
+  }
 }
 
 function renderPage() {
@@ -182,11 +177,11 @@ function renderPage() {
     <div class="user-row" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
       <div>
         <div style="font-weight: 700; font-size: 16px; color: #111827;">${record.userName}</div>
-        <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.date} • Room ${record.room}</div>
+        <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.date}</div>
       </div>
       <div style="text-align: right;">
         <div style="font-weight: 600; color: #FF725E;">${record.timeIn}</div>
-        <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Clocked in</div>
+        <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">${record.status}</div>
       </div>
     </div>
   `).join('');
@@ -213,27 +208,6 @@ function changePage(direction) {
   }
 }
 
-async function getWeeklyAttendanceData() {
-  const weeklyData = [0, 0, 0, 0, 0, 0, 0];
-  const today = new Date();
-  
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (3 - i));
-    const dateString = date.toISOString().split('T')[0];
-    
-    const uniqueUsers = new Set();
-    for (const record of allRecords) {
-      if (record.date === dateString) {
-        uniqueUsers.add(record.userName);
-      }
-    }
-    weeklyData[i] = uniqueUsers.size;
-  }
-  
-  return weeklyData;
-}
-
 loadRecentActivity();
 
 window.addEventListener('message', function(event) {
@@ -249,7 +223,7 @@ window.addEventListener('message', function(event) {
       filteredRecords = baseRecords;
     } else {
       filteredRecords = baseRecords.filter(record => {
-        const text = `${record.userName} ${record.date} ${record.room}`.toLowerCase();
+        const text = `${record.userName} ${record.date}`.toLowerCase();
         return text.includes(searchTerm);
       });
     }
@@ -300,9 +274,13 @@ function filterByDate(selectedDate) {
   const dateFilterLabel = document.getElementById('dateFilterLabel');
   const clearDateFilter = document.getElementById('clearDateFilter');
   
-  dateFilterLabel.textContent = `Filtered: ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-  dateFilterLabel.style.display = 'inline';
-  clearDateFilter.style.display = 'inline';
+  if (dateFilterLabel) {
+    dateFilterLabel.textContent = `Filtered: ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    dateFilterLabel.style.display = 'inline';
+  }
+  if (clearDateFilter) {
+    clearDateFilter.style.display = 'inline';
+  }
   
   renderPage();
 }
@@ -316,8 +294,12 @@ function clearDateFilter() {
   const dateFilterLabel = document.getElementById('dateFilterLabel');
   const clearDateFilter = document.getElementById('clearDateFilter');
   
-  dateFilterLabel.style.display = 'none';
-  clearDateFilter.style.display = 'none';
+  if (dateFilterLabel) {
+    dateFilterLabel.style.display = 'none';
+  }
+  if (clearDateFilter) {
+    clearDateFilter.style.display = 'none';
+  }
   
   renderPage();
 }
@@ -346,8 +328,12 @@ function toggleStats() {
   const statsContent = document.getElementById('statsToggleContent');
   const arrow = document.querySelector('.stats-toggle-btn .arrow');
   
-  statsContent.classList.toggle('expanded');
-  arrow.classList.toggle('rotated');
+  if (statsContent) {
+    statsContent.classList.toggle('expanded');
+  }
+  if (arrow) {
+    arrow.classList.toggle('rotated');
+  }
   statsExpanded = !statsExpanded;
   
   if (statsExpanded) {

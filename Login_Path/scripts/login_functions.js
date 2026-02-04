@@ -1,63 +1,73 @@
 console.log('scripts/login.js loaded');
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  setPersistence,
-  browserLocalPersistence,
-  browserSessionPersistence,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+const supabaseUrl = 'https://ckgvtzsslrxklmbkztxe.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo';
 
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+const { createClient } = supabase;
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDUnpdDMr0E6r-lohCNJKKKdUJfbVqzayM",
-  authDomain: "clockin-project-db.firebaseapp.com",
-  projectId: "clockin-project-db",
-  storageBucket: "clockin-project-db.firebasestorage.app",
-  messagingSenderId: "144733710358",
-  appId: "1:144733710358:web:5064e74d72052cded4ed37",
-  measurementId: "G-XNS00KPGZ6",
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+window.supabaseClient = supabaseClient;
 
 async function isUserAdmin(email) {
-  const q = query(
-    collection(db, 'user_admin_data'),
-    where('email', '==', email)
-  );
-  const snapshot = await getDocs(q);
-  return !snapshot.empty;
+  try {
+    const { data, error } = await supabaseClient
+      .from('user_admin_data')
+      .select('adminid')
+      .eq('email', email)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+    return !!data;
+  } catch (e) {
+    console.error('Error in isUserAdmin:', e);
+    return false;
+  }
 }
 
-onAuthStateChanged(auth, async (user) => {
-  console.log('onAuthStateChanged ->', user);
-
-  if (user) {
-    try {
-      const isAdmin = await isUserAdmin(user.email);
-
+async function checkExistingSession() {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && session.user) {
+      const email = session.user.email;
+      const isAdmin = await isUserAdmin(email);
       if (isAdmin) {
         window.location.href = '../Admin_ClockIn/index.html';
       } else {
         window.location.href = '../User_ClockIn/index_user.html';
       }
-    } catch (e) {
-      console.error('Privilege check failed', e);
-      window.location.href = '../User_ClockIn/index_user.html';
     }
+  } catch (e) {
+    console.error('Error checking session:', e);
   }
+}
+
+function setupAuthListener() {
+  return supabaseClient.auth.onAuthStateChanged(async (event, session) => {
+    console.log('onAuthStateChanged ->', event, session);
+
+    if (session && session.user) {
+      try {
+        const isAdmin = await isUserAdmin(session.user.email);
+
+        if (isAdmin) {
+          window.location.href = '../Admin_ClockIn/index.html';
+        } else {
+          window.location.href = '../User_ClockIn/index_user.html';
+        }
+      } catch (e) {
+        console.error('Privilege check failed', e);
+        window.location.href = '../User_ClockIn/index_user.html';
+      }
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupAuthListener();
+  checkExistingSession();
 });
 
 const loginForm = document.getElementById('loginForm');
@@ -78,24 +88,51 @@ if (loginForm) {
     const remember = rememberCheckbox ? rememberCheckbox.checked : false;
 
     try {
-      await setPersistence(
-        auth,
-        remember ? browserLocalPersistence : browserSessionPersistence
-      );
-
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const { data: adminData, error: adminError } = await supabaseClient
+        .from('user_admin_data')
+        .select('adminid, email, pass')
+        .eq('email', email)
+        .single();
 
       let isAdmin = false;
-      try {
-        isAdmin = await isUserAdmin(user.email);
-      } catch (e) {
-        console.error('Privilege check failed', e);
+      let userData = null;
+
+      if (!adminError && adminData) {
+        if (adminData.pass !== password) {
+          throw new Error('Invalid password');
+        }
+        isAdmin = true;
+        userData = { adminId: adminData.adminid, email: adminData.email, pass: adminData.pass };
+      } else {
+        const { data: empData, error: empError } = await supabaseClient
+          .from('user_employee_data')
+          .select('employeeid, email, pass')
+          .eq('email', email)
+          .single();
+
+        if (empError || !empData) {
+          throw new Error('User not found');
+        }
+
+        if (empData.pass !== password) {
+          throw new Error('Invalid password');
+        }
+        userData = { employeeId: empData.employeeid, email: empData.email, pass: empData.pass };
+      }
+
+      const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (authError) {
+        console.log('Supabase Auth note:', authError.message);
       }
 
       const storageKey = remember ? localStorage : sessionStorage;
-      storageKey.setItem('userEmail', user.email);
+      storageKey.setItem('userEmail', email);
       storageKey.setItem('userType', isAdmin ? 'admin' : 'employee');
+      storageKey.setItem('userId', isAdmin ? userData.adminId : userData.employeeId);
 
       if (isAdmin) {
         window.location.href = '../Admin_ClockIn/index.html';

@@ -41,7 +41,6 @@ function updateChart(attendanceData, trend = 'weekly') {
   const spacing = chartHeight / lineCount;
   const zeroLineTop = 20 + (lineCount * spacing) + 6;
   
-  // Get total users 
   let totalUsers = window.dashboardStats?.totalTeachers || 0;
   if (totalUsers === 0) {
     totalUsers = maxValue > 0 ? maxValue : 1;
@@ -170,6 +169,7 @@ async function updateChartForTrend(trend) {
 async function getWeeklyAttendanceData() {
   const weeklyData = [0, 0, 0, 0, 0, 0, 0];
   const today = new Date();
+  const records = window.allRecords || [];
   
   console.log('Getting weekly data for dates:');
   for (let i = 0; i < 7; i++) {
@@ -179,7 +179,7 @@ async function getWeeklyAttendanceData() {
     console.log(`Day ${i}: ${dateString}`);
     
     const uniqueUsers = new Set();
-    for (const record of allRecords) {
+    for (const record of records) {
       if (record.date === dateString) {
         uniqueUsers.add(record.userName);
       }
@@ -195,6 +195,7 @@ async function getWeeklyAttendanceData() {
 async function getMonthlyAttendanceData() {
   const monthlyData = [];
   const today = new Date();
+  const records = window.allRecords || [];
   
   for (let i = 0; i < 7; i++) {
     const date = new Date(today.getFullYear(), today.getMonth() - (3 - i), 1);
@@ -202,7 +203,7 @@ async function getMonthlyAttendanceData() {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     
     const uniqueUsers = new Set();
-    for (const record of allRecords) {
+    for (const record of records) {
       if (record.date && record.date.startsWith(`${year}-${month}`)) {
         uniqueUsers.add(record.userName);
       }
@@ -216,12 +217,13 @@ async function getMonthlyAttendanceData() {
 async function getYearlyAttendanceData() {
   const yearlyData = [];
   const currentYear = new Date().getFullYear();
+  const records = window.allRecords || [];
   
   for (let i = 0; i < 7; i++) {
     const year = currentYear - (3 - i);
     
     const uniqueUsers = new Set();
-    for (const record of allRecords) {
+    for (const record of records) {
       if (record.date && record.date.startsWith(year.toString())) {
         uniqueUsers.add(record.userName);
       }

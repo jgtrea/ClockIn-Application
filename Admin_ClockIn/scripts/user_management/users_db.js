@@ -2,8 +2,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const usersList = document.getElementById('usersList');
   const addUserBtn = document.getElementById('addUserBtn');
 
-  const db = window.db;
-  const USERS_COLLECTION = 'user_employee_data';
+  const supabase = window.supabaseClient;
+  const USERS_TABLE = 'user_employee_data';
 
   let filteredUsers = [];
   let searchTerm = '';
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       filteredUsers = [...users];
     } else {
       filteredUsers = users.filter(user => {
-        const searchText = `${user.name || ''} ${user.id || ''} ${user.email || ''} ${user.employment || ''}`.toLowerCase();
+        const searchText = `${user.name || ''} ${user.email || ''} ${user.employment || ''}`.toLowerCase();
         return searchText.includes(searchTerm.toLowerCase());
       });
     }
@@ -34,9 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let expandedRows = {};
   let sortAscending = true;
 
-  if (!db) {
-    console.error('users_db: Firestore (window.db) is not initialized.');
-    usersList.innerHTML = '<div class="error">Firestore not initialized.</div>';
+  // Check if Supabase is initialized
+  if (!supabase) {
+    console.error('users_db: Supabase client is not initialized.');
+    usersList.innerHTML = '<div class="error">Supabase not initialized.</div>';
     return;
   }
 
@@ -54,21 +55,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     pageUsers.forEach((user) => {
-      const isExpanded = !!expandedRows[user.uid];
+      const isExpanded = !!expandedRows[user.employeeId];
       const row = document.createElement('div');
       row.className = `user-row ${isExpanded ? 'expanded' : ''}`;
 
-      const subtitle = `${user.id || 'ID'} | ${user.email || 'Email'} | ${user.employment || 'Status'}`;
+      const subtitle = `${user.employeeId || 'ID'} | ${user.email || 'Email'} | ${user.employment || 'Status'}`;
 
       row.innerHTML = `
-        <div class="user-collapsed-content" onclick="window.toggleUser('${user.uid}')" style="${isExpanded ? 'display: none;' : ''}">
+        <div class="user-collapsed-content" onclick="window.toggleUser('${user.employeeId}')" style="${isExpanded ? 'display: none;' : ''}">
           <div class="user-text-details">
             <div class="user-name">${user.name || 'New User'}</div>
             <div class="user-subtitle">${subtitle}</div>
           </div>
           <div class="btn-group">
-            <button class="btn-outline" onclick="event.stopPropagation(); window.toggleUser('${user.uid}')">Edit</button>
-            <button class="btn-outline" onclick="event.stopPropagation(); window.deleteUser('${user.uid}')">Delete</button>
+            <button class="btn-outline" onclick="event.stopPropagation(); window.toggleUser('${user.employeeId}')">Edit</button>
+            <button class="btn-outline" onclick="event.stopPropagation(); window.deleteUser('${user.employeeId}')">Delete</button>
           </div>
         </div>
 
@@ -79,11 +80,10 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div class="user-subtitle">${subtitle}</div>
             </div>
             <div class="edit-grid">
-              <label>ID</label><input type="text" id="id-${user.uid}" value="${user.id || ''}">
-              <label>Name</label><input type="text" id="name-${user.uid}" value="${user.name || ''}">
-              <label>Email</label><input type="text" id="email-${user.uid}" value="${user.email || ''}">
-              <label>Password</label><input type="password" id="password-${user.uid}" value="${user.password || ''}">
-              <label>Employment</label><select id="emp-${user.uid}">
+              <label>Name</label><input type="text" id="name-${user.employeeId}" value="${user.name || ''}">
+              <label>Email</label><input type="text" id="email-${user.employeeId}" value="${user.email || ''}">
+              <label>Password</label><input type="password" id="password-${user.employeeId}" value="${user.pass || ''}">
+              <label>Employment</label><select id="emp-${user.employeeId}">
                 <option value="Full-time" ${user.employment === 'Full-time' ? 'selected' : ''}>Full-time</option>
                 <option value="Part-time" ${user.employment === 'Part-time' ? 'selected' : ''}>Part-time</option>
               </select>
@@ -91,8 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="sidebar-actions">
             <div class="btn-group">
-              <button class="btn-outline" onclick="window.saveUser('${user.uid}')">Save</button>
-              <button class="btn-outline" onclick="window.closeNoSave('${user.uid}')">Close</button>
+              <button class="btn-outline" onclick="window.saveUser('${user.employeeId}')">Save</button>
+              <button class="btn-outline" onclick="window.closeNoSave('${user.employeeId}')">Close</button>
             </div>
           </div>
         </div>
@@ -133,46 +133,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   let unsubscribe = null;
-  function startSync(isAdmin, currentUser) {
-    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  async function loadUsers() {
+    try {
+      const { data, error } = await supabase
+        .from(USERS_TABLE)
+        .select('*')
+        .order('createdat', { ascending: false });
 
-    if (isAdmin) {
-      unsubscribe = db.collection(USERS_COLLECTION)
-        .orderBy('createdAt', 'desc')
-        .onSnapshot(snapshot => {
-          const remoteData = snapshot.docs.map(doc => ({
-            uid: doc.id,
-            id: doc.data().employeeId || '',
-            name: doc.data().name || '',
-            email: doc.data().email || '',
-            password: doc.data().password || '',
-            employment: doc.data().employment || ''
-          }));
+      if (error) throw error;
 
-          users = remoteData.map(remoteUser => {
-            if (expandedRows[remoteUser.uid]) {
-              const localUser = users.find(u => u.uid === remoteUser.uid);
-              return localUser ? localUser : remoteUser;
-            }
-            return remoteUser;
-          });
-          applySearch();
-        }, err => { console.error('users_db: snapshot error', err); });
-    } else {
-      unsubscribe = db.collection(USERS_COLLECTION)
-        .where('email', '==', currentUser.email)
-        .onSnapshot(snapshot => {
-          const remoteData = snapshot.docs.map(doc => ({
-            uid: doc.id,
-            id: doc.data().employeeId || '',
-            name: doc.data().name || '',
-            email: doc.data().email || '',
-            password: doc.data().password || '',
-            employment: doc.data().employment || ''
-          }));
-          users = remoteData;
-          applySearch();
-        }, err => { console.error('users_db: snapshot error', err); });
+      users = data.map(user => ({
+        employeeId: user.employeeId,
+        name: user.name || '',
+        email: user.email || '',
+        pass: user.pass || '',
+        employment: user.employment || '',
+        createdat: user.createdat
+      }));
+
+      applySearch();
+    } catch (err) {
+      console.error('users_db: Error loading users:', err);
     }
   }
 
@@ -188,41 +169,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.saveUser = async (uid) => {
-    const idVal = document.getElementById(`id-${uid}`).value;
     const nameVal = document.getElementById(`name-${uid}`).value;
     const emailVal = document.getElementById(`email-${uid}`).value;
     const passwordVal = document.getElementById(`password-${uid}`).value;
-    const deptVal = document.getElementById(`dept-${uid}`).value;
     const empVal = document.getElementById(`emp-${uid}`).value;
 
-    const userInArray = users.find(u => u.uid === uid) || {};
+    const userInArray = users.find(u => u.employeeId === uid) || {};
 
-    const hasChanged = idVal !== (userInArray.id || '') ||
-      nameVal !== (userInArray.name || '') ||
+    const hasChanged = nameVal !== (userInArray.name || '') ||
       emailVal !== (userInArray.email || '') ||
-      passwordVal !== (userInArray.password || '') ||
+      passwordVal !== (userInArray.pass || '') ||
       empVal !== (userInArray.employment || '');
 
     if (hasChanged) {
       try {
-        await db.collection(USERS_COLLECTION).doc(uid).update({
-          employeeId: idVal,
-          name: nameVal,
-          email: emailVal,
-          password: passwordVal,
-          employment: empVal
-        });
+        const { error } = await supabase
+          .from(USERS_TABLE)
+          .update({
+            name: nameVal,
+            email: emailVal,
+            pass: passwordVal,
+            employment: empVal
+          })
+          .eq('employeeId', uid);
+
+        if (error) throw error;
         console.log('users_db: User data saved successfully.');
         
         // Update local data so card shows updated info
-        const userIndex = users.findIndex(u => u.uid === uid);
+        const userIndex = users.findIndex(u => u.employeeId === uid);
         if (userIndex !== -1) {
           users[userIndex] = {
             ...users[userIndex],
-            id: idVal,
             name: nameVal,
             email: emailVal,
-            password: passwordVal,
+            pass: passwordVal,
             employment: empVal
           };
           applySearch();
@@ -242,8 +223,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.deleteUser = async (uid) => {
     if (!confirm('Delete this user?')) return;
     try {
-      await db.collection(USERS_COLLECTION).doc(uid).delete();
+      const { error } = await supabase
+        .from(USERS_TABLE)
+        .delete()
+        .eq('employeeId', uid);
+
+      if (error) throw error;
       delete expandedRows[uid];
+      loadUsers();
     } catch (err) {
       console.error('users_db: delete error', err);
     }
@@ -251,45 +238,67 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   addUserBtn.addEventListener('click', async () => {
     try {
-      const docRef = await db.collection(USERS_COLLECTION).add({
-        name: 'New User', employeeId: '', email: '', password: '', employment: '',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      expandedRows[docRef.id] = true;
+      const { data, error } = await supabase
+        .from(USERS_TABLE)
+        .insert({
+          name: 'New User',
+          email: '',
+          pass: '',
+          employment: 'Full-time'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      expandedRows[data.employeeId] = true;
+      loadUsers();
     } catch (err) {
       console.error('users_db: add user error', err);
     }
   });
 
-  if (window.auth && typeof window.auth.onAuthStateChanged === 'function') {
-    window.auth.onAuthStateChanged((user) => {
-      if (!user) {
+  // Check for admin status
+  async function checkAdminAndLoad() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      // Check localStorage
+      const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
+      if (!userEmail) {
         users = [];
         renderUsers();
         addUserBtn.style.display = 'none';
-        if (unsubscribe) { unsubscribe(); unsubscribe = null; }
         return;
       }
+    }
 
-      user.getIdToken(true)
-        .then(() => user.getIdTokenResult())
-        .then(idTokenResult => {
-          const claims = idTokenResult && idTokenResult.claims ? idTokenResult.claims : {};
-          const isAdmin = claims.admin === true || user.email === 'hello@gmail.com';
-          addUserBtn.style.display = isAdmin ? '' : 'none';
-          console.log('users_db: signed in as', user.email, 'admin?', isAdmin, 'claims=', claims);
-          startSync(isAdmin, user);
-        })
-        .catch(err => {
-          console.warn('users_db: Failed to refresh/get ID token result', err);
-          const isAdminFallback = user.email === 'hello@gmail.com';
-          addUserBtn.style.display = isAdminFallback ? '' : 'none';
-          startSync(isAdminFallback, user);
-        });
-    });
-  } else {
-    console.warn('users_db: Auth not available; cannot load users.');
+    const userEmail = session?.user?.email || sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
+    if (userEmail) {
+      const { data: adminData, error } = await supabase
+        .from('user_admin_data')
+        .select('adminId')
+        .eq('email', userEmail)
+        .single();
+
+      const isAdmin = !error && !!adminData;
+      addUserBtn.style.display = isAdmin ? '' : 'none';
+      console.log('users_db: signed in as', userEmail, 'admin?', isAdmin);
+    }
+    loadUsers();
   }
+
+  // Listen for auth state changes
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      users = [];
+      renderUsers();
+      addUserBtn.style.display = 'none';
+    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      checkAdminAndLoad();
+    }
+  });
+
+  // Initial load
+  checkAdminAndLoad();
   
   window.sortUsers = function(field) {
     allUsers.sort((a, b) => {
@@ -298,11 +307,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         valueA = (a.name || '').toLowerCase();
         valueB = (b.name || '').toLowerCase();
       } else if (field === 'id') {
-        valueA = (a.id || '').toLowerCase();
-        valueB = (b.id || '').toLowerCase();
+        valueA = (a.employeeId || '').toLowerCase();
+        valueB = (b.employeeId || '').toLowerCase();
       } else if (field === 'createdAt') {
-        valueA = a.createdAt || 0;
-        valueB = b.createdAt || 0;
+        valueA = a.createdat || 0;
+        valueB = b.createdat || 0;
       }
       return sortAscending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
     });

@@ -1,8 +1,9 @@
 const scheduleList = document.getElementById("scheduleList");
-const USERS_COLLECTION = 'user_employee_data';
-const SUB_COLLECTION = 'user_schedule';
+const USERS_TABLE = 'user_employee_data';
+const SCHEDULE_TABLE = 'schedule';
+const SECTIONS_TABLE = 'sections';
 
-let userSchedules = []; 
+let userSchedules = [];
 let allUserSchedules = [];
 let filteredSchedules = [];
 let searchTerm = '';
@@ -29,53 +30,43 @@ function applyScheduleSearch() {
 
 window.performScheduleSearch = function(term) {
   searchTerm = term || '';
-  console.log('Schedule search called with term:', searchTerm, 'userSchedules length:', userSchedules.length);
   applyScheduleSearch();
 };
 
 async function loadSchedule(userId) {
+  const supabase = window.supabaseClient;
   const scheduleTable = document.getElementById(`schedule-table-${userId}`);
+  
+  if (!scheduleTable) return;
   
   scheduleTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">Loading...</p>';
 
   try {
-    const scheduleSnapshot = await window.db
-      .collection('user_employee_data')
-      .doc(userId)
-      .collection('Schedule')
-      .get();
+    const { data: scheduleData, error } = await supabase
+      .from(SCHEDULE_TABLE)
+      .select('*')
+      .eq('employeeId', userId)
+      .order('startTime', { ascending: true });
 
-    if (scheduleSnapshot.empty) {
+    if (error) {
+      console.error('Error loading schedule:', error);
+      scheduleTable.innerHTML = '<p style="text-align:center; color:#ef4444; padding:10px;">Error loading schedule.</p>';
+      return;
+    }
+
+    if (!scheduleData || scheduleData.length === 0) {
       scheduleTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">No schedule found.</p>';
       return;
     }
 
-    let teacherSchedule = [];
-    scheduleSnapshot.docs.forEach(timeDoc => {
-      const timeData = timeDoc.data();
-      console.log('Time document data:', timeData); 
-      
-      teacherSchedule.push({
-        time: timeDoc.id,
-        section: timeData.section || timeData.Section || timeData.room || timeData.Room || 'N/A',
-        subject: timeData.subject || timeData.Subject || timeData.class || timeData.Class || 'N/A'
-      });
-    });
-
-    teacherSchedule.sort((a, b) => {
-      const timeA = a.time.split(':').map(Number);
-      const timeB = b.time.split(':').map(Number);
-      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-    });
-
-    scheduleTable.innerHTML = teacherSchedule.map(item => `
+    scheduleTable.innerHTML = scheduleData.map(item => `
       <div class="slot-row">
-        <span>${formatTime(item.time)}</span>
-        <span>${item.section}</span>
-        <span>${item.subject}</span>
+        <span>${formatTime(item.startTime)}</span>
+        <span>${item.sectionName || '-'}</span>
+        <span>${item.subject || '-'}</span>
         <span class="actions-cell">
-          <button class="action-icon-btn" onclick="editSchedule('${userId}', '${item.time}')"><span class="material-symbols-outlined">edit</span></button>
-          <button class="action-icon-btn delete" onclick="deleteSchedule('${userId}', '${item.time}')"><span class="material-symbols-outlined">delete</span></button>
+          <button class="action-icon-btn" onclick="editSchedule('${userId}', '${item.schedId}')"><span class="material-symbols-outlined">edit</span></button>
+          <button class="action-icon-btn delete" onclick="deleteSchedule('${userId}', '${item.schedId}')"><span class="material-symbols-outlined">delete</span></button>
         </span>
       </div>
     `).join('');
@@ -86,37 +77,40 @@ async function loadSchedule(userId) {
   }
 }
 
-function loadUsersFromDB() {
-  if (!window.db) {
+async function loadUsersFromDB() {
+  const supabase = window.supabaseClient;
+  if (!supabase) {
     setTimeout(loadUsersFromDB, 500); 
     return;
   }
 
-  window.db.collection(USERS_COLLECTION)
-    .orderBy('createdAt', 'desc')
-    .get()
-    .then(async (snapshot) => {
-      const userPromises = snapshot.docs.map(async (doc) => {
-        const userData = doc.data();
-        const userId = doc.id;
+  try {
+    const { data: usersData, error } = await supabase
+      .from(USERS_TABLE)
+      .select('*')
+      .order('createdat', { ascending: false });
 
-        return {
-          uid: userId,
-          name: userData.name || '',
-          subtitle: `${userData.employeeId || 'T000'} | ${userData.email || 'N/A'} | ${userData.employment || 'N/A'}`
-        };
-      });
+    if (error) {
+      console.error('Error loading users:', error);
+      return;
+    }
 
-      userSchedules = await Promise.all(userPromises);
-      applyScheduleSearch();
-    })
-    .catch(err => {
-      console.error(err);
-    });
+    userSchedules = usersData.map(user => ({
+      uid: user.employeeId,
+      name: user.name || '',
+      subtitle: `${user.employeeId || 'T000'} | ${user.email || 'N/A'} | ${user.employment || 'N/A'}`
+    }));
+
+    applyScheduleSearch();
+  } catch (err) {
+    console.error('Error loading users:', err);
+  }
 }
 
 function formatTime(time) {
-  return time.replace(/^0/, '');
+  if (!time) return '';
+  const parts = time.split(':');
+  return `${parseInt(parts[0])}:${parts[1] || '00'}`;
 }
 
 function toggleUser(uid) {
@@ -130,6 +124,8 @@ function toggleUser(uid) {
 
 function toggleAddSchedule(uid) {
   const form = document.getElementById(`add-schedule-form-${uid}`);
+  if (!form) return;
+  
   const isVisible = form.style.display !== 'none';
   form.style.display = isVisible ? 'none' : 'block';
   
@@ -141,6 +137,7 @@ function toggleAddSchedule(uid) {
 }
 
 async function saveSchedule(uid) {
+  const supabase = window.supabaseClient;
   const time = document.getElementById(`add-time-${uid}`).value;
   const section = document.getElementById(`add-section-${uid}`).value;
   const subject = document.getElementById(`add-subject-${uid}`).value;
@@ -150,18 +147,22 @@ async function saveSchedule(uid) {
     return;
   }
   
-  const formattedTime = formatTime(time);
-  
   try {
-    await window.db
-      .collection('user_employee_data')
-      .doc(uid)
-      .collection('Schedule')
-      .doc(formattedTime)
-      .set({
-        section: section,
-        subject: subject
+    const { error } = await supabase
+      .from(SCHEDULE_TABLE)
+      .insert({
+        employeeId: uid,
+        sectionName: section,
+        subject: subject,
+        startTime: time,
+        weekday: new Date().toLocaleDateString('en-US', { weekday: 'long' })
       });
+
+    if (error) {
+      console.error('Error saving schedule:', error);
+      alert('Error saving schedule: ' + error.message);
+      return;
+    }
     
     toggleAddSchedule(uid);
     loadSchedule(uid);
@@ -172,31 +173,40 @@ async function saveSchedule(uid) {
   }
 }
 
-async function editSchedule(uid, time) {
+async function editSchedule(uid, schedId) {
+  const supabase = window.supabaseClient;
   try {
-    const doc = await window.db
-      .collection('user_employee_data')
-      .doc(uid)
-      .collection('Schedule')
-      .doc(time)
-      .get();
+    const { data, error } = await supabase
+      .from(SCHEDULE_TABLE)
+      .select('*')
+      .eq('schedId', schedId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching schedule:', error);
+      return;
+    }
     
-    if (doc.exists) {
-      const data = doc.data();
-      const newSection = prompt('Edit Section:', data.section || data.Section || '');
-      const newSubject = prompt('Edit Subject:', data.subject || data.Subject || '');
+    if (data) {
+      const newSection = prompt('Edit Section:', data.sectionName || '');
+      const newSubject = prompt('Edit Subject:', data.subject || '');
+      const newTime = prompt('Edit Time:', data.startTime || '');
       
-      if (newSection !== null && newSubject !== null) {
-        await window.db
-          .collection('user_employee_data')
-          .doc(uid)
-          .collection('Schedule')
-          .doc(time)
+      if (newSection !== null && newSubject !== null && newTime !== null) {
+        const { error: updateError } = await supabase
+          .from(SCHEDULE_TABLE)
           .update({
-            section: newSection,
-            subject: newSubject
-          });
-        
+            sectionName: newSection,
+            subject: newSubject,
+            startTime: newTime
+          })
+          .eq('schedId', schedId);
+
+        if (updateError) {
+          console.error('Error updating schedule:', updateError);
+          alert('Error updating schedule: ' + updateError.message);
+          return;
+        }
         loadSchedule(uid);
       }
     }
@@ -206,18 +216,23 @@ async function editSchedule(uid, time) {
   }
 }
 
-async function deleteSchedule(uid, time) {
+async function deleteSchedule(uid, schedId) {
+  const supabase = window.supabaseClient;
   if (!confirm('Are you sure you want to delete this schedule entry?')) {
     return;
   }
   
   try {
-    await window.db
-      .collection('user_employee_data')
-      .doc(uid)
-      .collection('Schedule')
-      .doc(time)
-      .delete();
+    const { error } = await supabase
+      .from(SCHEDULE_TABLE)
+      .delete()
+      .eq('schedId', schedId);
+
+    if (error) {
+      console.error('Error deleting schedule:', error);
+      alert('Error deleting schedule: ' + error.message);
+      return;
+    }
     
     loadSchedule(uid);
     
@@ -234,6 +249,13 @@ function render() {
   const pageUsers = allUserSchedules.slice(startIndex, endIndex);
   
   scheduleList.innerHTML = '';
+  
+  if (!pageUsers || pageUsers.length === 0) {
+    scheduleList.innerHTML = '<div class="no-records">No user records found.</div>';
+    document.getElementById('pagination').style.display = 'none';
+    return;
+  }
+  
   pageUsers.forEach(user => {
     const isExpanded = !!expandedRows[user.uid];
     const row = document.createElement('div');
@@ -308,13 +330,15 @@ function updatePagination(totalPages) {
   const prevBtn = document.getElementById('prevBtn');
   const nextBtn = document.getElementById('nextBtn');
   
+  if (!pagination) return;
+  
   if (totalPages > 1) {
     pagination.style.display = 'block';
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled = currentPage === totalPages;
-    prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
-    nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
+    if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = currentPage === 1;
+    if (nextBtn) nextBtn.disabled = currentPage === totalPages;
+    if (prevBtn) prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
+    if (nextBtn) nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
   } else {
     pagination.style.display = 'none';
   }
@@ -340,8 +364,8 @@ function sortSchedules(field) {
       valueA = (a.uid || '').toLowerCase();
       valueB = (b.uid || '').toLowerCase();
     } else if (field === 'createdAt') {
-      valueA = a.createdAt || 0;
-      valueB = b.createdAt || 0;
+      valueA = a.createdat || 0;
+      valueB = b.createdat || 0;
     }
     return sortAscending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
   });

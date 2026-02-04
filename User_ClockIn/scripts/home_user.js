@@ -29,23 +29,48 @@ if (profileCircle && profileMenu) {
   });
 }
 
-auth.onAuthStateChanged(user => {
-  if (!user) {
-    window.location.href = "../../Login_Path/login.html";
-    return;
-  }
+const supabase = window.supabaseClient;
 
-  const displayName = user.displayName || user.email.split("@")[0];
-  const letter = displayName.charAt(0).toUpperCase();
+if (supabase) {
+  supabase.auth.onAuthStateChanged(async (event, session) => {
+    if (!session) {
+      // Check if we have stored user info
+      const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
+      if (userEmail) {
+        const displayName = userEmail.split('@')[0];
+        const letter = displayName.charAt(0).toUpperCase();
+        if (profileCircle) profileCircle.textContent = letter;
+        if (profileCircleMenu) profileCircleMenu.textContent = letter;
+        if (profileName) profileName.textContent = displayName;
+        if (profileEmail) profileEmail.textContent = userEmail;
+        return;
+      }
+      window.location.href = "../../Login_Path/login.html";
+      return;
+    }
 
-  if (profileCircle) profileCircle.textContent = letter;
-  if (profileCircleMenu) profileCircleMenu.textContent = letter;
-  if (profileName) profileName.textContent = displayName;
-  if (profileEmail) profileEmail.textContent = user.email;
-});
+    const user = session.user;
+    const displayName = user.user_metadata?.displayName || user.email.split("@")[0];
+    const letter = displayName.charAt(0).toUpperCase();
+
+    if (profileCircle) profileCircle.textContent = letter;
+    if (profileCircleMenu) profileCircleMenu.textContent = letter;
+    if (profileName) profileName.textContent = displayName;
+    if (profileEmail) profileEmail.textContent = user.email;
+  });
+}
 
 async function logout() {
-  await auth.signOut();
+  if (supabase) {
+    await supabase.auth.signOut();
+  }
+  // Clear session storage
+  sessionStorage.removeItem('userEmail');
+  sessionStorage.removeItem('userId');
+  sessionStorage.removeItem('userType');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('userType');
   if (window.top !== window.self) {
     window.top.location.href = "../../Login_Path/login.html";
   } else {

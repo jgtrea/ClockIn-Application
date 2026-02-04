@@ -1,6 +1,6 @@
 (function() {
-  const USERS_COLLECTION = 'user_employee_data';
-  const NOTIFS_COLLECTION = 'notifications';
+  const USERS_TABLE = 'user_employee_data';
+  const NOTIFS_TABLE = 'notification';
 
   function $(id) { return document.getElementById(id); }
 
@@ -11,8 +11,9 @@
   const messageEl = $('pn-message');
   const sendPrimary = $('pn-send-primary');
 
-  let selected = []; // {uid, name, email}
+  let selected = [];
   let cache = [];
+  let supabaseReady = false;
 
   function renderChips() {
     chips.innerHTML = '';
@@ -72,12 +73,28 @@
   }
 
   function ensureData() {
-    if (cache.length > 0 || !window.db) return;
-    window.db.collection(USERS_COLLECTION).limit(2000).get()
-      .then(snap => {
-        cache = snap.docs.map(d => ({ uid: d.id, name: d.data().name || '', email: d.data().email || '' }));
-      })
-      .catch(err => console.error('push_notification: failed to load users', err));
+    if (!window.supabaseClient) {
+      setTimeout(ensureData, 500);
+      return;
+    }
+    if (cache.length > 0) return;
+    
+    supabaseReady = true;
+    window.supabaseClient
+      .from(USERS_TABLE)
+      .select('employeeId, name, email')
+      .limit(2000)
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('push_notification: failed to load users', error);
+          return;
+        }
+        cache = data.map(d => ({ 
+          uid: d.employeeId, 
+          name: d.name || '', 
+          email: d.email || '' 
+        }));
+      });
   }
 
   function deriveEndNotif() {
@@ -87,22 +104,12 @@
     return '';
   }
 
-  async function getNextNotifId(db) {
-    try {
-      const snap = await db.collection(NOTIFS_COLLECTION)
-        .orderBy('notifId', 'desc')
-        .limit(1)
-        .get();
-      const currentMax = snap.empty ? 0 : (snap.docs[0].data().notifId || 0);
-      return currentMax + 1;
-    } catch (e) {
-      console.warn('notif.js: failed to compute next notifId, defaulting to 1', e);
-      return 1;
-    }
-  }
-
   async function sendNotification() {
-    if (!window.db) { alert('Database not ready'); return; }
+    if (!window.supabaseClient) {
+      alert('Database is still loading. Please wait a moment and try again.');
+      return;
+    }
+    
     const message = (messageEl.value || '').trim();
     const header = (headerEl.value || '').trim();
     if (!message) { alert('Message is required'); return; }
@@ -115,28 +122,33 @@
     const endNotif = deriveEndNotif();
     if (!endNotif) { alert('Please choose at least one recipient (type a name/email or everyone)'); return; }
 
+    const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
+
     const payload = {
       header: header || '',
       message: message,
-      endNotif: endNotif,
-      dateCreated: firebase.firestore.FieldValue.serverTimestamp(),
-      notifId: await getNextNotifId(window.db),
+      endnotif: endNotif,
+      dataCreated: new Date().toISOString()
     };
 
+    if (selected.length === 1 && selected[0].uid !== '*everyone*') {
+      payload.employeeId = selected[0].uid;
+    }
+
     try {
-      await window.db.collection(NOTIFS_COLLECTION).add(payload);
+      await window.supabaseClient.from(NOTIFS_TABLE).insert(payload);
       headerEl.value = '';
       messageEl.value = '';
       input.value = '';
       sugg.style.display = 'none';
       selected = [];
       renderChips();
-      closeNotificationModal(); // Close modal after sending
-      loadNotificationHistory(); // Refresh history
+      closeNotificationModal();
+      loadNotificationHistory();
       alert('Notification sent successfully!');
     } catch (err) {
       console.error('push_notification: failed to send', err);
-      alert('Failed to save notification');
+      alert('Failed to save notification: ' + err.message);
     }
   }
 
@@ -152,25 +164,27 @@
   window.__pn_getSelection = () => selected.slice();
   window.__pn_send = sendNotification;
 
-  // Notification History Functionality
   let notifications = [];
   let currentPage = 1;
   const notificationsPerPage = 10;
 
   function loadNotificationHistory() {
-    if (!window.db) {
+    if (!window.supabaseClient) {
       setTimeout(loadNotificationHistory, 500);
       return;
     }
 
-    window.db.collection(NOTIFS_COLLECTION)
-      .orderBy('dateCreated', 'desc')
-      .get()
-      .then(snapshot => {
-        notifications = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+    window.supabaseClient
+      .from(NOTIFS_TABLE)
+      .select('*')
+      .order('dataCreated', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Error loading notification history:', error);
+          document.getElementById('notificationsList').innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading notifications.</p>';
+          return;
+        }
+        notifications = data || [];
         renderNotificationHistory();
       })
       .catch(err => {
@@ -194,17 +208,17 @@
     const pageNotifications = notifications.slice(startIndex, endIndex);
 
     notificationsList.innerHTML = pageNotifications.map(notif => {
-      const date = notif.dateCreated ? new Date(notif.dateCreated.seconds * 1000).toLocaleString() : 'Unknown';
+      const date = notif.dataCreated ? new Date(notif.dataCreated).toLocaleString() : 'Unknown';
       return `
         <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 16px; padding: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
             <div>
               <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">${notif.header || 'Notification'}</h3>
-              <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">To: ${notif.endNotif}</p>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">To: ${notif.endnotif || 'All Users'}</p>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
               <span style="font-size: 12px; color: #9ca3af;">${date}</span>
-              <button onclick="deleteNotification('${notif.id}')" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 4px; display: flex; align-items: center;" title="Delete notification">
+              <button onclick="deleteNotification('${notif.notifId}')" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 4px; display: flex; align-items: center;" title="Delete notification">
                 <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
               </button>
             </div>
@@ -253,15 +267,14 @@
     }
 
     try {
-      await window.db.collection(NOTIFS_COLLECTION).doc(notificationId).delete();
-      loadNotificationHistory(); // Refresh the list
+      await window.supabaseClient.from(NOTIFS_TABLE).delete().eq('notifId', notificationId);
+      loadNotificationHistory();
     } catch (error) {
       console.error('Error deleting notification:', error);
       alert('Error deleting notification. Please try again.');
     }
   };
 
-  // Load notification history when page loads
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadNotificationHistory);
   } else {

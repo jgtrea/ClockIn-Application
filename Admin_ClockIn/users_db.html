@@ -10,17 +10,13 @@
   <link rel="stylesheet" href="styles/user_ui.css">
   <link rel="stylesheet" href="styles/container_card/attendance_add_card.css">
 
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="../Firebase/firebase_config.js" defer></script>
+  <!-- Supabase Client Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../Supabase/supabase_config.js" defer></script>
   <script src="scripts/home.js" defer></script>
   <script src="scripts/user_management/users_db.js" defer></script>
   <script src="scripts/filter_user.js" defer></script>
 </head>
-
-<!-- TODO: List out choices for department and employement -->
-<!-- TODO: Remove choice to edit out password and in user interface. Make function in firebase through authentification -->
 
 <body data-page="users_db">
 
@@ -50,7 +46,7 @@
         </div>
       </div>
     </header>
-  
+   
     <main class="content">
 
       <div class="dashboard-header">
@@ -77,7 +73,7 @@
       </div>
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
-      
+       
       <div class="users-table">
         <div id="usersList"></div>
         <div id="pagination" style="display: none; text-align: center; margin-top: 20px;">
