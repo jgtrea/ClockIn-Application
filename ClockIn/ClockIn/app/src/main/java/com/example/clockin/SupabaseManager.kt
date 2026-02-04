@@ -24,7 +24,7 @@ import java.util.UUID
 
 @Serializable
 data class UserProfile(
-    @SerialName("employeeid") val id: String,
+    @SerialName("employeeId") val id: String,
     val name: String,
     val email: String,
     val department: String? = null,
@@ -33,30 +33,30 @@ data class UserProfile(
 
 @Serializable
 data class Schedule(
-    @SerialName("schedid") val id: String,
-    @SerialName("sectionname") val sectionName: String,
+    @SerialName("schedId") val id: String,
+    @SerialName("sectionName") val sectionName: String,
     val subject: String,
-    @SerialName("starttime") val startTime: String,
-    @SerialName("endtime") val endTime: String
+    @SerialName("startTime") val startTime: String,
+    @SerialName("endTime") val endTime: String
 )
 
 @Serializable
 data class Attendance(
-    @SerialName("attendid") val id: String,
+    @SerialName("attendId") val id: String,
     val status: String,
-    @SerialName("timein") val timeIn: String? = null,
-    @SerialName("timeout") val timeOut: String? = null,
-    @SerialName("schedid") val schedId: String,
+    @SerialName("timeIn") val timeIn: String? = null,
+    @SerialName("timeOut") val timeOut: String? = null,
+    @SerialName("schedId") val schedId: String,
     val schedule: Schedule? = null
 )
 
 @Serializable
 data class NotificationItem(
-    @SerialName("notifid") val notifId: String = "",
+    @SerialName("notifId") val notifId: String = "",
     val header: String = "",
     val message: String = "",
-    @SerialName("datacreated") val dateCreated: String? = null,
-    @SerialName("endnotif") val target: String? = "everyone"
+    @SerialName("dataCreated") val dateCreated: String? = null,
+    @SerialName("endNotif") val target: String? = "everyone"
 )
 
 object SupabaseManager {
@@ -151,7 +151,7 @@ object SupabaseManager {
         return withContext(Dispatchers.IO) {
             try {
                 val mySchedules = client.from("schedule")
-                    .select { filter { eq("employeeid", user.id) } }
+                    .select { filter { eq("employeeId", user.id) } }
                     .decodeList<Schedule>()
 
                 val myScheduleIds = mySchedules.map { it.id }
@@ -161,7 +161,7 @@ object SupabaseManager {
                 val result = client.from("attendance").select(
                     columns = Columns.list("*", "schedule(*)")
                 ) {
-                    filter { isIn("schedid", myScheduleIds) }
+                    filter { isIn("schedId", myScheduleIds) }
                 }
 
                 result.decodeList<Attendance>()
@@ -176,7 +176,7 @@ object SupabaseManager {
         return withContext(Dispatchers.IO) {
             try {
                 client.from("schedule")
-                    .select { filter { eq("employeeid", user.id) } }
+                    .select { filter { eq("employeeId", user.id) } }
                     .decodeList<Schedule>()
             } catch (e: Exception) {
                 emptyList()
@@ -196,17 +196,17 @@ object SupabaseManager {
                 val qrData = client.from("qr")
                     .select {
                         filter {
-                            eq("qrid", qrId)
+                            eq("qrId", qrId)
                             eq("status", true)
                         }
                     }
                     .decodeSingleOrNull<Map<String, String>>()
                     ?: return@withContext Result.failure(Exception("Invalid or inactive QR Code"))
 
-                val scheduleId = qrData["schedid"] ?: return@withContext Result.failure(Exception("QR has no schedule linked"))
+                val scheduleId = qrData["schedId"] ?: return@withContext Result.failure(Exception("QR has no schedule linked"))
 
                 val existingAttendance = client.from("attendance")
-                    .select { filter { eq("schedid", scheduleId) } }
+                    .select { filter { eq("schedId", scheduleId) } }
                     .decodeList<Attendance>()
                     .firstOrNull { it.status == "Present" || it.status == "Late" }
 
@@ -215,7 +215,7 @@ object SupabaseManager {
                 }
 
                 val schedule = client.from("schedule")
-                    .select { filter { eq("schedid", scheduleId) } }
+                    .select { filter { eq("schedId", scheduleId) } }
                     .decodeSingleOrNull<Schedule>()
                     ?: return@withContext Result.failure(Exception("Schedule not found"))
 

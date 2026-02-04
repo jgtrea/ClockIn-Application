@@ -169,10 +169,6 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
 
                 ProfileEditItem("Email", userProfile?.email ?: "", isEditable = false) {}
 
-                ProfileEditItem("Employee ID", userProfile?.id ?: "", isEditable = false) {}
-
-                ProfileEditItem("Department", userProfile?.department ?: "None", isEditable = false) {}
-
                 ProfileEditItem("Employment", userProfile?.employment ?: "None", isEditable = false) {}
             }
         }

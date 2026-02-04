@@ -16,11 +16,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Notification(
-    @SerialName("notifid") val id: String,
+    @SerialName("notifId") val id: String,
     val header: String,
     val message: String,
-    @SerialName("endnotif") val target: String = "everyone",
-    @SerialName("datecreated") val dateCreated: String? = null
+    @SerialName("endNotif") val target: String = "everyone",
+    @SerialName("dateCreated") val dateCreated: String? = null
 )
 
 @Composable
@@ -36,7 +36,7 @@ fun RealtimeNotificationListener() {
 
                     val recentNotifications = SupabaseManager.client.from("notification")
                         .select {
-                            order("datecreated", Order.DESCENDING)
+                            order("dateCreated", Order.DESCENDING)
                             limit(3)
                         }
                         .decodeList<Notification>()

@@ -82,8 +82,8 @@ val PrimaryOrange = Color(0xFFFF7F66)
 
 @Serializable
 data class SectionItem(
-    @SerialName("sectionname") val sectionName: String = "",
-    @SerialName("yearlevel") val yearLevel: String = "",
+    @SerialName("sectionName") val sectionName: String = "",
+    @SerialName("yearLevel") val yearLevel: String = "",
     val ble: String? = ""
 )
 
@@ -123,7 +123,7 @@ fun DashboardScreen(
         try {
             val result = SupabaseManager.client.from("notification")
                 .select {
-                    order("datacreated", Order.DESCENDING)
+                    order("dataCreated", Order.DESCENDING)
                     limit(10)
                 }
                 .decodeList<NotificationItem>()
