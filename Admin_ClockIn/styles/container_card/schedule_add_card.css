@@ -61,7 +61,7 @@
 
 .schedule-table-header {
   display: grid;
-  grid-template-columns: 80px 1fr 1fr 100px;
+  grid-template-columns: 80px 80px 1fr 1fr 100px;
   width: 100%;
   border-bottom: 1px solid #d1d5db;
   padding-bottom: 10px;
@@ -82,7 +82,7 @@
 
 .slot-row {
   display: grid;
-  grid-template-columns: 80px 1fr 1fr 100px;
+  grid-template-columns: 80px 80px 1fr 1fr 100px;
   padding: 12px 0;
   border-bottom: 1px solid #f9fafb;
   font-size: 14px;

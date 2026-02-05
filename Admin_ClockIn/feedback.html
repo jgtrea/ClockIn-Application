@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feedback — ClockIn</title>
+  <link rel="stylesheet" href="styles/user_ui.css" />
+  <link rel="stylesheet" href="styles/topbar.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="../Supabase/supabase_config.js"></script>
+  <script src="scripts/home.js" defer></script>
+  <link rel="stylesheet" href="styles/notif.css" />
+</head>
+<body data-page="feedback">
+
+<div class="app">
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar">
+        <input type="text" placeholder="Search..." id="globalSearch">
+        <button class="material-symbols-outlined" onclick="performSearch()">search</button>   
+      </div>
+      <div class="top-actions">
+        <div class="profile-wrapper">
+          <div class="profile-circle" id="profileCircle">A</div>
+          <div class="profile-menu" id="profileMenu">
+            <div class="profile-header">
+              <div class="profile-circle small" id="profileCircleMenu">A</div>
+              <div>
+                <div class="profile-name" id="profileName">User</div>
+                <div class="profile-email" id="profileEmail"></div>
+              </div>
+            </div>
+            <hr>
+            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
+            <a class="menu-item">Send Feedback</a>
+            <button class="menu-item logout" id="logoutBtn">Logout</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Feedback</h1>
+            <p class="tagline">View and manage user feedback submissions.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+      
+      <div id="feedbackList"></div>
+      <div id="pagination" style="display: none; text-align: center; margin-top: 20px;">
+        <button id="prevBtn" onclick="changePage(-1)" class="btn-outline" style="margin: 0 5px;">Previous</button>
+        <span id="pageInfo" style="margin: 0 15px; color: #6b7280;"></span>
+        <button id="nextBtn" onclick="changePage(1)" class="btn-outline" style="margin: 0 5px;">Next</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="scripts/feedback.js"></script>
+</body>
+</html>

@@ -33,7 +33,7 @@ window.performScheduleSearch = function(term) {
   applyScheduleSearch();
 };
 
-async function loadSchedule(userId) {
+async function loadSchedule(userId, selectedDay = 'Monday') {
   const supabase = window.supabaseClient;
   const scheduleTable = document.getElementById(`schedule-table-${userId}`);
   
@@ -46,6 +46,7 @@ async function loadSchedule(userId) {
       .from(SCHEDULE_TABLE)
       .select('*')
       .eq('employeeId', userId)
+      .eq('weekday', selectedDay)
       .order('startTime', { ascending: true });
 
     if (error) {
@@ -55,14 +56,32 @@ async function loadSchedule(userId) {
     }
 
     if (!scheduleData || scheduleData.length === 0) {
-      scheduleTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">No schedule found.</p>';
+      scheduleTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">No schedule found for ' + selectedDay + '.</p>';
       return;
+    }
+
+    // Get section names for the sectIds
+    const sectIds = [...new Set(scheduleData.map(item => item.sectId).filter(Boolean))];
+    let sectionNames = {};
+    
+    if (sectIds.length > 0) {
+      const { data: sectionsData } = await supabase
+        .from('sections')
+        .select('sectId, sectionName')
+        .in('sectId', sectIds);
+      
+      if (sectionsData) {
+        sectionsData.forEach(section => {
+          sectionNames[section.sectId] = section.sectionName;
+        });
+      }
     }
 
     scheduleTable.innerHTML = scheduleData.map(item => `
       <div class="slot-row">
         <span>${formatTime(item.startTime)}</span>
-        <span>${item.sectionName || '-'}</span>
+        <span>${formatTime(item.endTime)}</span>
+        <span>${sectionNames[item.sectId] || '-'}</span>
         <span>${item.subject || '-'}</span>
         <span class="actions-cell">
           <button class="action-icon-btn" onclick="editSchedule('${userId}', '${item.schedId}')"><span class="material-symbols-outlined">edit</span></button>
@@ -131,6 +150,7 @@ function toggleAddSchedule(uid) {
   
   if (!isVisible) {
     document.getElementById(`add-time-${uid}`).value = '';
+    document.getElementById(`add-endtime-${uid}`).value = '';
     document.getElementById(`add-section-${uid}`).value = '';
     document.getElementById(`add-subject-${uid}`).value = '';
   }
@@ -139,10 +159,11 @@ function toggleAddSchedule(uid) {
 async function saveSchedule(uid) {
   const supabase = window.supabaseClient;
   const time = document.getElementById(`add-time-${uid}`).value;
+  const endTime = document.getElementById(`add-endtime-${uid}`).value;
   const section = document.getElementById(`add-section-${uid}`).value;
   const subject = document.getElementById(`add-subject-${uid}`).value;
   
-  if (!time || !section || !subject) {
+  if (!time || !endTime || !section || !subject) {
     alert('Please fill in all fields');
     return;
   }
@@ -155,6 +176,7 @@ async function saveSchedule(uid) {
         sectionName: section,
         subject: subject,
         startTime: time,
+        endTime: endTime,
         weekday: new Date().toLocaleDateString('en-US', { weekday: 'long' })
       });
 
@@ -190,15 +212,17 @@ async function editSchedule(uid, schedId) {
     if (data) {
       const newSection = prompt('Edit Section:', data.sectionName || '');
       const newSubject = prompt('Edit Subject:', data.subject || '');
-      const newTime = prompt('Edit Time:', data.startTime || '');
+      const newStartTime = prompt('Edit Start Time:', data.startTime || '');
+      const newEndTime = prompt('Edit End Time:', data.endTime || '');
       
-      if (newSection !== null && newSubject !== null && newTime !== null) {
+      if (newSection !== null && newSubject !== null && newStartTime !== null && newEndTime !== null) {
         const { error: updateError } = await supabase
           .from(SCHEDULE_TABLE)
           .update({
             sectionName: newSection,
             subject: newSubject,
-            startTime: newTime
+            startTime: newStartTime,
+            endTime: newEndTime
           })
           .eq('schedId', schedId);
 
@@ -281,8 +305,21 @@ function render() {
               <span class="user-subtitle">${user.subtitle}</span>
             </div>
 
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-weight: 600;">Select Day:</label>
+              <select id="day-select-${user.uid}" onchange="loadScheduleForDay('${user.uid}', this.value)" style="width: 200px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+              </select>
+            </div>
+
             <div class="schedule-table-header">
-              <span>Time</span><span>Section</span><span>Subject</span><span>Actions</span>
+              <span>Start Time</span><span>End Time</span><span>Section</span><span>Subject</span><span>Actions</span>
             </div>
             <div id="schedule-table-${user.uid}"></div>
             
@@ -292,13 +329,20 @@ function render() {
               <h4 style="margin: 0 0 15px 0;">Add New Schedule</h4>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div>
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Time:</label>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Start Time:</label>
                   <input type="time" id="add-time-${user.uid}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
                 </div>
+                <div>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">End Time:</label>
+                  <input type="time" id="add-endtime-${user.uid}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div>
                   <label style="display: block; margin-bottom: 5px; font-weight: 600;">Section:</label>
                   <input type="text" id="add-section-${user.uid}" placeholder="e.g. A1, B2" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
                 </div>
+                <div></div>
               </div>
               <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: 600;">Subject:</label>
@@ -373,6 +417,10 @@ function sortSchedules(field) {
   currentPage = 1;
   render();
 }
+
+window.loadScheduleForDay = function(userId, selectedDay) {
+  loadSchedule(userId, selectedDay);
+};
 
 loadUsersFromDB();
 
