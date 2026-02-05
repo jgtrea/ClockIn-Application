@@ -38,8 +38,6 @@ async function loadRecentActivity() {
     return;
   }
 
-  console.log('Loading recent activity...');
-
   try {
     const { data: usersData, error: usersError } = await supabase
       .from('user_employee_data')
@@ -54,9 +52,6 @@ async function loadRecentActivity() {
 
     if (attendanceError) throw attendanceError;
 
-    console.log('Found users:', usersData.length);
-    allRecords = [];
-    
     window.dashboardStats.totalTeachers = usersData.length;
     window.dashboardStats.onSchedule = 0;
     window.dashboardStats.late = 0;
@@ -135,8 +130,7 @@ async function loadRecentActivity() {
       return 0;
     });
     
-    console.log('Total records:', allRecords.length);
-    console.log('Dashboard Stats:', window.dashboardStats);
+    
     updateDashboardStats();
     
     const weeklyData = await getWeeklyAttendanceData();

@@ -268,9 +268,7 @@ function render() {
                 if (isEditing) {
                   return `
                     <div class="record-row editing-row">
-                      <span><input type="date" id="edit-date-${r.recordId}" value="${editDate}"></span>
-                      <span><input type="time" id="edit-in-${r.recordId}" value="${editTimeIn}"></span>
-                      <span><input type="time" id="edit-out-${r.recordId}" value="${editTimeOut}"></span>
+                      <span>${r.date || '-'}</span><span>${r.timeIn || '-'}</span><span>${r.timeOut || '-'}</span>
                       <span>
                         <select id="edit-status-${r.recordId}">
                           <option value="Present" ${r.status==='Present'?'selected':''}>Present</option>
@@ -280,7 +278,7 @@ function render() {
                         </select>
                       </span>
                       <span class="actions-cell">
-                        <button class="action-icon-btn" onclick="updateRecord('${user.uid}', '${r.recordId}')"><span class="material-symbols-outlined">check</span></button>
+                        <button class="action-icon-btn" onclick="updateStatus('${user.uid}', '${r.recordId}')"><span class="material-symbols-outlined">check</span></button>
                         <button class="action-icon-btn" onclick="toggleStatusEdit(null)"><span class="material-symbols-outlined">close</span></button>
                       </span>
                     </div>`;
@@ -293,39 +291,6 @@ function render() {
                     </span>
                   </div>`;
               }).join('') : '<p style="text-align:center; color:#999; padding:10px;">No records found.</p>'}
-            </div>
-            
-            <button class="btn-outline" onclick="toggleAddAttendance('${user.uid}')" style="margin-top: 15px;">Add Attendance</button>
-            
-            <div id="add-attendance-form-${user.uid}" style="display: ${isAddFormOpen ? 'block' : 'none'}; margin-top: 20px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
-              <h4 style="margin: 0 0 15px 0;">Add New Attendance</h4>
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                <div>
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Date:</label>
-                  <input type="date" id="add-date-${user.uid}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                </div>
-                <div>
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Time In:</label>
-                  <input type="time" id="add-timein-${user.uid}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                </div>
-                <div>
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Time Out:</label>
-                  <input type="time" id="add-timeout-${user.uid}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                </div>
-                <div>
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Status:</label>
-                  <select id="add-status-${user.uid}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                    <option value="Present">Present</option>
-                    <option value="Late">Late</option>
-                    <option value="Absent">Absent</option>
-                    <option value="Excused">Excused</option>
-                  </select>
-                </div>
-              </div>
-              <div style="display: flex; gap: 10px;">
-                <button class="btn-outline" onclick="addAttendance('${user.uid}')">Save</button>
-                <button class="btn-outline" onclick="toggleAddAttendance('${user.uid}')">Cancel</button>
-              </div>
             </div>
           </div>
 

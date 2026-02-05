@@ -13,10 +13,12 @@ function updateChart(attendanceData, trend = 'weekly') {
     return;
   }
   
+  const chartHeight = 160;
+  const spacing = chartHeight / lineCount;
+  const zeroLineTop = 20 + (lineCount * spacing) + 6;
+  
   for (let i = 0; i <= lineCount; i++) {
     const value = topValue - (i * step);
-    const chartHeight = 160;
-    const spacing = chartHeight / lineCount;
     
     let labelPosition, linePosition;
     
@@ -37,9 +39,6 @@ function updateChart(attendanceData, trend = 'weekly') {
   }
   
   const today = new Date();
-  const chartHeight = 160;
-  const spacing = chartHeight / lineCount;
-  const zeroLineTop = 20 + (lineCount * spacing) + 6;
   
   let totalUsers = window.dashboardStats?.totalTeachers || 0;
   if (totalUsers === 0) {
@@ -171,12 +170,10 @@ async function getWeeklyAttendanceData() {
   const today = new Date();
   const records = window.allRecords || [];
   
-  console.log('Getting weekly data for dates:');
   for (let i = 0; i < 7; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() - (3 - i));
     const dateString = date.toISOString().split('T')[0];
-    console.log(`Day ${i}: ${dateString}`);
     
     const uniqueUsers = new Set();
     for (const record of records) {
@@ -185,10 +182,8 @@ async function getWeeklyAttendanceData() {
       }
     }
     weeklyData[i] = uniqueUsers.size;
-    console.log(`Unique users for ${dateString}: ${uniqueUsers.size}`);
   }
   
-  console.log('Weekly data:', weeklyData);
   return weeklyData;
 }
 
