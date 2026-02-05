@@ -59,6 +59,7 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
     var showEditDialog by remember { mutableStateOf(false) }
     var editField by remember { mutableStateOf("") }
     var editValue by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val profile = SupabaseManager.getCurrentUser()
@@ -74,34 +75,57 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
         val profile = userProfile ?: return
 
         if (editField == "Name") {
+            if (newValue.trim().isEmpty()) {
+                NotificationManager.show(
+                    header = "Validation Error",
+                    message = "Name cannot be empty",
+                    duration = 3000L
+                )
+                return
+            }
+
+            isSaving = true
             scope.launch {
-                // TODO: Implement updateUser in SupabaseManager if edits are required
-                // val success = SupabaseManager.updateUser(profile.id, "name", newValue)
+                val result = SupabaseManager.updateUserName(profile.id, newValue.trim())
 
-                // For now, simulate success or show message that editing is read-only in this demo
-                val success = false
+                isSaving = false
+                showEditDialog = false
 
-                if (success) {
-                    userProfile = profile.copy(name = newValue)
+                if (result.isSuccess) {
+                    // Update local state
+                    userProfile = profile.copy(name = newValue.trim())
+
                     NotificationManager.show(
                         header = "Profile Updated",
                         message = "Your name has been updated successfully",
                         duration = 3000L
                     )
                 } else {
+                    val errorMsg = result.exceptionOrNull()?.message ?: "Unknown error occurred"
                     NotificationManager.show(
-                        header = "Update Not Implemented",
-                        message = "Profile editing requires backend configuration.",
-                        duration = 3000L
+                        header = "Update Failed",
+                        message = errorMsg,
+                        duration = 4000L
                     )
                 }
             }
+        } else {
+            showEditDialog = false
         }
-        showEditDialog = false
     }
 
     if (showEditDialog) {
-        EditFieldDialog(editField, editValue, { showEditDialog = false }, { saveField(it) })
+        EditFieldDialog(
+            field = editField,
+            currentValue = editValue,
+            onDismiss = {
+                if (!isSaving) {
+                    showEditDialog = false
+                }
+            },
+            onSave = { saveField(it) },
+            isSaving = isSaving
+        )
     }
 
     if (isLoading) {
@@ -191,18 +215,59 @@ fun ProfileEditItem(label: String, value: String, isEditable: Boolean = true, on
 }
 
 @Composable
-fun EditFieldDialog(field: String, currentValue: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+fun EditFieldDialog(
+    field: String,
+    currentValue: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+    isSaving: Boolean = false
+) {
     var value by remember { mutableStateOf(currentValue) }
-    Dialog(onDismissRequest = onDismiss) {
+
+    Dialog(onDismissRequest = { if (!isSaving) onDismiss() }) {
         Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(text = "Edit $field", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(value = value, onValueChange = { value = it }, label = { Text(field) }, modifier = Modifier.fillMaxWidth())
+
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    label = { Text(field) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSaving,
+                    singleLine = true
+                )
+
                 Spacer(modifier = Modifier.height(24.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Button(onClick = { onSave(value) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66))) { Text("Save") }
+
+                if (isSaving) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color(0xFFFF7F66),
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = onDismiss) {
+                            Text("Cancel")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { onSave(value) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66)),
+                            enabled = value.trim().isNotEmpty() && value.trim() != currentValue.trim()
+                        ) {
+                            Text("Save")
+                        }
+                    }
                 }
             }
         }

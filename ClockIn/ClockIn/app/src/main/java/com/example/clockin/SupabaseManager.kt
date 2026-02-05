@@ -163,6 +163,29 @@ object SupabaseManager {
         }
     }
 
+    suspend fun updateUserName(employeeId: String, newName: String): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.from("user_employee_data")
+                    .update({
+                        set("name", newName)
+                    }) {
+                        filter {
+                            eq("employeeId", employeeId)
+                        }
+                    }
+
+                // Update cached user
+                cachedUser = cachedUser?.copy(name = newName)
+
+                Result.success(true)
+            } catch (e: Exception) {
+                Log.e("SupabaseManager", "Update name error", e)
+                Result.failure(e)
+            }
+        }
+    }
+
     suspend fun getCurrentUser(): UserProfile? {
         if (cachedUser != null) return cachedUser
 
