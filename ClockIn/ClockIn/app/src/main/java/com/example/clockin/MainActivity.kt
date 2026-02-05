@@ -43,6 +43,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,7 +66,6 @@ import androidx.core.app.ActivityCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import io.github.jan.supabase.gotrue.handleDeeplinks
 import kotlinx.coroutines.launch
 import kotlin.math.pow
@@ -111,21 +111,19 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 val isResetLink = intent?.data?.host == "reset-callback"
-
                 if (isResetLink) {
-                    startDestination = "resetPassword"
                     try {
                         SupabaseManager.client.handleDeeplinks(intent)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
+                }
+
+                val sessionRestored = SupabaseManager.loadSession()
+                if (sessionRestored) {
+                    startDestination = "home"
                 } else {
-                    val sessionRestored = SupabaseManager.loadSession()
-                    if (sessionRestored) {
-                        startDestination = "home"
-                    } else {
-                        startDestination = "login"
-                    }
+                    startDestination = "login"
                 }
                 isCheckingSession = false
             }
@@ -172,6 +170,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onForgotPassword = {
                                     navController.navigate("forgotPassword")
+                                },
+                                onNavigateToReset = {
+                                    navController.navigate("resetPassword")
                                 }
                             )
                         }
@@ -179,6 +180,9 @@ class MainActivity : ComponentActivity() {
                             ForgotPasswordScreen(
                                 onBack = {
                                     navController.popBackStack()
+                                },
+                                onNavigateToReset = {
+                                    navController.navigate("resetPassword")
                                 }
                             )
                         }
@@ -277,7 +281,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    onForgotPassword: () -> Unit = {}
+    onForgotPassword: () -> Unit,
+    onNavigateToReset: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -353,17 +358,15 @@ fun LoginScreen(
 
                         ExposedDropdownMenuBox(
                             expanded = expanded && filteredEmails.isNotEmpty(),
-                            onExpandedChange = {
-                            }
+                            onExpandedChange = { }
                         ) {
                             OutlinedTextField(
                                 value = emailInput,
-                                onValueChange = {
-                                    emailInput = it
-                                },
+                                onValueChange = { emailInput = it },
                                 placeholder = { Text("Enter Email") },
                                 modifier = Modifier
-                                    .fillMaxWidth(),
+                                    .fillMaxWidth()
+                                    .menuAnchor(), // <--- THIS LINE PREVENTS CRASHES
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                                 shape = RoundedCornerShape(8.dp),
                                 singleLine = true,
@@ -445,15 +448,20 @@ fun LoginScreen(
                         }
                     }
 
-                    androidx.compose.material3.TextButton(
-                        onClick = onForgotPassword,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "Forgot Password?",
-                            color = ButtonOrange,
-                            fontWeight = FontWeight.Medium
-                        )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        TextButton(
+                            onClick = onForgotPassword,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Forgot Password?", color = ButtonOrange, fontWeight = FontWeight.Medium)
+                        }
+
+                        TextButton(
+                            onClick = onNavigateToReset,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Have a Code? Reset Password", color = Color.Gray, fontSize = 12.sp)
+                        }
                     }
                 }
             }

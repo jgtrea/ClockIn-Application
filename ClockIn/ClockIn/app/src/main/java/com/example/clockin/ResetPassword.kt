@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
     val scope = rememberCoroutineScope()
-    // New Fields for manual bypass
+
     var email by remember { mutableStateOf("") }
     var otpToken by remember { mutableStateOf("") }
 
@@ -60,10 +60,8 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
                 Card(modifier = Modifier.fillMaxWidth().border(1.dp, BorderGray, RoundedCornerShape(8.dp)), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-                        // --- BYPASS FIELDS ---
                         LabeledInput(label = "Email Address", placeholder = "Enter your email", value = email, onValueChange = { email = it })
                         LabeledInput(label = "6-Digit Code", placeholder = "Enter OTP Code", value = otpToken, onValueChange = { otpToken = it })
-                        // ---------------------
 
                         LabeledInput(label = "New Password", placeholder = "Enter new password", value = newPassword, onValueChange = { newPassword = it }, isPassword = true)
                         LabeledInput(label = "Confirm Password", placeholder = "Confirm new password", value = confirmPassword, onValueChange = { confirmPassword = it }, isPassword = true)
