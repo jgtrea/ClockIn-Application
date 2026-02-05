@@ -27,28 +27,38 @@ import java.util.UUID
 @Serializable
 data class UserProfile(
     @SerialName("employeeId") val id: String,
-    val name: String,
-    val email: String,
+    val name: String = "",
+    val email: String = "",
     val department: String? = null,
     val employment: String? = null
 )
 
 @Serializable
+data class SectionInfo(
+    @SerialName("sectionName") val sectionName: String = "",
+    @SerialName("yearLevel") val yearLevel: String = ""
+)
+
+@Serializable
 data class Schedule(
-    @SerialName("schedId") val id: String,
-    @SerialName("sectionName") val sectionName: String,
-    val subject: String,
-    @SerialName("startTime") val startTime: String,
-    @SerialName("endTime") val endTime: String
+    @SerialName("schedId") val id: String = "",
+    @SerialName("sectId") val sectId: String = "",
+    @SerialName("sectionName") val sectionName: String = "",
+    val subject: String = "",
+    @SerialName("startTime") val startTime: String = "",
+    @SerialName("endTime") val endTime: String = "",
+    @SerialName("weekday") val weekday: String = "",
+    @SerialName("employeeId") val employeeId: String = "",
+    @SerialName("sections") val sectionDetails: SectionInfo? = null
 )
 
 @Serializable
 data class Attendance(
-    @SerialName("attendId") val id: String,
-    val status: String,
+    @SerialName("attendId") val id: String = "",
+    val status: String = "",
     @SerialName("timeIn") val timeIn: String? = null,
     @SerialName("timeOut") val timeOut: String? = null,
-    @SerialName("schedId") val schedId: String,
+    @SerialName("schedId") val schedId: String = "",
     val schedule: Schedule? = null
 )
 
@@ -62,6 +72,7 @@ data class NotificationItem(
 )
 
 object SupabaseManager {
+    private const val TAG = "SupabaseManager"
     private const val SUPABASE_URL = "https://ckgvtzsslrxklmbkztxe.supabase.co"
     private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo"
 
@@ -157,7 +168,7 @@ object SupabaseManager {
                 }
                 Result.success(true)
             } catch (e: Exception) {
-                Log.e("SupabaseManager", "Update password error", e)
+                Log.e(TAG, "Update password error", e)
                 Result.failure(e)
             }
         }
@@ -180,7 +191,7 @@ object SupabaseManager {
 
                 Result.success(true)
             } catch (e: Exception) {
-                Log.e("SupabaseManager", "Update name error", e)
+                Log.e(TAG, "Update name error", e)
                 Result.failure(e)
             }
         }
@@ -189,8 +200,13 @@ object SupabaseManager {
     suspend fun getCurrentUser(): UserProfile? {
         if (cachedUser != null) return cachedUser
 
-        val session = client.auth.currentSessionOrNull() ?: return null
+        val session = client.auth.currentSessionOrNull()
+        if (session == null) {
+            Log.d(TAG, "getCurrentUser: No session found")
+            return null
+        }
         val userEmail = session.user?.email ?: ""
+        Log.d(TAG, "getCurrentUser: Looking for profile with email: $userEmail")
 
         return withContext(Dispatchers.IO) {
             try {
@@ -200,9 +216,16 @@ object SupabaseManager {
                     }
                     .decodeSingleOrNull<UserProfile>()
 
+                if (result == null) {
+                    Log.d(TAG, "getCurrentUser: No database record found for $userEmail")
+                } else {
+                    Log.d(TAG, "getCurrentUser: Found user: ${result.name}, ID: ${result.id}")
+                }
+
                 cachedUser = result
                 result
             } catch (e: Exception) {
+                Log.e(TAG, "getCurrentUser error", e)
                 null
             }
         }
@@ -234,8 +257,27 @@ object SupabaseManager {
         }
     }
 
+    suspend fun getAllSections(): List<Map<String, String>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                // FIX: Changed "Sections" to "sections" (lowercase)
+                client.from("sections").select().decodeList<Map<String, String>>()
+            } catch (e: Exception) {
+                Log.e("SupabaseManager", "Error fetching sections: ${e.message}")
+                emptyList()
+            }
+        }
+    }
+
     suspend fun getEmployeeSchedule(): List<Schedule> {
-        val user = getCurrentUser() ?: return emptyList()
+        val user = getCurrentUser()
+        if (user == null) {
+            Log.d(TAG, "getEmployeeSchedule: User profile is null, cannot fetch schedule.")
+            return emptyList()
+        }
+
+        Log.d(TAG, "getEmployeeSchedule: Querying 'schedule' table for employeeId: ${user.id}")
+
         return withContext(Dispatchers.IO) {
             try {
                 client.from("schedule")
@@ -315,3 +357,5 @@ object SupabaseManager {
         }
     }
 }
+
+

@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.wifi.WifiManager
 
 object WifiChecker {
-    private const val ALLOWED_WIFI_SSID = "PLDTHOMEFIBR5G38e90"
+    private const val ALLOWED_WIFI_SSID = "PLDTHOMEFIBRjS3uf"
 
     fun isWifiEnabled(context: Context): Boolean {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
