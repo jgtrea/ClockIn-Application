@@ -6,82 +6,102 @@ document.addEventListener("DOMContentLoaded", async () => {
   const emailField = document.getElementById("emailField");
   const employmentField = document.getElementById("employmentField");
 
-  const supabase = window.supabaseClient;
+  let supabase = window.supabaseClient;
+  
   if (!supabase) {
-    console.error('Supabase client not initialized');
+    setTimeout(() => {
+      supabase = window.supabaseClient;
+      if (supabase) {
+        loadUserProfile();
+      }
+    }, 100);
     return;
   }
 
-  // Get current session
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    // Check localStorage for stored user info
-    const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
-    if (userEmail) {
-      const displayName = userEmail.split("@")[0];
+  loadUserProfile();
+
+  async function loadUserProfile() {
+    if (!supabase) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
+        if (userEmail) {
+          const displayName = userEmail.split("@")[0];
+          avatar.textContent = displayName.charAt(0).toUpperCase();
+          nameEl.textContent = displayName;
+          emailEl.textContent = userEmail;
+          username.textContent = displayName;
+          emailField.textContent = userEmail;
+          employmentField.textContent = "N/A";
+        }
+        return;
+      }
+
+      const user = session.user;
+      const displayName = user.user_metadata?.displayName || user.email.split("@")[0];
       avatar.textContent = displayName.charAt(0).toUpperCase();
       nameEl.textContent = displayName;
-      emailEl.textContent = userEmail;
+      emailEl.textContent = user.email;
       username.textContent = displayName;
-      emailField.textContent = userEmail;
-      employmentField.textContent = "N/A";
+      emailField.textContent = user.email;
+
+      loadUserData(user.email);
+      setupAuthListener();
+    } catch (error) {
+      console.error('Error loading profile:', error);
     }
-    return;
   }
 
-  const user = session.user;
-  const displayName = user.user_metadata?.displayName || user.email.split("@")[0];
-  avatar.textContent = displayName.charAt(0).toUpperCase();
-  nameEl.textContent = displayName;
-  emailEl.textContent = user.email;
-  username.textContent = displayName;
-  emailField.textContent = user.email;
-
-  // Get user data from user_admin_data or user_employee_data table
-  try {
-    const { data: adminData } = await supabase
-      .from('user_admin_data')
-      .select('*')
-      .eq('email', user.email)
-      .single();
-
-    if (adminData) {
-      employmentField.textContent = adminData.employment || 'Administrator';
-    } else {
-      const { data: empData } = await supabase
-        .from('user_employee_data')
+  async function loadUserData(email) {
+    try {
+      const { data: adminData } = await supabase
+        .from('user_admin_data')
         .select('*')
-        .eq('email', user.email)
+        .eq('email', email)
         .single();
 
-      if (empData) {
-        employmentField.textContent = empData.employment || 'Employee';
+      if (adminData) {
+        employmentField.textContent = adminData.employment || 'Administrator';
       } else {
-        employmentField.textContent = 'N/A';
+        const { data: empData } = await supabase
+          .from('user_employee_data')
+          .select('*')
+          .eq('email', email)
+          .single();
+
+        if (empData) {
+          employmentField.textContent = empData.employment || 'Employee';
+        } else {
+          employmentField.textContent = 'N/A';
+        }
       }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      employmentField.textContent = 'N/A';
     }
-  } catch (error) {
-    console.error('Error fetching user data:', error);
-    employmentField.textContent = 'N/A';
   }
 
-  // Listen for auth state changes
-  supabase.auth.onAuthStateChanged(async (event, session) => {
-    if (event === 'SIGNED_OUT' || !session) {
-      const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
-      if (userEmail) {
-        const displayName = userEmail.split("@")[0];
-        avatar.textContent = displayName.charAt(0).toUpperCase();
-        nameEl.textContent = displayName;
-        emailEl.textContent = userEmail;
-        username.textContent = displayName;
-        emailField.textContent = userEmail;
-        employmentField.textContent = "N/A";
+  function setupAuthListener() {
+    supabase.auth.onAuthStateChanged(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
+        if (userEmail) {
+          const displayName = userEmail.split("@")[0];
+          avatar.textContent = displayName.charAt(0).toUpperCase();
+          nameEl.textContent = displayName;
+          emailEl.textContent = userEmail;
+          username.textContent = displayName;
+          emailField.textContent = userEmail;
+          employmentField.textContent = "N/A";
+        }
+      } else if (event === 'SIGNED_IN' && session) {
+        window.location.reload();
       }
-    } else if (event === 'SIGNED_IN' && session) {
-      window.location.reload();
-    }
-  });
+    });
+  }
 
   const editButtons = document.querySelectorAll(".edit");
   const fields = ["username", "emailField", "employmentField"];
@@ -109,7 +129,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           username.textContent = newValue;
           nameEl.textContent = newValue;
           
-          // Update in user_admin_data or user_employee_data
           const { data: adminData } = await supabase
             .from('user_admin_data')
             .select('adminId')
@@ -142,7 +161,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           break;
 
         case "employmentField":
-          // Update employment in user_admin_data or user_employee_data
           const { data: adminData2 } = await supabase
             .from('user_admin_data')
             .select('adminId')

@@ -7,28 +7,15 @@
   <link rel="stylesheet" href="styles/user_ui.css">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   
-  <!-- Supabase Client Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
-  <script src="scripts/home.js" defer></script>
-  <script>
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        const supabase = window.supabaseClient;
-        if (supabase) {
-          supabase.auth.onAuthStateChanged(user => {
-            if (!user) {
-              window.location.href = '../Login_Path/login.html';
-            }
-          });
-        }
-      }, 1000);
-    });
-  </script>
+  <script src="scripts/managers/profile_icon.js" defer></script>
+  <script src="scripts/managers/clock_index.js" defer></script>
+  <script src="scripts/managers/schedule_overview.js" defer></script>
+  <script src="scripts/filter/search_bar.js" defer></script>
+  <script src="scripts/index.js" defer></script>
 </head>
 <body>
-
-<!-- TODO: Add security or verificaiton process 0(make js: prevent openning tab without providing credentials) -->
 
 <div class="app">
   <aside class="sidebar collapsed" id="sidebar">
@@ -119,10 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   if (sidebarLogout) {
-    sidebarLogout.addEventListener('click', async () => {
-      const supabase = window.supabaseClient;
-      if (supabase) {
-        await supabase.auth.signOut();
+    sidebarLogout.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (window.authGuard) {
+        window.authGuard.signOut();
+      } else {
+        const supabase = window.supabaseClient;
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
         window.location.href = '../Login_Path/login.html';
       }
     });

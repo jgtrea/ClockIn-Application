@@ -12,7 +12,10 @@ const usersPerPage = 10;
 let expandedRows = {};   
 let expandedAddForms = {}; 
 let editingSlotId = null;
+let editingDaySchedules = {}; 
 let sortAscending = true;
+
+let selectedDays = {};
 
 function applyScheduleSearch() {
   if (!searchTerm) {
@@ -39,6 +42,8 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
   
   if (!scheduleTable) return;
   
+  selectedDays[userId] = selectedDay;
+  
   scheduleTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">Loading...</p>';
 
   try {
@@ -60,7 +65,6 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
       return;
     }
 
-    // Get section names for the sectIds
     const sectIds = [...new Set(scheduleData.map(item => item.sectId).filter(Boolean))];
     let sectionNames = {};
     
@@ -77,24 +81,110 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
       }
     }
 
-    scheduleTable.innerHTML = scheduleData.map(item => `
-      <div class="slot-row">
-        <span>${formatTime(item.startTime)}</span>
-        <span>${formatTime(item.endTime)}</span>
-        <span>${sectionNames[item.sectId] || '-'}</span>
-        <span>${item.subject || '-'}</span>
-        <span class="actions-cell">
-          <button class="action-icon-btn" onclick="editSchedule('${userId}', '${item.schedId}')"><span class="material-symbols-outlined">edit</span></button>
-          <button class="action-icon-btn delete" onclick="deleteSchedule('${userId}', '${item.schedId}')"><span class="material-symbols-outlined">delete</span></button>
-        </span>
-      </div>
-    `).join('');
+    scheduleTable.innerHTML = scheduleData.map(item => {
+      const isEditing = editingSlotId === item.schedId;
+      const editingKey = `${userId}-${selectedDay}`;
+      
+      if (isEditing && editingDaySchedules[editingKey] === item.schedId) {
+        return `
+          <div class="slot-row editing-row">
+            <span><input type="time" id="edit-start-${item.schedId}" value="${item.startTime || ''}"></span>
+            <span><input type="time" id="edit-end-${item.schedId}" value="${item.endTime || ''}"></span>
+            <span><input type="text" id="edit-section-${item.schedId}" value="${sectionNames[item.sectId] || item.sectionName || ''}"></span>
+            <span><input type="text" id="edit-subject-${item.schedId}" value="${item.subject || ''}"></span>
+            <span class="actions-cell">
+              <button type="button" class="action-icon-btn" onclick="window.updateSchedule('${userId}', '${item.schedId}', '${selectedDay}')"><span class="material-symbols-outlined">check</span></button>
+              <button type="button" class="action-icon-btn" onclick="window.cancelScheduleEdit()"><span class="material-symbols-outlined">close</span></button>
+            </span>
+          </div>`;
+      }
+      
+      return `
+        <div class="slot-row">
+          <span>${formatTime(item.startTime)}</span>
+          <span>${formatTime(item.endTime)}</span>
+          <span>${sectionNames[item.sectId] || item.sectionName || '-'}</span>
+          <span>${item.subject || '-'}</span>
+          <span class="actions-cell">
+            <button type="button" class="action-icon-btn" onclick="window.toggleScheduleEdit('${userId}', '${item.schedId}', '${selectedDay}')"><span class="material-symbols-outlined">edit</span></button>
+            <button type="button" class="action-icon-btn delete" onclick="window.deleteSchedule('${userId}', '${item.schedId}')"><span class="material-symbols-outlined">delete</span></button>
+          </span>
+        </div>
+      `;
+    }).join('');
 
   } catch (error) {
     console.error('Error loading teacher schedule:', error);
     scheduleTable.innerHTML = '<p style="text-align:center; color:#ef4444; padding:10px;">Error loading schedule.</p>';
   }
 }
+
+function toggleScheduleEdit(userId, schedId, day) {
+  const editingKey = `${userId}-${day}`;
+  if (editingSlotId === schedId && editingDaySchedules[editingKey] === schedId) {
+    editingSlotId = null;
+    delete editingDaySchedules[editingKey];
+  } else {
+    editingSlotId = schedId;
+    editingDaySchedules[editingKey] = schedId;
+  }
+  loadSchedule(userId, day);
+}
+window.toggleScheduleEdit = toggleScheduleEdit;
+
+function cancelScheduleEdit() {
+  editingSlotId = null;
+  Object.keys(editingDaySchedules).forEach(key => {
+    delete editingDaySchedules[key];
+  });
+  Object.keys(expandedRows).forEach(uid => {
+    if (expandedRows[uid]) {
+      loadSchedule(uid, selectedDays[uid] || 'Monday');
+    }
+  });
+}
+window.cancelScheduleEdit = cancelScheduleEdit;
+
+async function updateSchedule(userId, schedId, day) {
+  const supabase = window.supabaseClient;
+  const newStartTime = document.getElementById(`edit-start-${schedId}`).value;
+  const newEndTime = document.getElementById(`edit-end-${schedId}`).value;
+  const newSection = document.getElementById(`edit-section-${schedId}`).value;
+  const newSubject = document.getElementById(`edit-subject-${schedId}`).value;
+
+  if (!newStartTime || !newEndTime || !newSubject) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from(SCHEDULE_TABLE)
+      .update({
+        startTime: newStartTime,
+        endTime: newEndTime,
+        sectionName: newSection,
+        subject: newSubject
+      })
+      .eq('schedId', schedId);
+
+    if (error) {
+      console.error('Error updating schedule:', error);
+      alert('Error updating schedule: ' + error.message);
+      return;
+    }
+    
+    editingSlotId = null;
+    const editingKey = `${userId}-${day}`;
+    delete editingDaySchedules[editingKey];
+    
+    loadSchedule(userId, day);
+  } catch (error) {
+    console.error('Error updating schedule:', error);
+    alert('Error updating schedule. Please try again.');
+  }
+}
+window.updateSchedule = updateSchedule;
 
 async function loadUsersFromDB() {
   const supabase = window.supabaseClient;
@@ -134,27 +224,28 @@ function formatTime(time) {
 
 function toggleUser(uid) {
   expandedRows[uid] = !expandedRows[uid];
+  if (!expandedRows[uid]) {
+    expandedAddForms[uid] = false;
+    editingSlotId = null;
+    Object.keys(editingDaySchedules).forEach(key => {
+      if (key.startsWith(uid + '-')) {
+        delete editingDaySchedules[key];
+      }
+    });
+  }
   render();
   
   if (expandedRows[uid]) {
-    loadSchedule(uid);
+    loadSchedule(uid, selectedDays[uid] || 'Monday');
   }
 }
+window.toggleUser = toggleUser;
 
 function toggleAddSchedule(uid) {
-  const form = document.getElementById(`add-schedule-form-${uid}`);
-  if (!form) return;
-  
-  const isVisible = form.style.display !== 'none';
-  form.style.display = isVisible ? 'none' : 'block';
-  
-  if (!isVisible) {
-    document.getElementById(`add-time-${uid}`).value = '';
-    document.getElementById(`add-endtime-${uid}`).value = '';
-    document.getElementById(`add-section-${uid}`).value = '';
-    document.getElementById(`add-subject-${uid}`).value = '';
-  }
+  expandedAddForms[uid] = !expandedAddForms[uid];
+  render();
 }
+window.toggleAddSchedule = toggleAddSchedule;
 
 async function saveSchedule(uid) {
   const supabase = window.supabaseClient;
@@ -177,7 +268,7 @@ async function saveSchedule(uid) {
         subject: subject,
         startTime: time,
         endTime: endTime,
-        weekday: new Date().toLocaleDateString('en-US', { weekday: 'long' })
+        weekday: selectedDays[uid] || 'Monday'
       });
 
     if (error) {
@@ -187,58 +278,14 @@ async function saveSchedule(uid) {
     }
     
     toggleAddSchedule(uid);
-    loadSchedule(uid);
+    loadSchedule(uid, selectedDays[uid] || 'Monday');
     
   } catch (error) {
     console.error('Error saving schedule:', error);
     alert('Error saving schedule. Please try again.');
   }
 }
-
-async function editSchedule(uid, schedId) {
-  const supabase = window.supabaseClient;
-  try {
-    const { data, error } = await supabase
-      .from(SCHEDULE_TABLE)
-      .select('*')
-      .eq('schedId', schedId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching schedule:', error);
-      return;
-    }
-    
-    if (data) {
-      const newSection = prompt('Edit Section:', data.sectionName || '');
-      const newSubject = prompt('Edit Subject:', data.subject || '');
-      const newStartTime = prompt('Edit Start Time:', data.startTime || '');
-      const newEndTime = prompt('Edit End Time:', data.endTime || '');
-      
-      if (newSection !== null && newSubject !== null && newStartTime !== null && newEndTime !== null) {
-        const { error: updateError } = await supabase
-          .from(SCHEDULE_TABLE)
-          .update({
-            sectionName: newSection,
-            subject: newSubject,
-            startTime: newStartTime,
-            endTime: newEndTime
-          })
-          .eq('schedId', schedId);
-
-        if (updateError) {
-          console.error('Error updating schedule:', updateError);
-          alert('Error updating schedule: ' + updateError.message);
-          return;
-        }
-        loadSchedule(uid);
-      }
-    }
-  } catch (error) {
-    console.error('Error editing schedule:', error);
-    alert('Error editing schedule. Please try again.');
-  }
-}
+window.saveSchedule = saveSchedule;
 
 async function deleteSchedule(uid, schedId) {
   const supabase = window.supabaseClient;
@@ -258,13 +305,14 @@ async function deleteSchedule(uid, schedId) {
       return;
     }
     
-    loadSchedule(uid);
+    loadSchedule(uid, selectedDays[uid] || 'Monday');
     
   } catch (error) {
     console.error('Error deleting schedule:', error);
     alert('Error deleting schedule. Please try again.');
   }
 }
+window.deleteSchedule = deleteSchedule;
 
 function render() {
   const totalPages = Math.ceil(allUserSchedules.length / usersPerPage);
@@ -282,6 +330,7 @@ function render() {
   
   pageUsers.forEach(user => {
     const isExpanded = !!expandedRows[user.uid];
+    const isAddFormOpen = !!expandedAddForms[user.uid];
     const row = document.createElement('div');
     row.className = `user-row ${isExpanded ? 'expanded' : ''}`;
 
@@ -293,7 +342,7 @@ function render() {
             <span class="user-subtitle">${user.subtitle}</span>
           </div>
           <div class="btn-group">
-            <button class="btn-outline" onclick="toggleUser('${user.uid}')">View</button>
+            <button type="button" class="btn-outline" onclick="window.toggleUser('${user.uid}')">View</button>
           </div>
         </div>`;
     } else {
@@ -307,25 +356,28 @@ function render() {
 
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; font-weight: 600;">Select Day:</label>
-              <select id="day-select-${user.uid}" onchange="loadScheduleForDay('${user.uid}', this.value)" style="width: 200px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
+              <select id="day-select-${user.uid}" onchange="window.loadScheduleForDay('${user.uid}', this.value)" style="width: 200px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                <option value="Monday" ${selectedDays[user.uid] === 'Monday' ? 'selected' : ''}>Monday</option>
+                <option value="Tuesday" ${selectedDays[user.uid] === 'Tuesday' ? 'selected' : ''}>Tuesday</option>
+                <option value="Wednesday" ${selectedDays[user.uid] === 'Wednesday' ? 'selected' : ''}>Wednesday</option>
+                <option value="Thursday" ${selectedDays[user.uid] === 'Thursday' ? 'selected' : ''}>Thursday</option>
+                <option value="Friday" ${selectedDays[user.uid] === 'Friday' ? 'selected' : ''}>Friday</option>
+                <option value="Saturday" ${selectedDays[user.uid] === 'Saturday' ? 'selected' : ''}>Saturday</option>
+                <option value="Sunday" ${selectedDays[user.uid] === 'Sunday' ? 'selected' : ''}>Sunday</option>
               </select>
             </div>
 
             <div class="schedule-table-header">
               <span>Start Time</span><span>End Time</span><span>Section</span><span>Subject</span><span>Actions</span>
             </div>
-            <div id="schedule-table-${user.uid}"></div>
+            <div id="schedule-table-${user.uid}">
+              <p style="text-align:center; color:#999; padding:10px;">Click "View" to load schedule</p>
+            </div>
             
-            <button class="btn-outline" onclick="toggleAddSchedule('${user.uid}')" style="margin-top: 15px;">Add Schedule</button>
+            <button type="button" class="btn-outline" onclick="window.toggleAddSchedule('${user.uid}')" style="margin-top: 15px;">Add Schedule</button>
             
-            <div id="add-schedule-form-${user.uid}" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
+            ${isAddFormOpen ? `
+            <div id="add-schedule-form-${user.uid}" style="margin-top: 20px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
               <h4 style="margin: 0 0 15px 0;">Add New Schedule</h4>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div>
@@ -349,15 +401,15 @@ function render() {
                 <input type="text" id="add-subject-${user.uid}" placeholder="e.g. Mathematics, English" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
               </div>
               <div style="display: flex; gap: 10px;">
-                <button class="btn-outline" onclick="saveSchedule('${user.uid}')">Save</button>
-                <button class="btn-outline" onclick="toggleAddSchedule('${user.uid}')">Cancel</button>
+                <button type="button" class="btn-outline" onclick="window.saveSchedule('${user.uid}')">Save</button>
+                <button type="button" class="btn-outline" onclick="window.toggleAddSchedule('${user.uid}')">Cancel</button>
               </div>
-            </div>
+            </div>` : `<div id="add-schedule-form-${user.uid}" style="display: none;"></div>`}
           </div>
 
           <div class="sidebar-actions">
             <div class="btn-group">
-              <button class="btn-outline" onclick="toggleUser('${user.uid}')">Close</button>
+              <button type="button" class="btn-outline" onclick="window.toggleUser('${user.uid}')">Close</button>
             </div>
           </div>
         </div>`;
@@ -421,6 +473,7 @@ function sortSchedules(field) {
 window.loadScheduleForDay = function(userId, selectedDay) {
   loadSchedule(userId, selectedDay);
 };
+window.loadSchedule = loadSchedule;
 
 loadUsersFromDB();
 

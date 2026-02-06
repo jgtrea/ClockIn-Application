@@ -1,7 +1,6 @@
 function performSearch() {
   const searchTerm = document.getElementById('globalSearch').value.trim();
   
-  // Check which page we're on and call the appropriate search function
   if (typeof window.performUserSearch === 'function') {
     window.performUserSearch(searchTerm);
   } else if (typeof window.performScheduleSearch === 'function') {
@@ -9,7 +8,6 @@ function performSearch() {
   } else if (typeof window.performAttendanceSearch === 'function') {
     window.performAttendanceSearch(searchTerm);
   } else {
-    // Fallback to old method if none of the above functions exist
     const rows = document.querySelectorAll('.user-row');
     rows.forEach(row => {
       const text = row.textContent.toLowerCase();
