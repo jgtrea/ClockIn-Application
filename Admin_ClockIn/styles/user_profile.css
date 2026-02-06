@@ -83,33 +83,47 @@ html, body {
 
 .info-grid {
   display: grid;
-  grid-template-columns: 110px 1fr 24px;
-  gap: 10px 8px;
+  grid-template-columns: 120px 1fr 24px;
+  gap: 12px 16px;
   text-align: left;
   align-items: center;
   border-top: 1px solid var(--border);
-  padding-top: 15px;
+  padding-top: 16px;
 }
 
-.label {
+.info-grid .label {
   font-weight: 600;
   color: var(--muted);
   font-size: 0.75rem;
   text-transform: uppercase;
 }
 
-.value {
+.info-grid .value {
   color: #111827;
   font-size: 0.9rem;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; 
+  text-overflow: ellipsis;
 }
 
-.edit {
+.info-grid .edit {
   cursor: pointer;
   color: var(--muted);
-  font-size: 18px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.info-grid .edit:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.info-grid .edit.email-edit {
+  visibility: hidden;
 }
 
 .back-btn {

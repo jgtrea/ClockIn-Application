@@ -43,14 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const email = session.user.email;
           let displayName = session.user.user_metadata?.displayName || email.split('@')[0];
           
-          const { data: adminData } = await this.supabase.from('user_admin_data').select('name').eq('email', email).maybeSingle();
-          if (adminData?.name) {
-            displayName = adminData.name;
-          } else {
-            const { data: empData } = await this.supabase.from('user_employee_data').select('name').eq('email', email).maybeSingle();
-            if (empData?.name) {
-              displayName = empData.name;
-            }
+          const { data: empData } = await this.supabase.from('user_employee_data').select('name').eq('email', email).maybeSingle();
+          if (empData?.name) {
+            displayName = empData.name;
           }
           
           const letter = displayName.charAt(0).toUpperCase();

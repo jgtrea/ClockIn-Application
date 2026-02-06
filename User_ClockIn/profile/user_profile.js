@@ -24,14 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const email = user.email;
     let displayName = user.user_metadata?.displayName || email.split("@")[0];
     
-    const { data: adminData } = await supabase.from('user_admin_data').select('name').eq('email', email).maybeSingle();
-    if (adminData?.name) {
-      displayName = adminData.name;
-    } else {
-      const { data: empData } = await supabase.from('user_employee_data').select('name').eq('email', email).maybeSingle();
-      if (empData?.name) {
-        displayName = empData.name;
-      }
+    const { data: empData } = await supabase.from('user_employee_data').select('name, employment').eq('email', email).maybeSingle();
+    if (empData?.name) {
+      displayName = empData.name;
     }
     
     elements.avatar.textContent = displayName.charAt(0).toUpperCase();
@@ -40,25 +35,13 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.username.textContent = displayName;
     elements.emailField.textContent = email;
 
-    await loadUserData(email);
-    setupAuthListener();
-  }
-
-  async function loadUserData(email) {
-    const supabase = window.supabaseClient;
-    
-    const { data: adminData, error: adminError } = await supabase.from('user_admin_data').select('*').eq('email', email).maybeSingle();
-    if (adminData && !adminError) {
-      elements.employmentField.textContent = adminData.employment || 'Administrator';
-      return;
-    }
-    
-    const { data: empData, error: empError } = await supabase.from('user_employee_data').select('*').eq('email', email).maybeSingle();
-    if (empData && !empError) {
-      elements.employmentField.textContent = empData.employment || 'Employee';
+    if (empData?.employment) {
+      elements.employmentField.textContent = empData.employment;
     } else {
-      elements.employmentField.textContent = 'N/A';
+      elements.employmentField.textContent = 'Employee';
     }
+
+    setupAuthListener();
   }
 
   function loadFromStorage() {
@@ -101,14 +84,9 @@ document.addEventListener("DOMContentLoaded", () => {
         elements.name.textContent = newValue;
         elements.avatar.textContent = newValue.charAt(0).toUpperCase();
         
-        const { data: adminData } = await supabase.from('user_admin_data').select('adminId').eq('email', session.user.email).maybeSingle();
-        if (adminData?.adminId) {
-          await supabase.from('user_admin_data').update({ name: newValue }).eq('adminId', adminData.adminId);
-        } else {
-          const { data: empData } = await supabase.from('user_employee_data').select('employeeId').eq('email', session.user.email).maybeSingle();
-          if (empData?.employeeId) {
-            await supabase.from('user_employee_data').update({ name: newValue }).eq('employeeId', empData.employeeId);
-          }
+        const { data: empData } = await supabase.from('user_employee_data').select('employeeId').eq('email', session.user.email).maybeSingle();
+        if (empData?.employeeId) {
+          await supabase.from('user_employee_data').update({ name: newValue }).eq('employeeId', empData.employeeId);
         }
         
         window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { name: newValue } }));
@@ -117,14 +95,9 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (field === "employmentField") {
         elements.employmentField.textContent = newValue;
         
-        const { data: adminData } = await supabase.from('user_admin_data').select('adminId').eq('email', session.user.email).maybeSingle();
-        if (adminData?.adminId) {
-          await supabase.from('user_admin_data').update({ employment: newValue }).eq('adminId', adminData.adminId);
-        } else {
-          const { data: empData } = await supabase.from('user_employee_data').select('employeeId').eq('email', session.user.email).maybeSingle();
-          if (empData?.employeeId) {
-            await supabase.from('user_employee_data').update({ employment: newValue }).eq('employeeId', empData.employeeId);
-          }
+        const { data: empData } = await supabase.from('user_employee_data').select('employeeId').eq('email', session.user.email).maybeSingle();
+        if (empData?.employeeId) {
+          await supabase.from('user_employee_data').update({ employment: newValue }).eq('employeeId', empData.employeeId);
         }
         alert("Employment updated successfully!");
       }
