@@ -34,7 +34,6 @@ const supabase = window.supabaseClient;
 if (supabase) {
   supabase.auth.onAuthStateChanged(async (event, session) => {
     if (!session) {
-      // Check if we have stored user info
       const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
       if (userEmail) {
         const displayName = userEmail.split('@')[0];
@@ -64,7 +63,6 @@ async function logout() {
   if (supabase) {
     await supabase.auth.signOut();
   }
-  // Clear session storage
   sessionStorage.removeItem('userEmail');
   sessionStorage.removeItem('userId');
   sessionStorage.removeItem('userType');

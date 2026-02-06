@@ -1,5 +1,3 @@
-// Schedule Containers
-
 class ScheduleOverview {
   constructor(supabaseClient, clockManager) {
     this.supabase = supabaseClient;

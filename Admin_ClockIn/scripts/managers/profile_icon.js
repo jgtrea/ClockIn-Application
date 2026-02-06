@@ -1,116 +1,91 @@
-class ProfileManager {
-  constructor() {
-    this.supabase = window.supabaseClient;
-    this.profileCircle = document.getElementById('profileCircle');
-    this.profileMenu = document.getElementById('profileMenu');
-    this.profileName = document.getElementById('profileName');
-    this.profileEmail = document.getElementById('profileEmail');
-    this.profileCircleMenu = document.getElementById('profileCircleMenu');
-    this.logoutBtn = document.getElementById('logoutBtn');
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  const profileCircle = document.getElementById('profileCircle');
+  const profileMenu = document.getElementById('profileMenu');
+  const profileName = document.getElementById('profileName');
+  const profileEmail = document.getElementById('profileEmail');
+  const profileCircleMenu = document.getElementById('profileCircleMenu');
+  const logoutBtn = document.getElementById('logoutBtn');
 
-  init() {
-    this.setupProfileMenu();
-    this.setupLogout();
-    this.loadUserSession();
-  }
+  if (!profileCircle) return;
 
-  async loadUserSession() {
-    if (!this.supabase) {
-      setTimeout(() => this.loadUserSession(), 100);
-      return;
+  class ProfileManager {
+    constructor() {
+      this.supabase = window.supabaseClient;
     }
 
-    try {
-      const { data: { session }, error } = await this.supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Session load error:', error);
+    init() {
+      this.setupProfileMenu();
+      this.setupLogout();
+      this.loadUserSession();
+    }
+
+    async loadUserSession() {
+      if (!this.supabase) {
+        setTimeout(() => this.loadUserSession(), 100);
         return;
       }
 
-      if (session && session.user) {
-        this.updateProfileDisplay(session.user);
-      } else {
-        this.resetProfileDisplay();
+      try {
+        const { data: { session } } = await this.supabase.auth.getSession();
+        
+        if (session && session.user) {
+          const displayName = session.user.user_metadata?.displayName || session.user.email.split('@')[0];
+          const letter = displayName.charAt(0).toUpperCase();
+          
+          profileCircle.textContent = letter;
+          profileCircleMenu.textContent = letter;
+          profileName.textContent = displayName;
+          profileEmail.textContent = session.user.email;
+        } else {
+          const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
+          profileCircle.textContent = '?';
+          profileCircleMenu.textContent = '?';
+          profileName.textContent = 'Guest';
+          profileEmail.textContent = userEmail || '';
+        }
+
+        this.supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_IN' && session) {
+            window.location.reload();
+          } else if (event === 'SIGNED_OUT') {
+            window.top.location.href = '../Login_Path/login.html';
+          }
+        });
+      } catch (err) {
+        console.error('Failed to load session:', err);
       }
-
-      this.setupAuthStateListener();
-    } catch (err) {
-      console.error('Failed to load session:', err);
     }
-  }
 
-  setupProfileMenu() {
-    if (this.profileCircle && this.profileMenu) {
-      this.profileCircle.addEventListener('click', () => {
-        this.profileMenu.classList.toggle('show');
-      });
-      
+    setupProfileMenu() {
+      profileCircle.onclick = () => {
+        profileMenu.classList.toggle('show');
+      };
+
       document.addEventListener('click', (e) => {
         if (!e.target.closest('.profile-wrapper')) {
-          this.profileMenu.classList.remove('show');
+          profileMenu.classList.remove('show');
         }
       });
     }
-  }
 
-  setupAuthStateListener() {
-    if (this.supabase) {
-      this.supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          this.updateProfileDisplay(session.user);
-        } else if (event === 'SIGNED_OUT') {
-          this.resetProfileDisplay();
-        }
-      });
-    }
-  }
-
-  updateProfileDisplay(user) {
-    const displayName = user.user_metadata?.displayName || user.email.split('@')[0];
-    const letter = displayName.charAt(0).toUpperCase();
-    
-    if (this.profileCircle) this.profileCircle.textContent = letter;
-    if (this.profileCircleMenu) this.profileCircleMenu.textContent = letter;
-    if (this.profileName) this.profileName.textContent = displayName;
-    if (this.profileEmail) this.profileEmail.textContent = user.email;
-  }
-
-  resetProfileDisplay() {
-    const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
-    
-    if (this.profileCircle) this.profileCircle.textContent = '?';
-    if (this.profileCircleMenu) this.profileCircleMenu.textContent = '?';
-    if (this.profileName) this.profileName.textContent = 'Guest';
-    if (this.profileEmail) this.profileEmail.textContent = userEmail || '';
-  }
-
-  setupLogout() {
-    if (this.logoutBtn) {
-      this.logoutBtn.addEventListener('click', async () => {
+    setupLogout() {
+      logoutBtn.onclick = async () => {
         if (this.supabase) {
           await this.supabase.auth.signOut();
         }
-        this.clearSession();
+        sessionStorage.removeItem('userEmail');
+        sessionStorage.removeItem('userId');
+        sessionStorage.removeItem('userType');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userType');
         window.top.location.href = '../Login_Path/login.html';
-      });
+      };
     }
   }
 
-  clearSession() {
-    sessionStorage.removeItem('userEmail');
-    sessionStorage.removeItem('userId');
-    sessionStorage.removeItem('userType');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userType');
-  }
-}
+  window.ProfileManager = ProfileManager;
 
-window.ProfileManager = ProfileManager;
-
-document.addEventListener('DOMContentLoaded', () => {
   const profileManager = new ProfileManager();
   profileManager.init();
 });

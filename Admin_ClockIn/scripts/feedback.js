@@ -24,7 +24,6 @@ async function loadFeedback() {
 
     feedbackData = data || [];
     
-    // Get employee names
     if (feedbackData.length > 0) {
       const employeeIds = [...new Set(feedbackData.map(f => f.employeeId).filter(Boolean))];
       if (employeeIds.length > 0) {
