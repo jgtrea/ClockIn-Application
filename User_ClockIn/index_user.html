@@ -8,30 +8,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../Authentification/authentification.js"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
   <script src="scripts/home_user.js" defer></script>
-  <script>
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        const supabase = window.supabaseClient;
-        if (supabase) {
-          supabase.auth.onAuthStateChanged(user => {
-            if (!user) {
-              window.location.href = '../Login_Path/login.html';
-            }
-          });
-        }
-      }, 1000);
-    });
-  </script>
 </head>
-<body>
+<body data-allow-employees="true">
 
 <div class="app">
   <aside class="sidebar collapsed" id="sidebar">
     <div class="sidebar-header">
       <div class="brand">
-        <img src="../Admin_ClockIn/images/clockin-logo.svg" alt="ClockIn Logo" class="brand-logo">
+        <img src="../Images/clockin-logo.svg" alt="ClockIn Logo" class="brand-logo">
         <span class="brand-text">ClockIn</span>
       </div>
       <button class="hamburger" id="hamburger">
@@ -70,7 +57,7 @@
     <iframe name="contentFrame" src="home_user.html" frameborder="0" id="contentFrame"></iframe>
   </div>
 </div>
-  
+   
 </body>
 </html>
 <script>
@@ -102,17 +89,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sidebarLogout) {
     sidebarLogout.addEventListener('click', async (e) => {
       e.preventDefault();
-      const supabase = window.supabaseClient;
-      if (supabase) {
-        await supabase.auth.signOut();
+      if (window.authentification) {
+        window.authentification.signOut();
+      } else {
+        const supabase = window.supabaseClient;
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
+        window.location.href = '../Login_Path/login.html';
       }
-      sessionStorage.removeItem('userEmail');
-      sessionStorage.removeItem('userId');
-      sessionStorage.removeItem('userType');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('userType');
-      window.location.href = '../Login_Path/login.html';
     });
   }
 });

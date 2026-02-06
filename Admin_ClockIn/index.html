@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../Authentification/authentification.js"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
   <script src="scripts/managers/profile_icon.js" defer></script>
   <script src="scripts/managers/clock_index.js" defer></script>
@@ -21,7 +22,7 @@
   <aside class="sidebar collapsed" id="sidebar">
     <div class="sidebar-header">
       <div class="brand">
-        <img src="images/clockin-logo.svg" alt="ClockIn Logo" class="brand-logo">
+        <img src="../Images/clockin-logo.svg" alt="ClockIn Logo" class="brand-logo">
         <span class="brand-text">Clock In</span>
       </div>
       <button class="hamburger" id="hamburger">
@@ -108,8 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sidebarLogout) {
     sidebarLogout.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (window.authGuard) {
-        window.authGuard.signOut();
+      if (window.authentification) {
+        window.authentification.signOut();
       } else {
         const supabase = window.supabaseClient;
         if (supabase) {
