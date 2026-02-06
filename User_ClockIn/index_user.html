@@ -7,12 +7,10 @@
   <link rel="stylesheet" href="styles/user_ui.css">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   
-  <!-- Supabase Client Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
   <script src="scripts/home_user.js" defer></script>
   <script>
-    // Authentication 
     window.addEventListener('load', () => {
       setTimeout(() => {
         const supabase = window.supabaseClient;
@@ -75,3 +73,47 @@
   
 </body>
 </html>
+<script>
+function setActive(clickedLink) {
+  document.querySelectorAll('#sidebar a').forEach(link => {
+    link.classList.remove('active');
+  });
+  clickedLink.classList.add('active');
+  
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.classList.add('collapsed');
+    sidebar.classList.remove('expanded');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const sidebar = document.getElementById('sidebar');
+  const hamburger = document.getElementById('hamburger');
+  const sidebarLogout = document.getElementById('sidebarLogout');
+  
+  if (hamburger && sidebar) {
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('expanded');
+      sidebar.classList.toggle('collapsed');
+    });
+  }
+  
+  if (sidebarLogout) {
+    sidebarLogout.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const supabase = window.supabaseClient;
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+      sessionStorage.removeItem('userEmail');
+      sessionStorage.removeItem('userId');
+      sessionStorage.removeItem('userType');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userType');
+      window.location.href = '../Login_Path/login.html';
+    });
+  }
+});
+</script>
