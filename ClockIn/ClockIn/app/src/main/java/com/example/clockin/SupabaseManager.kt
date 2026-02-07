@@ -356,6 +356,31 @@ object SupabaseManager {
             }
         }
     }
+    suspend fun submitFeedback(title: String, message: String): Result<Boolean> {
+        val user = getCurrentUser() ?: return Result.failure(Exception("User not logged in"))
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val feedbackId = UUID.randomUUID().toString()
+                val dateCreated = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+
+                // Create feedback object based on your database schema
+                val feedback = mapOf(
+                    "feedbackId" to feedbackId,
+                    "title" to title,
+                    "message" to message,
+                    "employeeId" to user.id,
+                    "dateCreated" to dateCreated
+                )
+
+                client.from("feedback").insert(feedback)
+
+                Log.d(TAG, "Feedback submitted successfully: $feedbackId")
+                Result.success(true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Submit feedback error", e)
+                Result.failure(e)
+            }
+        }
+    }
 }
-
-

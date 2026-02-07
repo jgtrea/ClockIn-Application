@@ -1,0 +1,185 @@
+package com.example.clockin
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.launch
+
+@Composable
+fun FeedbackDialog(onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+
+    var title by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    Dialog(onDismissRequest = { if (!isSubmitting) onDismiss() }) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Submit Feedback",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                    IconButton(
+                        onClick = { if (!isSubmitting) onDismiss() },
+                        enabled = !isSubmitting
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Title Field
+                Text(
+                    "Title",
+                    color = Color.DarkGray,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Enter feedback title", color = Color.Gray) },
+                    enabled = !isSubmitting,
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryOrange,
+                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Message Field
+                Text(
+                    "Description",
+                    color = Color.DarkGray,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    placeholder = { Text("Describe your feedback in detail", color = Color.Gray) },
+                    enabled = !isSubmitting,
+                    maxLines = 8,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryOrange,
+                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                    )
+                )
+
+                // Error Message
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage!!,
+                        color = Color.Red,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Submit Button
+                if (isSubmitting) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = PrimaryOrange,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            // Validation
+                            when {
+                                title.trim().isEmpty() -> {
+                                    errorMessage = "Please enter a title"
+                                    return@Button
+                                }
+                                message.trim().isEmpty() -> {
+                                    errorMessage = "Please enter a description"
+                                    return@Button
+                                }
+                                else -> {
+                                    errorMessage = null
+                                    isSubmitting = true
+
+                                    scope.launch {
+                                        val result = SupabaseManager.submitFeedback(
+                                            title = title.trim(),
+                                            message = message.trim()
+                                        )
+
+                                        isSubmitting = false
+
+                                        if (result.isSuccess) {
+                                            NotificationManager.show(
+                                                header = "Feedback Submitted",
+                                                message = "Thank you for your feedback!",
+                                                duration = 3000L
+                                            )
+                                            onDismiss()
+                                        } else {
+                                            errorMessage = result.exceptionOrNull()?.message ?: "Failed to submit feedback"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
+                        shape = RoundedCornerShape(20.dp),
+                        enabled = !isSubmitting
+                    ) {
+                        Text("Submit", color = Color.White, modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                }
+            }
+        }
+    }
+}

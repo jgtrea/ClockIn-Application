@@ -542,35 +542,6 @@ fun InfoCard(title: String? = null, text: String) {
 }
 
 @Composable
-fun FeedbackDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(24.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Submit Feedback", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Close") }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Title", color = Color.Gray, fontSize = 14.sp)
-                Box(modifier = Modifier.fillMaxWidth().height(45.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFF2F2F2)))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Description", color = Color.Gray, fontSize = 14.sp)
-                Box(modifier = Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFF2F2F2)))
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = { onDismiss() },
-                    modifier = Modifier.align(Alignment.End),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Text("Submit", color = Color.White)
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun PoliciesView(onBack: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
