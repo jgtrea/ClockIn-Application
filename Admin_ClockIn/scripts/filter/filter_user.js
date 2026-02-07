@@ -1,4 +1,4 @@
-function performSearch() {
+function filterUser() {
   const searchTerm = document.getElementById('globalSearch').value.trim();
   
   if (typeof window.performUserSearch === 'function') {
@@ -22,7 +22,7 @@ function performSearch() {
 
 const searchInput = document.getElementById('globalSearch');
 if (searchInput) {
-  searchInput.addEventListener('input', performSearch);
+  searchInput.addEventListener('input', filterUser);
 }
 
-window.performSearch = performSearch;
+window.filterUser = filterUser;

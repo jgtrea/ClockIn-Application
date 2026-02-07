@@ -209,7 +209,6 @@
     const endIndex = startIndex + notificationsPerPage;
     const pageNotifications = notifications.slice(startIndex, endIndex);
 
-    // Get employee emails for notifications with employeeId
     const employeeIds = pageNotifications.filter(n => n.employeeId).map(n => n.employeeId);
     let employeeEmails = {};
     
@@ -235,10 +234,10 @@
       const date = notif.dataCreated ? new Date(notif.dataCreated).toLocaleString() : 'Unknown';
       const recipient = notif.employeeId ? (employeeEmails[notif.employeeId] || `Employee ID: ${notif.employeeId}`) : 'All Users';
       return `
-        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 16px; padding: 20px;">
+        <div class="notif-card" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 16px; padding: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
             <div>
-              <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">${notif.header || 'Notification'}</h3>
+              <h3 class="notif-title" style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">${notif.header || 'Notification'}</h3>
               <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">To: ${recipient}</p>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">

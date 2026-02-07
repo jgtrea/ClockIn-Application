@@ -69,10 +69,10 @@ function renderFeedback() {
   const pageData = feedbackData.slice(startIndex, endIndex);
 
   feedbackList.innerHTML = pageData.map(feedback => `
-    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+    <div class="feedback-card" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
         <div>
-          <h3 style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #111827;">${feedback.title || 'No Title'}</h3>
+          <h3 class="feedback-title" style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #111827;">${feedback.title || 'No Title'}</h3>
           <p style="margin: 0; font-size: 14px; color: #6b7280;">From: ${feedback.employeeName || 'Unknown'} ${feedback.employeeEmail ? `(${feedback.employeeEmail})` : ''}</p>
         </div>
         <span style="font-size: 12px; color: #9ca3af;">${formatDate(feedback.dateCreated)}</span>
@@ -124,5 +124,4 @@ function formatDate(dateString) {
   });
 }
 
-// Initialize
 loadFeedback();

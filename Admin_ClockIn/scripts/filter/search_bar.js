@@ -1,17 +1,26 @@
-// TODO: Apply filter to notif and feedback
-
 class SearchBar {
-  constructor() {
-    this.searchInput = document.getElementById('sectionSearch');
+  constructor(options = {}) {
+    this.searchInput = document.getElementById('sectionSearch') || document.getElementById('globalSearch');
+    this.filterType = options.filterType || 'sections'; 
   }
 
   init() {
     if (this.searchInput) {
-      this.searchInput.addEventListener('keyup', () => this.searchSections());
+      this.searchInput.addEventListener('keyup', () => this.filter());
     }
   }
 
-  searchSections() {
+  filter() {
+    if (this.filterType === 'user' && typeof window.filterUser === 'function') {
+      window.filterUser();
+    } else if ((this.filterType === 'notif' || this.filterType === 'feedback') && typeof window.filterNotif === 'function') {
+      window.filterNotif();
+    } else {
+      this.filterSections();
+    }
+  }
+
+  filterSections() {
     const searchTerm = this.searchInput.value.toLowerCase();
     const cards = document.querySelectorAll('.section-card');
     
@@ -28,7 +37,7 @@ class SearchBar {
   clearSearch() {
     if (this.searchInput) {
       this.searchInput.value = '';
-      this.searchSections();
+      this.filter();
     }
   }
 
