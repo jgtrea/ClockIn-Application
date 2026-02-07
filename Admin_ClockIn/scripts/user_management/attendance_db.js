@@ -12,6 +12,7 @@ let currentPage = 1;
 const usersPerPage = 10;
 let expandedRows = {};   
 let selectedDates = {};
+let editingAttendance = {};
 let sortAscending = true;
 
 async function loadAttendanceForDate(userId, selectedDate) {
@@ -91,6 +92,7 @@ async function loadAttendanceForDate(userId, selectedDate) {
       const status = attendance ? attendance.status : 'Unattended';
       const timeIn = attendance && attendance.timeIn ? new Date(attendance.timeIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-';
       const timeOut = attendance && attendance.timeOut ? new Date(attendance.timeOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-';
+      const hasAttendance = !!attendance;
       
       return `
         <div class="slot-row">
@@ -100,6 +102,9 @@ async function loadAttendanceForDate(userId, selectedDate) {
           <span>${timeIn}</span>
           <span>${timeOut}</span>
           <span><span class="status-badge status-${status.toLowerCase()}">${status}</span></span>
+          <span class="actions-cell">
+            ${hasAttendance ? `<button type="button" class="action-icon-btn" onclick="window.editAttendance('${userId}', '${attendance.attendId}', '${item.schedId}')"><span class="material-symbols-outlined">edit</span></button>` : ''}
+          </span>
         </div>
       `;
     }).join('');
@@ -120,6 +125,36 @@ window.loadAttendanceForSelectedDate = function(userId, dateInput) {
   const selectedDate = dateInput.value;
   if (selectedDate) {
     loadAttendanceForDate(userId, selectedDate);
+  }
+};
+
+window.editAttendance = async function(userId, attendId, schedId) {
+  const status = prompt('Edit Status (Present/Late/Absent/Excused):');
+  if (!status) return;
+  
+  const validStatuses = ['Present', 'Late', 'Absent', 'Excused'];
+  if (!validStatuses.includes(status)) {
+    alert('Invalid status. Please use: Present, Late, Absent, or Excused');
+    return;
+  }
+  
+  const supabase = window.supabaseClient;
+  try {
+    const { error } = await supabase
+      .from(ATTENDANCE_TABLE)
+      .update({ status: status })
+      .eq('attendId', attendId);
+    
+    if (error) {
+      console.error('Error updating attendance:', error);
+      alert('Error updating attendance: ' + error.message);
+      return;
+    }
+    
+    loadAttendanceForDate(userId, selectedDates[userId]);
+  } catch (error) {
+    console.error('Error updating attendance:', error);
+    alert('Error updating attendance. Please try again.');
   }
 };
 
@@ -264,7 +299,7 @@ function render() {
             </div>
 
             <div class="schedule-table-header">
-              <span>Scheduled Time</span><span>Section</span><span>Subject</span><span>Time In</span><span>Time Out</span><span>Status</span>
+              <span>Scheduled Time</span><span>Section</span><span>Subject</span><span>Time In</span><span>Time Out</span><span>Status</span><span>Actions</span>
             </div>
             <div id="attendance-table-${user.uid}">
               <p style="text-align:center; color:#999; padding:10px;">Loading...</p>

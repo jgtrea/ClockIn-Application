@@ -42,11 +42,11 @@
 }
 
 .attendance-main-section .schedule-table-header {
-  grid-template-columns: 120px 1fr 1fr 80px 80px 100px;
+  grid-template-columns: 120px 1fr 1fr 80px 80px 100px 80px;
 }
 
 .attendance-main-section .slot-row {
-  grid-template-columns: 120px 1fr 1fr 80px 80px 100px;
+  grid-template-columns: 120px 1fr 1fr 80px 80px 100px 80px;
 }
 
 .status-badge {
