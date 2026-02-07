@@ -344,9 +344,6 @@ function sortAttendance(field) {
     if (field === 'name') {
       valueA = (a.name || '').toLowerCase();
       valueB = (b.name || '').toLowerCase();
-    } else if (field === 'id') {
-      valueA = (a.uid || '').toLowerCase();
-      valueB = (b.uid || '').toLowerCase();
     } else if (field === 'createdAt') {
       valueA = a.createdAt || 0;
       valueB = b.createdAt || 0;

@@ -305,9 +305,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (field === 'name') {
         valueA = (a.name || '').toLowerCase();
         valueB = (b.name || '').toLowerCase();
-      } else if (field === 'id') {
-        valueA = (a.employeeId || '').toLowerCase();
-        valueB = (b.employeeId || '').toLowerCase();
       } else if (field === 'createdAt') {
         valueA = a.createdAt || 0;
         valueB = b.createdAt || 0;

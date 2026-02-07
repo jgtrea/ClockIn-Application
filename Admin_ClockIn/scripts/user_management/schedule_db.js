@@ -456,9 +456,6 @@ function sortSchedules(field) {
     if (field === 'name') {
       valueA = (a.name || '').toLowerCase();
       valueB = (b.name || '').toLowerCase();
-    } else if (field === 'id') {
-      valueA = (a.uid || '').toLowerCase();
-      valueB = (b.uid || '').toLowerCase();
     } else if (field === 'createdAt') {
       valueA = a.createdat || 0;
       valueB = b.createdat || 0;
