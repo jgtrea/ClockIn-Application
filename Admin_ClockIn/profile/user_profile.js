@@ -27,11 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const { data: adminData } = await supabase.from('user_admin_data').select('name').eq('email', email).maybeSingle();
     if (adminData?.name) {
       displayName = adminData.name;
-    } else {
-      const { data: empData } = await supabase.from('user_employee_data').select('name').eq('email', email).maybeSingle();
-      if (empData?.name) {
-        displayName = empData.name;
-      }
     }
     
     elements.avatar.textContent = displayName.charAt(0).toUpperCase();
@@ -50,12 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const { data: adminData, error: adminError } = await supabase.from('user_admin_data').select('*').eq('email', email).maybeSingle();
     if (adminData && !adminError) {
       elements.employmentField.textContent = adminData.employment || 'Administrator';
-      return;
-    }
-    
-    const { data: empData, error: empError } = await supabase.from('user_employee_data').select('*').eq('email', email).maybeSingle();
-    if (empData && !empError) {
-      elements.employmentField.textContent = empData.employment || 'Employee';
     } else {
       elements.employmentField.textContent = 'N/A';
     }
@@ -104,11 +93,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const { data: adminData } = await supabase.from('user_admin_data').select('adminId').eq('email', session.user.email).maybeSingle();
         if (adminData?.adminId) {
           await supabase.from('user_admin_data').update({ name: newValue }).eq('adminId', adminData.adminId);
-        } else {
-          const { data: empData } = await supabase.from('user_employee_data').select('employeeId').eq('email', session.user.email).maybeSingle();
-          if (empData?.employeeId) {
-            await supabase.from('user_employee_data').update({ name: newValue }).eq('employeeId', empData.employeeId);
-          }
         }
         
         window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { name: newValue } }));
@@ -120,11 +104,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const { data: adminData } = await supabase.from('user_admin_data').select('adminId').eq('email', session.user.email).maybeSingle();
         if (adminData?.adminId) {
           await supabase.from('user_admin_data').update({ employment: newValue }).eq('adminId', adminData.adminId);
-        } else {
-          const { data: empData } = await supabase.from('user_employee_data').select('employeeId').eq('email', session.user.email).maybeSingle();
-          if (empData?.employeeId) {
-            await supabase.from('user_employee_data').update({ employment: newValue }).eq('employeeId', empData.employeeId);
-          }
         }
         alert("Employment updated successfully!");
       }

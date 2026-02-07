@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const row = document.createElement('div');
       row.className = `user-row ${isExpanded ? 'expanded' : ''}`;
 
-      const subtitle = `${user.employeeId || 'ID'} | ${user.email || 'Email'} | ${user.employment || 'Status'}`;
+      const subtitle = `${user.email || 'Email'} | ${user.employment || 'Status'}`;
 
       row.innerHTML = `
         <div class="user-collapsed-content" style="${isExpanded ? 'display: none;' : ''}">

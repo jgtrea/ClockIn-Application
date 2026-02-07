@@ -77,7 +77,7 @@ async function loadUsersFromDB() {
     userAttendance = usersData.map(user => ({
       uid: user.employeeId,
       name: user.name || '',
-      subtitle: `${user.employeeId || 'T000'} | ${user.email || 'N/A'} | ${user.employment || 'N/A'}`,
+      subtitle: `${user.email || 'N/A'} | ${user.employment || 'N/A'}`,
       records: attendanceByUser[user.employeeId] || []
     }));
 
@@ -275,6 +275,7 @@ function render() {
                           <option value="Late" ${r.status==='Late'?'selected':''}>Late</option>
                           <option value="Absent" ${r.status==='Absent'?'selected':''}>Absent</option>
                           <option value="Excused" ${r.status==='Excused'?'selected':''}>Excused</option>
+                          <option value="Unattended" ${r.status==='Unattended'?'selected':''}>Unattended</option>
                         </select>
                       </span>
                       <span class="actions-cell">

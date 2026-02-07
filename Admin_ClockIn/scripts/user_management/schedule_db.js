@@ -207,7 +207,7 @@ async function loadUsersFromDB() {
     userSchedules = usersData.map(user => ({
       uid: user.employeeId,
       name: user.name || '',
-      subtitle: `${user.employeeId || 'T000'} | ${user.email || 'N/A'} | ${user.employment || 'N/A'}`
+      subtitle: `${user.email || 'N/A'} | ${user.employment || 'N/A'}`
     }));
 
     applyScheduleSearch();
