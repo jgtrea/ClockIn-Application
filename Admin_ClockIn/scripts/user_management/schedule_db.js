@@ -90,7 +90,7 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
           <div class="slot-row editing-row">
             <span><input type="time" id="edit-start-${item.schedId}" value="${item.startTime || ''}"></span>
             <span><input type="time" id="edit-end-${item.schedId}" value="${item.endTime || ''}"></span>
-            <span><input type="text" id="edit-section-${item.schedId}" value="${sectionNames[item.sectId] || item.sectionName || ''}"></span>
+            <span><select id="edit-section-${item.schedId}" data-current-sectid="${item.sectId}" style="width: 90%; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px;"><option>Loading...</option></select></span>
             <span><input type="text" id="edit-subject-${item.schedId}" value="${item.subject || ''}"></span>
             <span class="actions-cell">
               <button type="button" class="action-icon-btn" onclick="window.updateSchedule('${userId}', '${item.schedId}', '${selectedDay}')"><span class="material-symbols-outlined">check</span></button>
@@ -119,7 +119,7 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
   }
 }
 
-function toggleScheduleEdit(userId, schedId, day) {
+async function toggleScheduleEdit(userId, schedId, day) {
   const editingKey = `${userId}-${day}`;
   if (editingSlotId === schedId && editingDaySchedules[editingKey] === schedId) {
     editingSlotId = null;
@@ -128,7 +128,19 @@ function toggleScheduleEdit(userId, schedId, day) {
     editingSlotId = schedId;
     editingDaySchedules[editingKey] = schedId;
   }
-  loadSchedule(userId, day);
+  await loadSchedule(userId, day);
+  
+  // Load sections for dropdown after schedule is loaded
+  if (editingSlotId === schedId) {
+    const sections = await loadSectionsForDropdown(userId);
+    const sectionSelect = document.getElementById(`edit-section-${schedId}`);
+    if (sectionSelect && sections.length > 0) {
+      const currentSectId = sectionSelect.getAttribute('data-current-sectid');
+      sectionSelect.innerHTML = sections.map(s => 
+        `<option value="${s.sectId}" ${s.sectId === currentSectId ? 'selected' : ''}>${s.sectionName}</option>`
+      ).join('');
+    }
+  }
 }
 window.toggleScheduleEdit = toggleScheduleEdit;
 
@@ -149,10 +161,10 @@ async function updateSchedule(userId, schedId, day) {
   const supabase = window.supabaseClient;
   const newStartTime = document.getElementById(`edit-start-${schedId}`).value;
   const newEndTime = document.getElementById(`edit-end-${schedId}`).value;
-  const newSection = document.getElementById(`edit-section-${schedId}`).value;
+  const newSectId = document.getElementById(`edit-section-${schedId}`).value;
   const newSubject = document.getElementById(`edit-subject-${schedId}`).value;
 
-  if (!newStartTime || !newEndTime || !newSubject) {
+  if (!newStartTime || !newEndTime || !newSectId || !newSubject) {
     alert('Please fill in all required fields');
     return;
   }
@@ -163,7 +175,7 @@ async function updateSchedule(userId, schedId, day) {
       .update({
         startTime: newStartTime,
         endTime: newEndTime,
-        sectionName: newSection,
+        sectId: newSectId,
         subject: newSubject
       })
       .eq('schedId', schedId);
@@ -222,6 +234,25 @@ function formatTime(time) {
   return `${parseInt(parts[0])}:${parts[1] || '00'}`;
 }
 
+async function loadSectionsForDropdown(userId) {
+  const supabase = window.supabaseClient;
+  try {
+    const { data, error } = await supabase
+      .from('sections')
+      .select('sectId, sectionName')
+      .order('sectionName', { ascending: true });
+
+    if (error) {
+      console.error('Error loading sections:', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error loading sections:', error);
+    return [];
+  }
+}
+
 function toggleUser(uid) {
   expandedRows[uid] = !expandedRows[uid];
   if (!expandedRows[uid]) {
@@ -232,18 +263,32 @@ function toggleUser(uid) {
         delete editingDaySchedules[key];
       }
     });
+  } else {
+    // Set current day before rendering
+    if (!selectedDays[uid]) {
+      selectedDays[uid] = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    }
   }
   render();
   
   if (expandedRows[uid]) {
-    loadSchedule(uid, selectedDays[uid] || 'Monday');
+    loadSchedule(uid, selectedDays[uid]);
   }
 }
 window.toggleUser = toggleUser;
 
-function toggleAddSchedule(uid) {
+async function toggleAddSchedule(uid) {
   expandedAddForms[uid] = !expandedAddForms[uid];
   render();
+  
+  if (expandedAddForms[uid]) {
+    const sections = await loadSectionsForDropdown(uid);
+    const sectionSelect = document.getElementById(`add-section-${uid}`);
+    if (sectionSelect && sections.length > 0) {
+      sectionSelect.innerHTML = '<option value="">Select a section</option>' + 
+        sections.map(s => `<option value="${s.sectId}">${s.sectionName}</option>`).join('');
+    }
+  }
 }
 window.toggleAddSchedule = toggleAddSchedule;
 
@@ -251,10 +296,10 @@ async function saveSchedule(uid) {
   const supabase = window.supabaseClient;
   const time = document.getElementById(`add-time-${uid}`).value;
   const endTime = document.getElementById(`add-endtime-${uid}`).value;
-  const section = document.getElementById(`add-section-${uid}`).value;
+  const sectId = document.getElementById(`add-section-${uid}`).value;
   const subject = document.getElementById(`add-subject-${uid}`).value;
   
-  if (!time || !endTime || !section || !subject) {
+  if (!time || !endTime || !sectId || !subject) {
     alert('Please fill in all fields');
     return;
   }
@@ -264,11 +309,11 @@ async function saveSchedule(uid) {
       .from(SCHEDULE_TABLE)
       .insert({
         employeeId: uid,
-        sectionName: section,
+        sectId: sectId,
         subject: subject,
         startTime: time,
         endTime: endTime,
-        weekday: selectedDays[uid] || 'Monday'
+        weekday: selectedDays[uid] || new Date().toLocaleDateString('en-US', { weekday: 'long' })
       });
 
     if (error) {
@@ -278,7 +323,7 @@ async function saveSchedule(uid) {
     }
     
     toggleAddSchedule(uid);
-    loadSchedule(uid, selectedDays[uid] || 'Monday');
+    loadSchedule(uid, selectedDays[uid] || new Date().toLocaleDateString('en-US', { weekday: 'long' }));
     
   } catch (error) {
     console.error('Error saving schedule:', error);
@@ -392,7 +437,9 @@ function render() {
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div>
                   <label style="display: block; margin-bottom: 5px; font-weight: 600;">Section:</label>
-                  <input type="text" id="add-section-${user.uid}" placeholder="e.g. A1, B2" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                  <select id="add-section-${user.uid}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                    <option value="">Loading sections...</option>
+                  </select>
                 </div>
                 <div></div>
               </div>

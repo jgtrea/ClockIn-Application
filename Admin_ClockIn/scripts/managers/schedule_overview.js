@@ -7,6 +7,8 @@ class ScheduleOverview {
 
   init() {
     this.loadSections();
+    // Refresh every 30 seconds for real-time updates
+    setInterval(() => this.refresh(), 30000);
   }
 
   async loadSections() {
@@ -37,7 +39,41 @@ class ScheduleOverview {
 
       if (schedulesError) throw schedulesError;
 
-      const sectionCards = sectionsData.map(section => this.createSectionCard(section, schedulesData, today));
+      // Get today's attendance records
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data: attendanceData, error: attendanceError } = await this.supabase
+        .from('attendance')
+        .select('*')
+        .gte('timeIn', startOfDay.toISOString())
+        .lte('timeIn', endOfDay.toISOString())
+        .in('status', ['Present', 'Late']);
+
+      if (attendanceError) console.error('Error loading attendance:', attendanceError);
+
+      // Get employee names
+      const employeeIds = attendanceData ? [...new Set(attendanceData.map(a => a.employeeId))] : [];
+      let employeeMap = {};
+      
+      if (employeeIds.length > 0) {
+        const { data: employeesData } = await this.supabase
+          .from('user_employee_data')
+          .select('employeeId, name')
+          .in('employeeId', employeeIds);
+        
+        if (employeesData) {
+          employeesData.forEach(emp => {
+            employeeMap[emp.employeeId] = emp.name;
+          });
+        }
+      }
+
+      const sectionCards = sectionsData.map(section => 
+        this.createSectionCard(section, schedulesData, attendanceData || [], employeeMap, today)
+      );
       
       this.renderSections(sectionCards);
 
@@ -49,9 +85,20 @@ class ScheduleOverview {
     }
   }
 
-  createSectionCard(section, schedulesData, today) {
+  createSectionCard(section, schedulesData, attendanceData, employeeMap, today) {
     const sectionSchedules = this.filterAndSortSchedules(section.sectId, schedulesData);
-    const { currentSubject, timeRange } = this.getCurrentClassInfo(sectionSchedules);
+    const { currentSubject, timeRange, currentSchedule } = this.getCurrentClassInfo(sectionSchedules);
+    
+    let teacherStatus = '';
+    if (currentSchedule) {
+      const attendance = attendanceData.find(a => a.schedId === currentSchedule.schedId);
+      if (attendance) {
+        const teacherName = employeeMap[attendance.employeeId] || 'Teacher';
+        teacherStatus = `<div style="font-size: 13px; color: #059669; margin-top: 4px; font-weight: 500;">👤 ${teacherName}</div>`;
+      } else {
+        teacherStatus = `<div style="font-size: 13px; color: #9ca3af; margin-top: 4px;">⏳ Waiting</div>`;
+      }
+    }
 
     return `
       <div class="section-card" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; min-height: 300px;">
@@ -62,6 +109,7 @@ class ScheduleOverview {
         <div style="margin-bottom: 16px; text-align: center; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
           <div style="font-size: 14px; color: #6b7280;">Current Class: ${currentSubject}</div>
           ${timeRange ? `<div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">${timeRange}</div>` : ''}
+          ${teacherStatus}
         </div>
         <div style="flex: 1;">
           <div style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 8px;">${today}'s Schedule:</div>
@@ -95,6 +143,7 @@ class ScheduleOverview {
     const currentMinutes = this.clockManager.getCurrentTimeInMinutes();
     let currentSubject = 'No class';
     let timeRange = '';
+    let currentSchedule = null;
 
     for (const schedule of sectionSchedules) {
       const startMinutes = this.timeToMinutes(schedule.startTime);
@@ -103,7 +152,8 @@ class ScheduleOverview {
       if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
         currentSubject = schedule.subject || 'Class';
         timeRange = `${schedule.startTime} - ${schedule.endTime}`;
-        return { currentSubject, timeRange };
+        currentSchedule = schedule;
+        return { currentSubject, timeRange, currentSchedule };
       }
     }
 
@@ -115,7 +165,7 @@ class ScheduleOverview {
       }
     }
 
-    return { currentSubject, timeRange };
+    return { currentSubject, timeRange, currentSchedule };
   }
 
   renderScheduleList(sectionSchedules) {
