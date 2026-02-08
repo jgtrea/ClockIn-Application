@@ -37,6 +37,52 @@
   width: 100%;
 }
 
+.attendance-main-section {
+  flex: 1;
+}
+
+.attendance-main-section .schedule-table-header {
+  grid-template-columns: 120px 1fr 1fr 80px 80px 100px 80px;
+}
+
+.attendance-main-section .slot-row {
+  grid-template-columns: 120px 1fr 1fr 80px 80px 100px 80px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.status-present {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-late {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.status-absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-excused {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-unattended {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
 .schedule-main-section {
   flex: 1;
 }

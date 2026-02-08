@@ -1,6 +1,8 @@
 const attendanceList = document.getElementById("attendanceList");
 const USERS_TABLE = 'user_employee_data';
 const ATTENDANCE_TABLE = 'attendance';
+const SCHEDULE_TABLE = 'schedule';
+const SECTIONS_TABLE = 'sections';
 
 let userAttendance = []; 
 let allUserAttendance = [];
@@ -9,9 +11,152 @@ let searchTerm = '';
 let currentPage = 1;
 const usersPerPage = 10;
 let expandedRows = {};   
-let expandedAddForms = {}; 
-let editingRecordId = null;
+let selectedDates = {};
+let editingAttendance = {};
 let sortAscending = true;
+
+async function loadAttendanceForDate(userId, selectedDate) {
+  const supabase = window.supabaseClient;
+  const attendanceTable = document.getElementById(`attendance-table-${userId}`);
+  
+  if (!attendanceTable) return;
+  
+  selectedDates[userId] = selectedDate;
+  attendanceTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">Loading...</p>';
+
+  try {
+    const date = new Date(selectedDate);
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+    
+    const { data: scheduleData, error: schedError } = await supabase
+      .from(SCHEDULE_TABLE)
+      .select('*')
+      .eq('employeeId', userId)
+      .eq('weekday', weekday)
+      .order('startTime', { ascending: true });
+
+    if (schedError) {
+      console.error('Error loading schedule:', schedError);
+      attendanceTable.innerHTML = '<p style="text-align:center; color:#ef4444; padding:10px;">Error loading schedule.</p>';
+      return;
+    }
+
+    if (!scheduleData || scheduleData.length === 0) {
+      attendanceTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">No schedule found for ' + weekday + '.</p>';
+      return;
+    }
+
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const { data: attendanceData, error: attError } = await supabase
+      .from(ATTENDANCE_TABLE)
+      .select('*')
+      .eq('employeeId', userId)
+      .gte('timeIn', startOfDay.toISOString())
+      .lte('timeIn', endOfDay.toISOString());
+
+    if (attError) {
+      console.error('Error loading attendance:', attError);
+    }
+
+    const attendanceMap = {};
+    if (attendanceData) {
+      attendanceData.forEach(att => {
+        if (att.schedId) {
+          attendanceMap[att.schedId] = att;
+        }
+      });
+    }
+
+    const sectIds = [...new Set(scheduleData.map(item => item.sectId).filter(Boolean))];
+    let sectionNames = {};
+    
+    if (sectIds.length > 0) {
+      const { data: sectionsData } = await supabase
+        .from(SECTIONS_TABLE)
+        .select('sectId, sectionName')
+        .in('sectId', sectIds);
+      
+      if (sectionsData) {
+        sectionsData.forEach(section => {
+          sectionNames[section.sectId] = section.sectionName;
+        });
+      }
+    }
+
+    attendanceTable.innerHTML = scheduleData.map(item => {
+      const attendance = attendanceMap[item.schedId];
+      const status = attendance ? attendance.status : 'Unattended';
+      const timeIn = attendance && attendance.timeIn ? new Date(attendance.timeIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-';
+      const timeOut = attendance && attendance.timeOut ? new Date(attendance.timeOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-';
+      const hasAttendance = !!attendance;
+      
+      return `
+        <div class="slot-row">
+          <span>${formatTime(item.startTime)} - ${formatTime(item.endTime)}</span>
+          <span>${sectionNames[item.sectId] || '-'}</span>
+          <span>${item.subject || '-'}</span>
+          <span>${timeIn}</span>
+          <span>${timeOut}</span>
+          <span><span class="status-badge status-${status.toLowerCase()}">${status}</span></span>
+          <span class="actions-cell">
+            ${hasAttendance ? `<button type="button" class="action-icon-btn" onclick="window.editAttendance('${userId}', '${attendance.attendId}', '${item.schedId}')"><span class="material-symbols-outlined">edit</span></button>` : ''}
+          </span>
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('Error loading attendance:', error);
+    attendanceTable.innerHTML = '<p style="text-align:center; color:#ef4444; padding:10px;">Error loading attendance.</p>';
+  }
+}
+
+function formatTime(time) {
+  if (!time) return '';
+  const parts = time.split(':');
+  return `${parseInt(parts[0])}:${parts[1] || '00'}`;
+}
+
+window.loadAttendanceForSelectedDate = function(userId, dateInput) {
+  const selectedDate = dateInput.value;
+  if (selectedDate) {
+    loadAttendanceForDate(userId, selectedDate);
+  }
+};
+
+window.editAttendance = async function(userId, attendId, schedId) {
+  const status = prompt('Edit Status (Present/Late/Absent/Excused):');
+  if (!status) return;
+  
+  const validStatuses = ['Present', 'Late', 'Absent', 'Excused'];
+  if (!validStatuses.includes(status)) {
+    alert('Invalid status. Please use: Present, Late, Absent, or Excused');
+    return;
+  }
+  
+  const supabase = window.supabaseClient;
+  try {
+    const { error } = await supabase
+      .from(ATTENDANCE_TABLE)
+      .update({ status: status })
+      .eq('attendId', attendId);
+    
+    if (error) {
+      console.error('Error updating attendance:', error);
+      alert('Error updating attendance: ' + error.message);
+      return;
+    }
+    
+    loadAttendanceForDate(userId, selectedDates[userId]);
+  } catch (error) {
+    console.error('Error updating attendance:', error);
+    alert('Error updating attendance. Please try again.');
+  }
+};
 
 function applyAttendanceSearch() {
   if (!searchTerm) {
@@ -87,131 +232,26 @@ async function loadUsersFromDB() {
   }
 }
 
-async function updateRecord(uid, recordId) {
-  const supabase = window.supabaseClient;
-  const newDate = document.getElementById(`edit-date-${recordId}`).value;
-  const newTimeIn = document.getElementById(`edit-in-${recordId}`).value;
-  const newTimeOut = document.getElementById(`edit-out-${recordId}`).value;
-  const newStatus = document.getElementById(`edit-status-${recordId}`).value;
 
-  let timeInValue = null;
-  if (newDate && newTimeIn) {
-    timeInValue = new Date(`${newDate}T${newTimeIn}:00`).toISOString();
-  }
-
-  let timeOutValue = null;
-  if (newDate && newTimeOut) {
-    timeOutValue = new Date(`${newDate}T${newTimeOut}:00`).toISOString();
-  }
-
-  const updatedData = {
-    timeIn: timeInValue,
-    timeOut: timeOutValue,
-    status: newStatus
-  };
-
-  try {
-    const { error } = await supabase
-      .from(ATTENDANCE_TABLE)
-      .update(updatedData)
-      .eq('attendId', recordId);
-
-    if (error) {
-      console.error('Error updating record:', error);
-      alert('Error updating record: ' + error.message);
-      return;
-    }
-    editingRecordId = null;
-    loadUsersFromDB();
-  } catch (err) {
-    console.error('Error updating record:', err);
-  }
-}
-
-function toggleEdit(recordId) {
-  editingRecordId = (editingRecordId === recordId) ? null : recordId;
-  render();
-}
-
-function toggleStatusEdit(recordId) {
-  editingRecordId = (editingRecordId === recordId) ? null : recordId;
-  render();
-}
-
-async function updateStatus(uid, recordId) {
-  const supabase = window.supabaseClient;
-  const updatedData = {
-    status: document.getElementById(`edit-status-${recordId}`).value
-  };
-
-  try {
-    const { error } = await supabase
-      .from(ATTENDANCE_TABLE)
-      .update(updatedData)
-      .eq('attendId', recordId);
-
-    if (error) {
-      console.error('Error updating status:', error);
-      alert('Error updating status: ' + error.message);
-      return;
-    }
-    editingRecordId = null;
-    loadUsersFromDB();
-  } catch (err) {
-    console.error('Error updating status:', err);
-  }
-}
 
 function toggleUser(uid) {
   expandedRows[uid] = !expandedRows[uid];
   if (!expandedRows[uid]) {
-    expandedAddForms[uid] = false;
-    editingRecordId = null;
-  }
-  render();
-}
-
-function toggleAddAttendance(uid) {
-  expandedAddForms[uid] = !expandedAddForms[uid];
-  render();
-}
-
-async function addAttendance(uid) {
-  const supabase = window.supabaseClient;
-  const date = document.getElementById(`add-date-${uid}`).value;
-  const timeIn = document.getElementById(`add-timein-${uid}`).value;
-  const timeOut = document.getElementById(`add-timeout-${uid}`).value;
-  const status = document.getElementById(`add-status-${uid}`).value;
-
-  if (!date || !timeIn) {
-    alert('Please fill in date and time in');
-    return;
-  }
-
-  const timeInValue = new Date(`${date}T${timeIn}:00`).toISOString();
-  const timeOutValue = timeOut ? new Date(`${date}T${timeOut}:00`).toISOString() : null;
-
-  try {
-    const { error } = await supabase
-      .from(ATTENDANCE_TABLE)
-      .insert({
-        employeeId: uid,
-        timeIn: timeInValue,
-        timeOut: timeOutValue,
-        status: status
-      });
-
-    if (error) {
-      console.error('Error adding attendance:', error);
-      alert('Error adding attendance: ' + error.message);
-      return;
+    delete selectedDates[uid];
+  } else {
+    if (!selectedDates[uid]) {
+      selectedDates[uid] = new Date().toISOString().split('T')[0];
     }
-    loadUsersFromDB();
-  } catch (err) {
-    console.error('Error adding attendance:', err);
-    alert('Error adding attendance. Please try again.');
+  }
+  render();
+  
+  if (expandedRows[uid]) {
+    loadAttendanceForDate(uid, selectedDates[uid]);
   }
 }
+window.toggleUser = toggleUser;
+
+
 
 function render() {
   const totalPages = Math.ceil(allUserAttendance.length / usersPerPage);
@@ -230,7 +270,6 @@ function render() {
   
   pageUsers.forEach(user => {
     const isExpanded = !!expandedRows[user.uid];
-    const isAddFormOpen = !!expandedAddForms[user.uid];
     const row = document.createElement('div');
     row.className = `user-row ${isExpanded ? 'expanded' : ''}`;
 
@@ -254,44 +293,16 @@ function render() {
               <span class="user-subtitle">${user.subtitle}</span>
             </div>
 
-            <div class="attendance-table-header">
-              <span>Date</span><span>In</span><span>Out</span><span>Status</span><span class="actions-header">Actions</span>
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-weight: 600;">Select Date:</label>
+              <input type="date" id="date-select-${user.uid}" value="${selectedDates[user.uid] || ''}" onchange="window.loadAttendanceForSelectedDate('${user.uid}', this)" style="width: 200px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
             </div>
-            
-            <div class="records-list">
-              ${user.records.length > 0 ? user.records.map(r => {
-                const isEditing = editingRecordId === r.recordId;
-                const editDate = r.originalTimeIn ? new Date(r.originalTimeIn).toISOString().split('T')[0] : '';
-                const editTimeIn = r.timeIn || '';
-                const editTimeOut = r.timeOut || '';
-                
-                if (isEditing) {
-                  return `
-                    <div class="record-row editing-row">
-                      <span>${r.date || '-'}</span><span>${r.timeIn || '-'}</span><span>${r.timeOut || '-'}</span>
-                      <span>
-                        <select id="edit-status-${r.recordId}">
-                          <option value="Present" ${r.status==='Present'?'selected':''}>Present</option>
-                          <option value="Late" ${r.status==='Late'?'selected':''}>Late</option>
-                          <option value="Absent" ${r.status==='Absent'?'selected':''}>Absent</option>
-                          <option value="Excused" ${r.status==='Excused'?'selected':''}>Excused</option>
-                          <option value="Unattended" ${r.status==='Unattended'?'selected':''}>Unattended</option>
-                        </select>
-                      </span>
-                      <span class="actions-cell">
-                        <button class="action-icon-btn" onclick="updateStatus('${user.uid}', '${r.recordId}')"><span class="material-symbols-outlined">check</span></button>
-                        <button class="action-icon-btn" onclick="toggleStatusEdit(null)"><span class="material-symbols-outlined">close</span></button>
-                      </span>
-                    </div>`;
-                }
-                return `
-                  <div class="record-row">
-                    <span>${r.date || '-'}</span><span>${r.timeIn || '-'}</span><span>${r.timeOut || '-'}</span><span>${r.status || '-'}</span>
-                    <span class="actions-cell">
-                      <button class="action-icon-btn" onclick="toggleStatusEdit('${r.recordId}')"><span class="material-symbols-outlined">edit</span></button>
-                    </span>
-                  </div>`;
-              }).join('') : '<p style="text-align:center; color:#999; padding:10px;">No records found.</p>'}
+
+            <div class="schedule-table-header">
+              <span>Scheduled Time</span><span>Section</span><span>Subject</span><span>Time In</span><span>Time Out</span><span>Status</span><span>Actions</span>
+            </div>
+            <div id="attendance-table-${user.uid}">
+              <p style="text-align:center; color:#999; padding:10px;">Loading...</p>
             </div>
           </div>
 
