@@ -67,13 +67,19 @@ fun ScheduleScreen(navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
 
     val daysOfWeek = listOf("All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+    // Helper list to define the sort order
+    val daySortOrder = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
     var selectedDay by remember {
         val today = SimpleDateFormat("EEEE", Locale.US).format(Date())
         mutableStateOf(today)
     }
 
     var isDayDropdownExpanded by remember { mutableStateOf(false) }
-    var scheduleMap by remember { mutableStateOf<Map<String, List<ScheduleItem>>>(emptyMap()) }
+
+    // Changed: Store a flat list instead of a map so we can regroup dynamically
+    var allScheduleItems by remember { mutableStateOf<List<ScheduleItem>>(emptyList()) }
     var happeningNowItem by remember { mutableStateOf<ScheduleItem?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var userName by remember { mutableStateOf("") }
@@ -114,19 +120,36 @@ fun ScheduleScreen(navController: NavController) {
                 )
             }
             happeningNowItem = items.find { it.isHappeningNow }
-            scheduleMap = items.groupBy { it.sectionHeader }.toSortedMap()
+            allScheduleItems = items
         }
         isLoading = false
     }
 
-    val filteredSchedule = remember(scheduleMap, searchQuery, selectedDay) {
-        scheduleMap.mapValues { (_, items) ->
-            items.filter {
-                val matchesSearch = it.title.contains(searchQuery, true) || it.details.contains(searchQuery, true)
-                val matchesDay = selectedDay == "All Days" || it.day.equals(selectedDay, ignoreCase = true)
-                matchesSearch && matchesDay
-            }.sortedBy { it.rawStartTime.padStart(5, '0') }
-        }.filterValues { it.isNotEmpty() }
+    // Dynamic Grouping & Sorting Logic
+    val groupedSchedule = remember(allScheduleItems, searchQuery, selectedDay, happeningNowItem) {
+        // 1. Filter the list first
+        var list = allScheduleItems.filter {
+            val matchesSearch = it.title.contains(searchQuery, true) || it.details.contains(searchQuery, true)
+            val matchesDay = selectedDay == "All Days" || it.day.equals(selectedDay, ignoreCase = true)
+            val isNotDuplicate = it != happeningNowItem // Remove happening now item
+            matchesSearch && matchesDay && isNotDuplicate
+        }
+
+        // 2. Sort and Group based on selection
+        if (selectedDay == "All Days") {
+            // Sort by Day (Mon-Sun) then by Time
+            list = list.sortedWith(
+                compareBy<ScheduleItem> { daySortOrder.indexOf(it.day) }
+                    .thenBy { it.rawStartTime }
+            )
+            // Group by Day (Header will be "Monday", "Tuesday" etc.)
+            list.groupBy { it.day }
+        } else {
+            // Sort by Time only
+            list = list.sortedBy { it.rawStartTime }
+            // Group by Section Name (Header will be "Adelfa", "Sampaguita" etc.)
+            list.groupBy { it.sectionHeader }
+        }
     }
 
     if (showFeedbackDialog) {
@@ -222,14 +245,15 @@ fun ScheduleScreen(navController: NavController) {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = ButtonOrange)
                         }
-                    } else if (filteredSchedule.isEmpty()) {
+                    } else if (groupedSchedule.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                             val emptyMsg = if (searchQuery.isNotEmpty()) "No matching schedules found." else "No schedules found."
                             Text(text = emptyMsg, color = Color.Gray)
                         }
                     } else {
-                        filteredSchedule.forEach { (section, items) ->
-                            ScheduleDateGroup(section, items)
+                        // Iterate through the map we built in the remember block
+                        groupedSchedule.forEach { (headerTitle, items) ->
+                            ScheduleDateGroup(headerTitle, items)
                         }
                     }
                 }
@@ -244,10 +268,10 @@ fun formatScheduleTime(start: String, end: String): String {
 }
 
 @Composable
-fun ScheduleDateGroup(sectionName: String, items: List<ScheduleItem>) {
+fun ScheduleDateGroup(headerTitle: String, items: List<ScheduleItem>) {
     Column(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) {
-        if (sectionName.isNotEmpty()) {
-            Text(text = sectionName, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
+        if (headerTitle.isNotEmpty()) {
+            Text(text = headerTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
         }
 
         items.forEach { item ->
