@@ -2,7 +2,7 @@ package com.example.clockin
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +28,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,9 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.ButtonDefaults
-import android.util.Log
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class ScheduleItem(
     val title: String,
@@ -52,7 +54,8 @@ data class ScheduleItem(
     val sectionHeader: String,
     val displaySection: String,
     val day: String,
-    val rawStartTime: String
+    val rawStartTime: String,
+    val isUpcoming: Boolean = false
 )
 
 @Composable
@@ -62,9 +65,14 @@ fun ScheduleScreen(navController: NavController) {
     var showFAQ by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
-    
+
     val daysOfWeek = listOf("All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-    var selectedDay by remember { mutableStateOf("All Days") }
+
+    var selectedDay by remember {
+        val today = SimpleDateFormat("EEEE", Locale.US).format(Date())
+        mutableStateOf(today)
+    }
+
     var isDayDropdownExpanded by remember { mutableStateOf(false) }
 
     var scheduleMap by remember { mutableStateOf<Map<String, List<ScheduleItem>>>(emptyMap()) }
@@ -85,20 +93,28 @@ fun ScheduleScreen(navController: NavController) {
             id to "$year - $name"
         }
 
-        Log.d("LookupDebug", "Lookup Map Keys: ${sectionLookup.keys}")
-        Log.d("LookupDebug", "First Schedule sectId: ${records.firstOrNull()?.sectId}")
+        val dayFormat = SimpleDateFormat("EEEE", Locale.US)
+        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+        val now = Date()
+        val currentDay = dayFormat.format(now)
+        val currentTime = timeFormat.format(now)
 
         if (records.isNotEmpty()) {
             val items = records.map { record ->
-                val searchId = record.sectId.trim()
                 val displayRoom = sectionLookup[record.sectId] ?: "Room Not Found"
+
+                val isToday = record.weekday.equals(currentDay, ignoreCase = true)
+                val isFutureOrNow = record.endTime > currentTime
+                val isUpcoming = isToday && isFutureOrNow
+
                 ScheduleItem(
                     title = record.subject,
                     details = formatScheduleTime(record.startTime, record.endTime),
                     sectionHeader = record.sectionName,
                     displaySection = displayRoom,
                     day = record.weekday,
-                    rawStartTime = record.startTime
+                    rawStartTime = record.startTime,
+                    isUpcoming = isUpcoming
                 )
             }
             scheduleMap = items.groupBy { it.sectionHeader }.toSortedMap()
@@ -116,7 +132,6 @@ fun ScheduleScreen(navController: NavController) {
                 val matchesDay = selectedDay == "All Days" || it.day.equals(selectedDay, ignoreCase = true)
                 matchesSearch && matchesDay
             }.sortedBy { item ->
-                // Pad with zero so "7:00" becomes "07:00", ensuring 0 comes before 1
                 item.rawStartTime.padStart(5, '0')
             }
         }.filterValues { it.isNotEmpty() }
@@ -175,8 +190,7 @@ fun ScheduleScreen(navController: NavController) {
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Day Selector Dropdown
+
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(
                             onClick = { isDayDropdownExpanded = true },
@@ -217,7 +231,7 @@ fun ScheduleScreen(navController: NavController) {
 
                     if (isLoading) {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = PrimaryOrange)
+                            CircularProgressIndicator(color = ButtonOrange)
                         }
                     } else if (filteredSchedule.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
@@ -265,8 +279,10 @@ fun ScheduleDateGroup(sectionName: String, items: List<ScheduleItem>) {
 
 @Composable
 fun ScheduleCard(item: ScheduleItem) {
+    val borderColor = if (item.isUpcoming) ButtonOrange else Color(0xFFEEEEEE)
+
     Card(
-        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp)),
+        modifier = Modifier.fillMaxWidth().border(1.dp, borderColor, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -277,7 +293,7 @@ fun ScheduleCard(item: ScheduleItem) {
             Box(
                 modifier = Modifier
                     .size(45.dp)
-                    .background(PrimaryOrange, RoundedCornerShape(8.dp)),
+                    .background(ButtonOrange, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -290,8 +306,25 @@ fun ScheduleCard(item: ScheduleItem) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column {
-                Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    if (item.isUpcoming) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            color = ButtonOrange.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "UPCOMING",
+                                color = ButtonOrange,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
 
                 Text(
                     text = "Room: ${item.displaySection}",
@@ -302,7 +335,7 @@ fun ScheduleCard(item: ScheduleItem) {
 
                 Text(text = item.details, color = Color.Gray, fontSize = 12.sp)
                 if (item.day.isNotEmpty()) {
-                    Text(text = item.day, color = PrimaryOrange, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(text = item.day, color = ButtonOrange, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }

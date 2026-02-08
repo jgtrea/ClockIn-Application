@@ -12,6 +12,7 @@ import io.github.jan.supabase.gotrue.providers.builtin.OTP
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,7 @@ data class Attendance(
     @SerialName("timeIn") val timeIn: String? = null,
     @SerialName("timeOut") val timeOut: String? = null,
     @SerialName("schedId") val schedId: String = "",
+    @SerialName("employeeId") val employeeId: String? = null,
     val schedule: Schedule? = null
 )
 
@@ -185,10 +187,7 @@ object SupabaseManager {
                             eq("employeeId", employeeId)
                         }
                     }
-
-                // Update cached user
                 cachedUser = cachedUser?.copy(name = newName)
-
                 Result.success(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Update name error", e)
@@ -201,12 +200,8 @@ object SupabaseManager {
         if (cachedUser != null) return cachedUser
 
         val session = client.auth.currentSessionOrNull()
-        if (session == null) {
-            Log.d(TAG, "getCurrentUser: No session found")
-            return null
-        }
+        if (session == null) return null
         val userEmail = session.user?.email ?: ""
-        Log.d(TAG, "getCurrentUser: Looking for profile with email: $userEmail")
 
         return withContext(Dispatchers.IO) {
             try {
@@ -216,16 +211,9 @@ object SupabaseManager {
                     }
                     .decodeSingleOrNull<UserProfile>()
 
-                if (result == null) {
-                    Log.d(TAG, "getCurrentUser: No database record found for $userEmail")
-                } else {
-                    Log.d(TAG, "getCurrentUser: Found user: ${result.name}, ID: ${result.id}")
-                }
-
                 cachedUser = result
                 result
             } catch (e: Exception) {
-                Log.e(TAG, "getCurrentUser error", e)
                 null
             }
         }
@@ -240,18 +228,25 @@ object SupabaseManager {
                     .select { filter { eq("employeeId", user.id) } }
                     .decodeList<Schedule>()
 
+                if (mySchedules.isEmpty()) return@withContext emptyList()
+
                 val myScheduleIds = mySchedules.map { it.id }
+                val scheduleMap = mySchedules.associateBy { it.id }
 
-                if (myScheduleIds.isEmpty()) return@withContext emptyList()
+                val attendanceRecords = client.from("attendance")
+                    .select {
+                        filter { isIn("schedId", myScheduleIds) }
+                        order("timeIn", Order.DESCENDING)
+                    }
+                    .decodeList<Attendance>()
 
-                val result = client.from("attendance").select(
-                    columns = Columns.list("*", "schedule(*)")
-                ) {
-                    filter { isIn("schedId", myScheduleIds) }
+                val populatedAttendance = attendanceRecords.map { record ->
+                    record.copy(schedule = scheduleMap[record.schedId])
                 }
 
-                result.decodeList<Attendance>()
+                populatedAttendance
             } catch (e: Exception) {
+                Log.e(TAG, "Error fetching attendance", e)
                 emptyList()
             }
         }
@@ -260,7 +255,6 @@ object SupabaseManager {
     suspend fun getAllSections(): List<Map<String, String>> {
         return withContext(Dispatchers.IO) {
             try {
-                // FIX: Changed "Sections" to "sections" (lowercase)
                 client.from("sections").select().decodeList<Map<String, String>>()
             } catch (e: Exception) {
                 Log.e("SupabaseManager", "Error fetching sections: ${e.message}")
@@ -270,14 +264,7 @@ object SupabaseManager {
     }
 
     suspend fun getEmployeeSchedule(): List<Schedule> {
-        val user = getCurrentUser()
-        if (user == null) {
-            Log.d(TAG, "getEmployeeSchedule: User profile is null, cannot fetch schedule.")
-            return emptyList()
-        }
-
-        Log.d(TAG, "getEmployeeSchedule: Querying 'schedule' table for employeeId: ${user.id}")
-
+        val user = getCurrentUser() ?: return emptyList()
         return withContext(Dispatchers.IO) {
             try {
                 client.from("schedule")
@@ -299,7 +286,7 @@ object SupabaseManager {
                 }
 
                 val qrData = client.from("qr")
-                    .select {
+                    .select(columns = Columns.list("schedId")) {
                         filter {
                             eq("qrId", qrId)
                             eq("status", true)
@@ -310,41 +297,56 @@ object SupabaseManager {
 
                 val scheduleId = qrData["schedId"] ?: return@withContext Result.failure(Exception("QR has no schedule linked"))
 
-                val existingAttendance = client.from("attendance")
-                    .select { filter { eq("schedId", scheduleId) } }
-                    .decodeList<Attendance>()
-                    .firstOrNull { it.status == "Present" || it.status == "Late" }
-
-                if (existingAttendance != null) {
-                    return@withContext Result.success("Already Clocked In")
-                }
-
                 val schedule = client.from("schedule")
                     .select { filter { eq("schedId", scheduleId) } }
                     .decodeSingleOrNull<Schedule>()
                     ?: return@withContext Result.failure(Exception("Schedule not found"))
 
-                val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                val now = Date()
-                val currentTimeStr = timeFormat.format(now)
-
-                var status = "Present"
-                try {
-                    val startTime = timeFormat.parse(schedule.startTime)
-                    val currentTime = timeFormat.parse(currentTimeStr)
-                    if (startTime != null && currentTime != null) {
-                        val diff = currentTime.time - startTime.time
-                        if (diff > 15 * 60 * 1000) status = "Late"
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                if (schedule.employeeId != user.id) {
+                    return@withContext Result.failure(Exception("Not your QR Code. This belongs to another employee."))
                 }
+
+                val myAttendanceRecords = client.from("attendance")
+                    .select {
+                        filter {
+                            eq("schedId", scheduleId)
+                            eq("employeeId", user.id)
+                        }
+                    }
+                    .decodeList<Attendance>()
+
+                val activeSession = myAttendanceRecords.firstOrNull { it.timeOut == null }
+
+                val timeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                val now = Date()
+                val nowStr = timeFormat.format(now)
+
+                if (activeSession != null) {
+                    client.from("attendance").update({
+                        set("timeOut", nowStr)
+                    }) {
+                        filter { eq("attendId", activeSession.id) }
+                    }
+                    return@withContext Result.success("Successfully Clocked Out")
+                }
+
+                val todayDatePrefix = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
+                val completedToday = myAttendanceRecords.any {
+                    it.timeIn?.startsWith(todayDatePrefix) == true && it.timeOut != null
+                }
+
+                if (completedToday) {
+                    return@withContext Result.success("Already Completed for Today")
+                }
+
+                val status = calculateStatus(schedule.startTime, now)
 
                 val newAttendance = Attendance(
                     id = UUID.randomUUID().toString(),
                     status = status,
-                    timeIn = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(now),
-                    schedId = scheduleId
+                    timeIn = nowStr,
+                    schedId = scheduleId,
+                    employeeId = user.id
                 )
 
                 client.from("attendance").insert(newAttendance)
@@ -356,6 +358,83 @@ object SupabaseManager {
             }
         }
     }
+
+    private fun calculateStatus(scheduleStartTime: String, currentTime: Date): String {
+        return try {
+            val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+            val currentTimeStr = timeFormat.format(currentTime)
+
+            val start = timeFormat.parse(scheduleStartTime)
+            val current = timeFormat.parse(currentTimeStr)
+
+            if (start != null && current != null) {
+                val diff = current.time - start.time
+                if (diff > 15 * 60 * 1000) "Late" else "Present"
+            } else {
+                "Present"
+            }
+        } catch (e: Exception) {
+            "Present"
+        }
+    }
+
+    suspend fun verifyBleBeacon(scannedName: String): Result<String> {
+        val user = getCurrentUser() ?: return Result.failure(Exception("User not logged in"))
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val beaconData = client.from("ble_devices")
+                    .select {
+                        filter {
+                            eq("name", scannedName)
+                            eq("status", true)
+                        }
+                    }
+                    .decodeSingleOrNull<Map<String, String>>()
+                    ?: return@withContext Result.failure(Exception("Unknown or inactive BLE device"))
+
+                val beaconSectId = beaconData["sectId"]
+                    ?: return@withContext Result.failure(Exception("Beacon is not assigned to a section"))
+
+                val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+                val dayFormat = SimpleDateFormat("EEEE", Locale.US)
+                val now = Date()
+                val currentTimeStr = timeFormat.format(now)
+                val currentDay = dayFormat.format(now)
+
+                val schedules = client.from("schedule")
+                    .select { filter { eq("employeeId", user.id) } }
+                    .decodeList<Schedule>()
+
+                val currentSchedule = schedules.firstOrNull { sched ->
+                    try {
+                        if (!sched.weekday.equals(currentDay, ignoreCase = true)) return@firstOrNull false
+
+                        val start = timeFormat.parse(sched.startTime)
+                        val end = timeFormat.parse(sched.endTime)
+                        val current = timeFormat.parse(currentTimeStr)
+
+                        if (start != null && end != null && current != null) {
+                            return@firstOrNull current.after(start) && current.before(end)
+                        }
+                        false
+                    } catch (e: Exception) {
+                        false
+                    }
+                } ?: return@withContext Result.failure(Exception("You have no class scheduled right now."))
+
+                if (beaconSectId != currentSchedule.sectId) {
+                    return@withContext Result.failure(Exception("Wrong Room! You are in the room for a different section."))
+                }
+
+                return@withContext Result.success("Location Verified: Correct Section Room")
+
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
     suspend fun submitFeedback(title: String, message: String): Result<Boolean> {
         val user = getCurrentUser() ?: return Result.failure(Exception("User not logged in"))
 
@@ -364,7 +443,6 @@ object SupabaseManager {
                 val feedbackId = UUID.randomUUID().toString()
                 val dateCreated = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
 
-                // Create feedback object based on your database schema
                 val feedback = mapOf(
                     "feedbackId" to feedbackId,
                     "title" to title,
@@ -374,8 +452,6 @@ object SupabaseManager {
                 )
 
                 client.from("feedback").insert(feedback)
-
-                Log.d(TAG, "Feedback submitted successfully: $feedbackId")
                 Result.success(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Submit feedback error", e)

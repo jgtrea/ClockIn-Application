@@ -45,8 +45,7 @@ data class AttendanceItem(
     val status: String,
     val timeIn: String,
     val timeOut: String,
-    val date: String,
-    val sortTime: String
+    val date: String
 )
 
 @Composable
@@ -69,79 +68,42 @@ fun AttendanceScreen(navController: NavController) {
         val attendanceRecords = SupabaseManager.getAttendanceWithSchedule()
 
         if (attendanceRecords.isNotEmpty()) {
-            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
             val displayDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
-            val currentTimeStr = timeFormat.format(Date())
-            val currentTime = timeFormat.parse(currentTimeStr)
-
-            var items = attendanceRecords.map { record ->
+            val items = attendanceRecords.mapNotNull { record ->
                 val schedule = record.schedule
                 val subject = schedule?.subject ?: "Unknown"
                 val section = schedule?.sectionName ?: "Unknown"
-                val startTimeStr = schedule?.startTime ?: "00:00"
 
                 val formattedTitle = "$subject - $section"
 
                 val displayTimeIn = formatTime(record.timeIn)
                 val displayTimeOut = formatTime(record.timeOut)
 
-                val rawLabel = if (record.timeIn != null) {
-                    try {
+                if (record.timeIn != null) {
+                    val rawLabel = try {
                         val dateObj = isoFormat.parse(record.timeIn)
                         if (dateObj != null) displayDateFormat.format(dateObj) else "Recent"
                     } catch (e: Exception) {
                         "Recent"
                     }
+
+                    AttendanceItem(
+                        title = formattedTitle,
+                        status = record.status,
+                        timeIn = displayTimeIn,
+                        timeOut = displayTimeOut,
+                        date = rawLabel
+                    )
                 } else {
-                    try {
-                        val startTime = timeFormat.parse(startTimeStr)
-                        if (currentTime != null && startTime != null && currentTime.before(startTime)) {
-                            "Upcoming"
-                        } else {
-                            "Today"
-                        }
-                    } catch (e: Exception) {
-                        "Today"
-                    }
-                }
-
-                AttendanceItem(
-                    title = formattedTitle,
-                    status = record.status,
-                    timeIn = displayTimeIn,
-                    timeOut = displayTimeOut,
-                    date = rawLabel,
-                    sortTime = startTimeStr
-                )
-            }
-
-            items = items.sortedBy { it.sortTime }
-
-            val upcomingItems = items.filter { it.date == "Upcoming" }
-            if (upcomingItems.size > 1) {
-                val firstUpcoming = upcomingItems.first()
-                items = items.map { item ->
-                    if (item.date == "Upcoming" && item != firstUpcoming) {
-                        item.copy(date = "Today")
-                    } else {
-                        item
-                    }
+                    null
                 }
             }
 
             attendanceMap = items
                 .groupBy { it.date }
-                .toSortedMap { d1, d2 ->
-                    when {
-                        d1 == "Upcoming" -> -1
-                        d2 == "Upcoming" -> 1
-                        d1 == "Today" -> -1
-                        d2 == "Today" -> 1
-                        else -> d2.compareTo(d1)
-                    }
-                }
+                .toSortedMap(compareByDescending { it })
         } else {
             attendanceMap = emptyMap()
         }
@@ -207,8 +169,8 @@ fun AttendanceScreen(navController: NavController) {
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
-                    Text("Attendance", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text("View your time ins and time outs", color = Color.Gray, fontSize = 14.sp)
+                    Text("Attendance History", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("View your past clock-ins", color = Color.Gray, fontSize = 14.sp)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
@@ -216,7 +178,7 @@ fun AttendanceScreen(navController: NavController) {
 
                     if (isLoading) {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = PrimaryOrange)
+                            CircularProgressIndicator(color = ButtonOrange)
                         }
                     } else if (errorMessage != null) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
@@ -224,7 +186,7 @@ fun AttendanceScreen(navController: NavController) {
                         }
                     } else if (filteredAttendance.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                            Text(text = if(searchQuery.isNotEmpty()) "No matching records found." else "No attendance records found.", color = Color.Gray)
+                            Text(text = if(searchQuery.isNotEmpty()) "No matching records found." else "No attendance records yet.", color = Color.Gray)
                         }
                     } else {
                         filteredAttendance.forEach { (date, items) ->
@@ -282,7 +244,7 @@ fun AttendanceCard(item: AttendanceItem) {
             Box(
                 modifier = Modifier
                     .size(45.dp)
-                    .background(PrimaryOrange, RoundedCornerShape(8.dp)),
+                    .background(ButtonOrange, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

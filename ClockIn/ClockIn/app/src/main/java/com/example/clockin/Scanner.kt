@@ -136,6 +136,7 @@ fun ScannerScreen(navController: NavController) {
                             }
 
                             scope.launch {
+                                // Updated call to verifyQrCode in SupabaseManager
                                 val result = SupabaseManager.verifyQrCode(code, context)
                                 if (result.isSuccess) {
                                     NotificationManager.show(
