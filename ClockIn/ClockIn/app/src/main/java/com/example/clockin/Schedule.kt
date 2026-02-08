@@ -55,7 +55,8 @@ data class ScheduleItem(
     val displaySection: String,
     val day: String,
     val rawStartTime: String,
-    val isUpcoming: Boolean = false
+    val isUpcoming: Boolean = false,
+    val isHappeningNow: Boolean = false
 )
 
 @Composable
@@ -63,19 +64,17 @@ fun ScheduleScreen(navController: NavController) {
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
-
     var searchQuery by remember { mutableStateOf("") }
 
     val daysOfWeek = listOf("All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-
     var selectedDay by remember {
         val today = SimpleDateFormat("EEEE", Locale.US).format(Date())
         mutableStateOf(today)
     }
 
     var isDayDropdownExpanded by remember { mutableStateOf(false) }
-
     var scheduleMap by remember { mutableStateOf<Map<String, List<ScheduleItem>>>(emptyMap()) }
+    var happeningNowItem by remember { mutableStateOf<ScheduleItem?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var userName by remember { mutableStateOf("") }
 
@@ -84,14 +83,6 @@ fun ScheduleScreen(navController: NavController) {
         userName = user?.name ?: "User"
 
         val records = SupabaseManager.getEmployeeSchedule()
-        val sectionData = SupabaseManager.getAllSections()
-
-        val sectionLookup = sectionData.associate {
-            val id = it["sectId"]?.toString()?.trim() ?: ""
-            val name = it["sectionName"]?.toString() ?: ""
-            val year = it["yearLevel"]?.toString() ?: ""
-            id to "$year - $name"
-        }
 
         val dayFormat = SimpleDateFormat("EEEE", Locale.US)
         val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
@@ -101,11 +92,15 @@ fun ScheduleScreen(navController: NavController) {
 
         if (records.isNotEmpty()) {
             val items = records.map { record ->
-                val displayRoom = sectionLookup[record.sectId] ?: "Room Not Found"
+                val displayRoom = if (record.sectionDetails != null) {
+                    "${record.sectionDetails.yearLevel} - ${record.sectionDetails.sectionName}"
+                } else {
+                    record.sectionName
+                }
 
                 val isToday = record.weekday.equals(currentDay, ignoreCase = true)
-                val isFutureOrNow = record.endTime > currentTime
-                val isUpcoming = isToday && isFutureOrNow
+                val isHappening = isToday && currentTime >= record.startTime && currentTime <= record.endTime
+                val isUpcoming = isToday && record.startTime > currentTime
 
                 ScheduleItem(
                     title = record.subject,
@@ -114,12 +109,12 @@ fun ScheduleScreen(navController: NavController) {
                     displaySection = displayRoom,
                     day = record.weekday,
                     rawStartTime = record.startTime,
-                    isUpcoming = isUpcoming
+                    isUpcoming = isUpcoming,
+                    isHappeningNow = isHappening
                 )
             }
+            happeningNowItem = items.find { it.isHappeningNow }
             scheduleMap = items.groupBy { it.sectionHeader }.toSortedMap()
-        } else {
-            scheduleMap = emptyMap()
         }
         isLoading = false
     }
@@ -127,13 +122,10 @@ fun ScheduleScreen(navController: NavController) {
     val filteredSchedule = remember(scheduleMap, searchQuery, selectedDay) {
         scheduleMap.mapValues { (_, items) ->
             items.filter {
-                val matchesSearch = it.title.contains(searchQuery, true) ||
-                        it.details.contains(searchQuery, true)
+                val matchesSearch = it.title.contains(searchQuery, true) || it.details.contains(searchQuery, true)
                 val matchesDay = selectedDay == "All Days" || it.day.equals(selectedDay, ignoreCase = true)
                 matchesSearch && matchesDay
-            }.sortedBy { item ->
-                item.rawStartTime.padStart(5, '0')
-            }
+            }.sortedBy { it.rawStartTime.padStart(5, '0') }
         }.filterValues { it.isNotEmpty() }
     }
 
@@ -160,9 +152,7 @@ fun ScheduleScreen(navController: NavController) {
                     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
                     scope.launch {
                         SupabaseManager.signOut()
-                        navController.navigate("login") {
-                            popUpTo("home") { inclusive = true }
-                        }
+                        navController.navigate("login") { popUpTo("home") { inclusive = true } }
                     }
                 },
                 searchQuery = searchQuery,
@@ -183,13 +173,9 @@ fun ScheduleScreen(navController: NavController) {
                         .padding(16.dp)
                 ) {
                     Text("Schedules", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "View and track class schedules.",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
+                    Text("View and track class schedules.", color = Color.Gray, fontSize = 14.sp)
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(
@@ -216,18 +202,21 @@ fun ScheduleScreen(navController: NavController) {
                             daysOfWeek.forEach { day ->
                                 DropdownMenuItem(
                                     text = { Text(day) },
-                                    onClick = {
-                                        selectedDay = day
-                                        isDayDropdownExpanded = false
-                                    }
+                                    onClick = { selectedDay = day; isDayDropdownExpanded = false }
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
+                    if (!isLoading && happeningNowItem != null && (selectedDay == "All Days" || happeningNowItem?.day == selectedDay)) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Happening Now", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ScheduleCard(happeningNowItem!!)
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(thickness = 1.dp, color = Color.Black)
 
                     if (isLoading) {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -235,11 +224,7 @@ fun ScheduleScreen(navController: NavController) {
                         }
                     } else if (filteredSchedule.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                            val emptyMsg = when {
-                                searchQuery.isNotEmpty() -> "No matching schedules found."
-                                selectedDay != "All Days" -> "No schedules found for $selectedDay."
-                                else -> "No schedules found."
-                            }
+                            val emptyMsg = if (searchQuery.isNotEmpty()) "No matching schedules found." else "No schedules found."
                             Text(text = emptyMsg, color = Color.Gray)
                         }
                     } else {
@@ -254,21 +239,16 @@ fun ScheduleScreen(navController: NavController) {
 }
 
 fun formatScheduleTime(start: String, end: String): String {
-    fun cleanTime(t: String): String {
-        return if (t.count { it == ':' } == 2) t.substringBeforeLast(':') else t
-    }
+    fun cleanTime(t: String) = if (t.count { it == ':' } == 2) t.substringBeforeLast(':') else t
     return "${cleanTime(start)} - ${cleanTime(end)}"
 }
 
 @Composable
 fun ScheduleDateGroup(sectionName: String, items: List<ScheduleItem>) {
-    Column(modifier = Modifier.padding(vertical = 16.dp)) {
-        Text(
-            text = sectionName,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+    Column(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) {
+        if (sectionName.isNotEmpty()) {
+            Text(text = sectionName, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
+        }
 
         items.forEach { item ->
             ScheduleCard(item)
@@ -279,17 +259,16 @@ fun ScheduleDateGroup(sectionName: String, items: List<ScheduleItem>) {
 
 @Composable
 fun ScheduleCard(item: ScheduleItem) {
-    val borderColor = if (item.isUpcoming) ButtonOrange else Color(0xFFEEEEEE)
+    val borderColor = if (item.isHappeningNow || item.isUpcoming) ButtonOrange else Color(0xFFEEEEEE)
 
     Card(
-        modifier = Modifier.fillMaxWidth().border(1.dp, borderColor, RoundedCornerShape(12.dp)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
                     .size(45.dp)
@@ -309,14 +288,14 @@ fun ScheduleCard(item: ScheduleItem) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    if (item.isUpcoming) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (item.isHappeningNow || item.isUpcoming) {
                         Surface(
                             color = ButtonOrange.copy(alpha = 0.1f),
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
-                                text = "UPCOMING",
+                                text = if (item.isHappeningNow) "HAPPENING NOW" else "UPCOMING",
                                 color = ButtonOrange,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -325,17 +304,20 @@ fun ScheduleCard(item: ScheduleItem) {
                         }
                     }
                 }
-
                 Text(
                     text = "Grade ${item.displaySection}",
                     color = Color.DarkGray,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
-
                 Text(text = item.details, color = Color.Gray, fontSize = 12.sp)
                 if (item.day.isNotEmpty()) {
-                    Text(text = item.day, color = ButtonOrange, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        text = item.day,
+                        color = ButtonOrange,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
