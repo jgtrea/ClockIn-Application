@@ -25,9 +25,7 @@ import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
@@ -48,7 +46,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -69,23 +66,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 val PrimaryOrange = Color(0xFFFF7F66)
-
-@Serializable
-data class SectionItem(
-    @SerialName("sectionName") val sectionName: String = "",
-    @SerialName("yearLevel") val yearLevel: String = "",
-    val ble: String? = ""
-)
 
 @Composable
 fun DashboardScreen(
@@ -108,11 +95,7 @@ fun DashboardScreen(
     var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
     var isLoadingNotifs by remember { mutableStateOf(true) }
 
-    var sections by remember { mutableStateOf<List<SectionItem>>(emptyList()) }
-    var selectedDisplayTitle by remember { mutableStateOf("Select Section") }
-    var isDropdownExpanded by remember { mutableStateOf(false) }
-    var isLoadingSections by remember { mutableStateOf(true) }
-
+    var currentSectionTitle by remember { mutableStateOf("Checking Schedule...") }
     var userName by remember { mutableStateOf("User") }
 
     LaunchedEffect(Unit) {
@@ -155,15 +138,13 @@ fun DashboardScreen(
             isLoadingNotifs = false
         }
 
-        try {
-            val result = SupabaseManager.client.from("sections")
-                .select()
-                .decodeList<SectionItem>()
-            sections = result
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            isLoadingSections = false
+        val classInfo = SupabaseManager.getCurrentClassBeacon()
+        if (classInfo != null) {
+            currentSectionTitle = classInfo.sectionDisplay
+            onTargetBleChanged(classInfo.targetBeaconName)
+        } else {
+            currentSectionTitle = "No Active Class"
+            onTargetBleChanged("")
         }
     }
 
@@ -192,7 +173,7 @@ fun DashboardScreen(
                 .background(Color.White)
         ) {
             DashboardHeader(
-                userName = userName, // Pass the userName here
+                userName = userName,
                 onProfileClick = { navController.navigate("profile") },
                 onLogout = onLogout,
                 onPoliciesClick = { showPolicies = true },
@@ -214,48 +195,44 @@ fun DashboardScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
-                        // Section Dropdown
-                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                            OutlinedButton(
-                                onClick = { isDropdownExpanded = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                if (isLoadingSections) {
-                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                } else {
-                                    Text(selectedDisplayTitle)
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                            }
+                        SectionHeader(title = "Current Class", icon = Icons.Default.Schedule)
 
-                            DropdownMenu(
-                                expanded = isDropdownExpanded,
-                                onDismissRequest = { isDropdownExpanded = false },
-                                modifier = Modifier.fillMaxWidth(0.9f)
-                            ) {
-                                sections.forEach { section ->
-                                    val fullTitle = "${section.yearLevel} - ${section.sectionName}"
+                        InfoCard(
+                            title = "Section: $currentSectionTitle",
+                            text = if (deviceName.isNotEmpty()) "Monitoring Beacon: $deviceName"
+                            else if (currentSectionTitle.contains("No Active")) "Relax! No classes scheduled."
+                            else "Scanning for $currentSectionTitle..."
+                        )
 
-                                    DropdownMenuItem(
-                                        text = { Text(fullTitle) },
-                                        onClick = {
-                                            selectedDisplayTitle = fullTitle
-                                            isDropdownExpanded = false
-                                            onTargetBleChanged(section.ble ?: "")
-                                        }
-                                    )
-                                }
-                            }
-                        }
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         SectionHeader(title = "Attendance Proximity", icon = Icons.Default.Bluetooth)
-                        InfoCard(
-                            title = "Room: $selectedDisplayTitle",
-                            text = if (!isBeaconFound) "Searching for $deviceName..."
-                            else "Distance: %.2f meters".format(beaconDistance)
-                        )
+
+                        val statusColor = if (isBeaconFound) Color(0xFF4CAF50) else Color.DarkGray
+
+                        // --- TOO FAR UI LOGIC INTEGRATED HERE ---
+                        val proximityStatus = when {
+                            deviceName.isEmpty() -> "Waiting for active schedule..."
+                            !isBeaconFound && beaconDistance > 0 -> "Beacon too far (%.2f m). Move closer!".format(beaconDistance)
+                            !isBeaconFound -> "Searching for $deviceName..."
+                            else -> "Beacon Detected! Distance: %.2f m".format(beaconDistance)
+                        }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            border = CardDefaults.outlinedCardBorder()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = proximityStatus,
+                                    fontSize = 14.sp,
+                                    color = statusColor,
+                                    fontWeight = if (isBeaconFound) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 

@@ -327,7 +327,7 @@ fun ScheduleCard(item: ScheduleItem) {
                 }
 
                 Text(
-                    text = "Room: ${item.displaySection}",
+                    text = "Grade ${item.displaySection}",
                     color = Color.DarkGray,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium

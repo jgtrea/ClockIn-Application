@@ -73,6 +73,11 @@ data class NotificationItem(
     @SerialName("endNotif") val target: String? = "everyone"
 )
 
+data class ClassSession(
+    val sectionDisplay: String,
+    val targetBeaconName: String
+)
+
 object SupabaseManager {
     private const val TAG = "SupabaseManager"
     private const val SUPABASE_URL = "https://ckgvtzsslrxklmbkztxe.supabase.co"
@@ -268,21 +273,77 @@ object SupabaseManager {
         return withContext(Dispatchers.IO) {
             try {
                 client.from("schedule")
-                    .select { filter { eq("employeeId", user.id) } }
+                    .select(columns = Columns.list("*, sections(*)")) {
+                        filter { eq("employeeId", user.id) }
+                    }
                     .decodeList<Schedule>()
             } catch (e: Exception) {
+                Log.e(TAG, "getEmployeeSchedule Error: ${e.message}")
                 emptyList()
             }
         }
     }
 
-    suspend fun verifyQrCode(qrId: String, context: Context): Result<String> {
+    suspend fun getCurrentClassBeacon(): ClassSession? {
+        val user = getCurrentUser() ?: return null
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+                val dayFormat = SimpleDateFormat("EEEE", Locale.US)
+                val now = Date()
+                val currentTimeStr = timeFormat.format(now)
+                val currentDay = dayFormat.format(now)
+
+                val schedules = client.from("schedule")
+                    .select(columns = Columns.list("*, sections(*)")) {
+                        filter { eq("employeeId", user.id) }
+                    }
+                    .decodeList<Schedule>()
+
+                val currentSchedule = schedules.firstOrNull { sched ->
+                    try {
+                        val dbDay = sched.weekday.trim()
+                        if (!dbDay.equals(currentDay, ignoreCase = true)) return@firstOrNull false
+
+                        val start = timeFormat.parse(sched.startTime)
+                        val end = timeFormat.parse(sched.endTime)
+                        val current = timeFormat.parse(currentTimeStr)
+
+                        if (start != null && end != null && current != null) {
+                            return@firstOrNull current.after(start) && current.before(end)
+                        }
+                        false
+                    } catch (e: Exception) {
+                        false
+                    }
+                } ?: return@withContext null
+
+                val displaySectionName = currentSchedule.sectionDetails?.sectionName ?: "Unknown"
+                val sectionDisplay = "${currentSchedule.sectionDetails?.yearLevel ?: "?"} - $displaySectionName"
+
+                val targetBeaconName = displaySectionName.trim()
+
+                ClassSession(sectionDisplay, targetBeaconName)
+            } catch (e: Exception) {
+                Log.e("SupabaseManager", "Error in getCurrentClassBeacon", e)
+                null
+            }
+        }
+    }
+
+    suspend fun verifyQrCode(qrId: String, context: Context, isBeaconFound: Boolean): Result<String> {
         val user = getCurrentUser() ?: return Result.failure(Exception("User not logged in"))
 
         return withContext(Dispatchers.IO) {
             try {
                 if (!WifiChecker.isWifiEnabled(context) || !WifiChecker.isConnectedToAllowedWifi(context)) {
-                    return@withContext Result.failure(Exception("Invalid WiFi Network"))
+                    val requiredWifi = WifiChecker.getAllowedWifiSsid()
+                    return@withContext Result.failure(Exception("Wrong WiFi! You must be connected to: $requiredWifi"))
+                }
+
+                if (!isBeaconFound) {
+                    return@withContext Result.failure(Exception("Beacon not detected! Please move closer to the room's beacon."))
                 }
 
                 val qrData = client.from("qr")
@@ -295,12 +356,29 @@ object SupabaseManager {
                     .decodeSingleOrNull<Map<String, String>>()
                     ?: return@withContext Result.failure(Exception("Invalid or inactive QR Code"))
 
+                val currentScanCount = qrData["scanCount"]?.toIntOrNull() ?: 0
+
+                client.from("qr").update({
+                    set("scanCount", currentScanCount + 1)
+                }) {
+                    filter {
+                        eq("qrId", qrId)
+                    }
+                }
+
                 val scheduleId = qrData["schedId"] ?: return@withContext Result.failure(Exception("QR has no schedule linked"))
 
                 val schedule = client.from("schedule")
                     .select { filter { eq("schedId", scheduleId) } }
                     .decodeSingleOrNull<Schedule>()
                     ?: return@withContext Result.failure(Exception("Schedule not found"))
+
+                val dayFormat = SimpleDateFormat("EEEE", Locale.US)
+                val currentDay = dayFormat.format(Date())
+
+                if (!schedule.weekday.trim().equals(currentDay, ignoreCase = true)) {
+                    return@withContext Result.failure(Exception("Wrong Day! This schedule is for ${schedule.weekday}."))
+                }
 
                 if (schedule.employeeId != user.id) {
                     return@withContext Result.failure(Exception("Not your QR Code. This belongs to another employee."))
@@ -375,63 +453,6 @@ object SupabaseManager {
             }
         } catch (e: Exception) {
             "Present"
-        }
-    }
-
-    suspend fun verifyBleBeacon(scannedName: String): Result<String> {
-        val user = getCurrentUser() ?: return Result.failure(Exception("User not logged in"))
-
-        return withContext(Dispatchers.IO) {
-            try {
-                val beaconData = client.from("ble_devices")
-                    .select {
-                        filter {
-                            eq("name", scannedName)
-                            eq("status", true)
-                        }
-                    }
-                    .decodeSingleOrNull<Map<String, String>>()
-                    ?: return@withContext Result.failure(Exception("Unknown or inactive BLE device"))
-
-                val beaconSectId = beaconData["sectId"]
-                    ?: return@withContext Result.failure(Exception("Beacon is not assigned to a section"))
-
-                val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
-                val dayFormat = SimpleDateFormat("EEEE", Locale.US)
-                val now = Date()
-                val currentTimeStr = timeFormat.format(now)
-                val currentDay = dayFormat.format(now)
-
-                val schedules = client.from("schedule")
-                    .select { filter { eq("employeeId", user.id) } }
-                    .decodeList<Schedule>()
-
-                val currentSchedule = schedules.firstOrNull { sched ->
-                    try {
-                        if (!sched.weekday.equals(currentDay, ignoreCase = true)) return@firstOrNull false
-
-                        val start = timeFormat.parse(sched.startTime)
-                        val end = timeFormat.parse(sched.endTime)
-                        val current = timeFormat.parse(currentTimeStr)
-
-                        if (start != null && end != null && current != null) {
-                            return@firstOrNull current.after(start) && current.before(end)
-                        }
-                        false
-                    } catch (e: Exception) {
-                        false
-                    }
-                } ?: return@withContext Result.failure(Exception("You have no class scheduled right now."))
-
-                if (beaconSectId != currentSchedule.sectId) {
-                    return@withContext Result.failure(Exception("Wrong Room! You are in the room for a different section."))
-                }
-
-                return@withContext Result.success("Location Verified: Correct Section Room")
-
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
         }
     }
 

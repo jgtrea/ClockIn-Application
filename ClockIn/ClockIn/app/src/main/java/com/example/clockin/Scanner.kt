@@ -68,7 +68,10 @@ import java.util.concurrent.Executors
 import kotlin.math.min
 
 @Composable
-fun ScannerScreen(navController: NavController) {
+fun ScannerScreen(
+    navController: NavController,
+    isBeaconFound: Boolean
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -136,14 +139,14 @@ fun ScannerScreen(navController: NavController) {
                             }
 
                             scope.launch {
-                                // Updated call to verifyQrCode in SupabaseManager
-                                val result = SupabaseManager.verifyQrCode(code, context)
+                                val result = SupabaseManager.verifyQrCode(code, context, isBeaconFound)
                                 if (result.isSuccess) {
                                     NotificationManager.show(
                                         header = "Success ✓",
                                         message = result.getOrNull() ?: "Clock In/Out Recorded!",
                                         duration = 3000L
                                     )
+                                    navController.popBackStack()
                                 } else {
                                     NotificationManager.show(
                                         header = "Failed ✗",

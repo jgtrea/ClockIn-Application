@@ -1,13 +1,9 @@
 package com.example.clockin
 
 import android.Manifest
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -62,13 +58,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.github.jan.supabase.gotrue.handleDeeplinks
 import kotlinx.coroutines.launch
-import kotlin.math.pow
 
 val BrownHeader = Color(0xFFAF8373)
 val TextOrange = Color(0xFFFF725E)
@@ -78,12 +73,6 @@ val BorderGray = Color(0xFFE0E0E0)
 
 class MainActivity : ComponentActivity() {
     var targetBleName by mutableStateOf("")
-    private var currentScanCallback: ScanCallback? = null
-
-    private val bluetoothAdapter: BluetoothAdapter? by lazy {
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothManager.adapter
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,13 +87,17 @@ class MainActivity : ComponentActivity() {
             var isCheckingSession by remember { mutableStateOf(true) }
             var startDestination by remember { mutableStateOf("login") }
 
-            val locationPermissionLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestPermission()
-            ) { isGranted ->
-                if (!isGranted) {
+            var beaconDistance by remember { mutableDoubleStateOf(0.0) }
+            var isBeaconFound by remember { mutableStateOf(false) }
+
+            val permissionsLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                val allGranted = permissions.values.all { it }
+                if (!allGranted) {
                     NotificationManager.show(
-                        header = "Permission Required",
-                        message = "Location permission is needed to detect WiFi Name."
+                        header = "Permissions Required",
+                        message = "Bluetooth and Location are needed for attendance."
                     )
                 }
             }
@@ -119,33 +112,38 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val sessionRestored = SupabaseManager.loadSession()
-                if (sessionRestored) {
-                    startDestination = "home"
-                } else {
-                    startDestination = "login"
+                val permissionsToRequest = mutableListOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+                    permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
                 }
+
+                if (permissionsToRequest.any {
+                        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+                    }) {
+                    permissionsLauncher.launch(permissionsToRequest.toTypedArray())
+                }
+
+                val sessionRestored = SupabaseManager.loadSession()
+                startDestination = if (sessionRestored) "home" else "login"
                 isCheckingSession = false
             }
-
-            LaunchedEffect(Unit) {
-                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                }
-            }
-
-            var beaconDistance by remember { mutableDoubleStateOf(0.0) }
-            var isBeaconFound by remember { mutableStateOf(false) }
 
             LaunchedEffect(targetBleName) {
                 if (targetBleName.isNotEmpty()) {
                     beaconDistance = 0.0
                     isBeaconFound = false
 
-                    startScanning(targetBleName) { name, distance ->
+                    BleManager.startScanning(context, targetBleName) { _, distance, isWithinLimit ->
                         beaconDistance = distance
-                        isBeaconFound = true
+                        isBeaconFound = isWithinLimit
                     }
+                } else {
+                    BleManager.stopScanning(context)
                 }
             }
 
@@ -208,6 +206,7 @@ class MainActivity : ComponentActivity() {
                                 onLogout = {
                                     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
                                     scope.launch {
+                                        BleManager.stopScanning(context)
                                         SupabaseManager.signOut()
                                         navController.navigate("login") { popUpTo("home") { inclusive = true } }
                                     }
@@ -219,7 +218,10 @@ class MainActivity : ComponentActivity() {
                             ProfileDetailsScreen(onBack = { navController.popBackStack() })
                         }
                         composable("scan_qr") {
-                            ScannerScreen(navController = navController)
+                            ScannerScreen(
+                                navController = navController,
+                                isBeaconFound = isBeaconFound
+                            )
                         }
                         composable("schedule") {
                             ScheduleScreen(navController = navController)
@@ -233,47 +235,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startScanning(filterName: String, onUpdate: (String, Double) -> Unit) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-
-        val scanner = bluetoothAdapter?.bluetoothLeScanner ?: return
-
-        currentScanCallback?.let {
-            try {
-                scanner.stopScan(it)
-            } catch (e: Exception) {
-            }
-        }
-
-        val newCallback = object : ScanCallback() {
-            override fun onScanResult(callbackType: Int, result: ScanResult) {
-                if (ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    return
-                }
-
-                val name = result.device.name
-                if (name == filterName) {
-                    val distance = calculateDistance(result.rssi, -59)
-                    runOnUiThread { onUpdate(name ?: "Unknown", distance) }
-                }
-            }
-        }
-
-        currentScanCallback = newCallback
-
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build()
-
-        scanner.startScan(null, settings, newCallback)
-    }
-
-    private fun calculateDistance(rssi: Int, txPower: Int): Double {
-        if (rssi == 0) return -1.0
-        val n = 2.5
-        return 10.0.pow((txPower.toDouble() - rssi) / (10 * n))
+    override fun onDestroy() {
+        super.onDestroy()
+        BleManager.stopScanning(this)
     }
 }
 
@@ -365,8 +329,7 @@ fun LoginScreen(
                                 onValueChange = { emailInput = it },
                                 placeholder = { Text("Enter Email") },
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(), // <--- THIS LINE PREVENTS CRASHES
+                                    .fillMaxWidth(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                                 shape = RoundedCornerShape(8.dp),
                                 singleLine = true,

@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.wifi.WifiManager
 
 object WifiChecker {
+
+    // REPLACE WIFI WITH CORRECT SSID
     private const val ALLOWED_WIFI_SSID = "PLDTHOMEFIBR5G38e90"
 
     fun isWifiEnabled(context: Context): Boolean {
