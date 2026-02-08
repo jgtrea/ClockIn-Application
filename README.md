@@ -1,21 +1,23 @@
 # ClockIn - Employee Attendance System
 
-**ClockIn** is a modern Android application built with **Kotlin** and **Jetpack Compose** that streamlines employee attendance tracking. It utilizes **QR Code scanning**, **Bluetooth Low Energy (BLE) beacons**, and **WiFi SSID restrictions** to ensure secure and accurate logging of work hours.
+**ClockIn** is a modern Android application built with **Kotlin** and **Jetpack Compose** that streamlines employee attendance tracking. It utilizes a strict **3-Factor Verification System** (QR Code + WiFi + BLE Proximity) to ensure secure, location-verified, and accurate logging of work hours.
 
 ---
 
 ## Features
 
 * **Secure Authentication:** Employee login using Supabase Authentication.
-* **QR Code Clock-In/Out:**
-    * Scans secure QR codes to log attendance.
-    * **Smart Logic:** Automatically toggles between "Clock In" and "Clock Out".
+* **3-Factor Clock-In/Out:**
+    * **1. WiFi Restriction:** Clock-in is only allowed when connected to the specific Office WiFi network.
+    * **2. Dynamic BLE Proximity:** Automatically detects the specific Bluetooth Beacon assigned to the user's scheduled room.
+    * **3. QR Code Scanning:** Scans secure QR codes to finalize the log.
+* **Smart Attendance Logic:**
+    * **Auto-Toggle:** Automatically switches between "Clock In" and "Clock Out" based on current status.
     * **Late Detection:** Automatically marks attendance as "Late" if clocked in >15 minutes after start time.
-    * **Prevents Double Scanning:** Rejects scans if a session is already "Completed".
-* **Location Verification:**
-    * **WiFi Restriction:** Clock-in is only allowed when connected to a specific Office WiFi network.
-    * **BLE Proximity:** Detects nearby Bluetooth Beacons to verify room presence.
-* **Schedule & History:** View weekly schedules and past attendance records with status badges (Present/Late).
+    * **Duplicate Prevention:** Rejects scans if a session is already "Completed" for the day.
+* **Live Schedule Dashboard:**
+    * **Happening Now:** Highlights the current active class and automatically configures the scanner for that specific room's beacon.
+    * **Upcoming:** View weekly schedules sorted chronologically.
 * **Notifications:** Real-time announcements from the admin.
 * **Profile Management:** View employee details and logout capability.
 
@@ -29,7 +31,7 @@
 * **Networking:** Ktor Client & Kotlin Serialization
 * **Hardware Integration:**
     * **CameraX & ML Kit:** For high-speed QR code scanning.
-    * **Android Bluetooth LE:** For beacon proximity detection.
+    * **Android Bluetooth LE:** For targeted beacon scanning (Low Latency).
     * **WifiManager:** For SSID security checks.
 * **Concurrency:** Kotlin Coroutines (`Dispatchers.IO` for optimized performance).
 
@@ -74,11 +76,11 @@
 ## Configuration
 
 ### 1. WiFi Restriction
-The app strictly enforces clock-in only on a specific WiFi network. To change the allowed WiFi, open `com/example/clockin/WifiChecker.kt`:
+The app hard-codes the allowed WiFi SSID for security. To change the allowed WiFi, open `com/example/clockin/WifiChecker.kt`:
 
 ```kotlin
 object WifiChecker {
-    // Change this to your office WiFi name
+    // Change this to your office WiFi name (Case Sensitive)
     private const val ALLOWED_WIFI_SSID = "YOUR_OFFICE_WIFI_NAME" 
     ...
 }
