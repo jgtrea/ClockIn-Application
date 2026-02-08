@@ -150,6 +150,7 @@ body {
 	margin: 0 0 18px;
 	color: #f59e8a; 
 	font-size: 0.95rem;
+	line-height: 1.5;
 }
 
 .login-form label {
@@ -224,6 +225,23 @@ body {
 .signup a {
 	color: var(--accent);
 	text-decoration: none;
+}
+
+.back-link {
+	margin-top: 16px;
+	text-align: center;
+}
+
+.back-link a {
+	color: var(--accent);
+	text-decoration: none;
+	font-size: 0.9rem;
+}
+
+.btn-wrapper {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 }
 
 input:focus {

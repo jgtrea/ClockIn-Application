@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reset Password — ClockIn</title>
+  <link rel="stylesheet" href="../styles/login_ui.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="scripts/reset_password.js" defer></script>
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-right">
+      <div class="hero">
+        <div class="hero-content">
+          <div class="hero-title">CLOCK IN</div>
+          <p class="hero-sub">See what is going on with your business</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-left">
+      <div class="login-container">
+        <main>
+          <form class="login-form" id="resetPassForm" action="#" method="get" novalidate>
+            <h2 class="form-title">Enter Details</h2>
+            <p class="form-sub">Enter the code from your email and your new password.</p>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required placeholder="email@example.com" readonly>
+
+            <label for="code">6-Digit Code</label>
+            <input type="text" id="code" name="code" required placeholder="******" maxlength="6">
+
+            <label for="newPassword">New Password</label>
+            <input type="password" id="newPassword" name="newPassword" required placeholder="••••••••">
+
+            <label for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="••••••••">
+
+            <button type="submit" class="btn">Reset Password</button>
+
+            <div class="back-link">
+              <a href="../login.html">← Back to Login</a>
+            </div>
+          </form>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('email').value = sessionStorage.getItem('resetEmail') || '';
+  </script>
+</body>
+</html>
