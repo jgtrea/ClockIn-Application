@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (event === 'SIGNED_IN' && session) {
             window.location.reload();
           } else if (event === 'SIGNED_OUT') {
-            window.top.location.href = '../Login_Path/login.html';
+            window.top.location.href = '../../index.html';
           }
         });
       } catch (err) {
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('userEmail');
         localStorage.removeItem('userId');
         localStorage.removeItem('userType');
-        window.top.location.href = '../Login_Path/login.html';
+        window.top.location.href = '../../index.html';
       };
     }
   }

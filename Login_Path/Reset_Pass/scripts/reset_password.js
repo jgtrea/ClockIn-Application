@@ -6,29 +6,47 @@ const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 const resetCodeForm = document.getElementById('resetCodeForm');
 if (resetCodeForm) {
-  resetCodeForm.addEventListener('submit', async (e) => {
+  resetCodeForm.addEventListener('submit', function(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value.trim();
+    const email = document.getElementById('email');
     const btn = resetCodeForm.querySelector('button');
     
-    if (!email) return alert('Please enter your email');
+    if (!email.value.trim() || !email.value.includes('@')) {
+      email.style.borderColor = '#dc3545';
+      const msg = document.createElement('p');
+      msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 0 0;';
+      msg.textContent = 'Enter a valid email.';
+      email.parentNode.insertBefore(msg, email.nextSibling);
+      return;
+    }
     
-    sessionStorage.setItem('resetEmail', email);
+    email.style.borderColor = '';
+    const existingMsg = email.nextElementSibling;
+    if (existingMsg && existingMsg.tagName === 'P') existingMsg.remove();
+    
+    sessionStorage.setItem('resetEmail', email.value.trim());
     btn.disabled = true;
     btn.textContent = 'Sending...';
     
-    const { error } = await supabaseClient.auth.signInWithOtp({
-      email: email,
+    supabaseClient.auth.signInWithOtp({
+      email: email.value.trim(),
       options: { shouldCreateUser: false }
+    }).then(function(response) {
+      const error = response.error;
+      if (error) {
+        email.style.borderColor = '#dc3545';
+        const msg = document.createElement('p');
+        msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 0 0;';
+        msg.textContent = error.message;
+        email.parentNode.insertBefore(msg, email.nextSibling);
+        btn.disabled = false;
+        btn.textContent = 'Send Code';
+      } else {
+        setTimeout(function() {
+          window.location.href = 'code_sent.html';
+        }, 1000);
+      }
     });
-    
-    if (error) return alert('Failed to send code: ' + error.message);
-    
-    document.getElementById('codeSection').style.display = 'block';
-    document.getElementById('sendBtn').style.display = 'none';
-    document.getElementById('proceedBtn').style.display = 'block';
-    document.getElementById('userEmail').textContent = email;
-    alert('Code sent! Check your email.');
   });
 }
 
@@ -36,31 +54,91 @@ const resetPassForm = document.getElementById('resetPassForm');
 if (resetPassForm) {
   document.getElementById('email').value = sessionStorage.getItem('resetEmail') || '';
   
-  resetPassForm.addEventListener('submit', async (e) => {
+  resetPassForm.addEventListener('submit', function(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value.trim();
-    const code = document.getElementById('code').value.trim();
-    const newPass = document.getElementById('newPassword').value;
-    const confirmPass = document.getElementById('confirmPassword').value;
     const btn = resetPassForm.querySelector('button');
+    const newPass = document.getElementById('newPassword');
+    const confirmPass = document.getElementById('confirmPassword');
+    const email = document.getElementById('email').value.trim();
     
-    if (!code || !newPass || !confirmPass) return alert('Fill all fields');
-    if (newPass !== confirmPass) return alert('Passwords do not match');
-    if (newPass.length < 8) return alert('Password must be at least 8 characters');
+    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(newPass.value);
+    const hasNumber = /\d/.test(newPass.value);
+    const isLongEnough = newPass.value.length >= 8;
+    
+    if (!hasSymbol || !hasNumber || !isLongEnough) {
+      newPass.style.borderColor = '#dc3545';
+      const msg = document.createElement('p');
+      msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 0 0;';
+      msg.textContent = 'Password must contain: a symbol, a number, at least 8 text long';
+      newPass.parentNode.insertBefore(msg, newPass.nextSibling);
+      return;
+    }
+    
+    if (newPass.value !== confirmPass.value) {
+      newPass.style.borderColor = '';
+      confirmPass.style.borderColor = '#dc3545';
+      const msg = document.createElement('p');
+      msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 0 0;';
+      msg.textContent = 'Passwords do not match';
+      confirmPass.parentNode.insertBefore(msg, confirmPass.nextSibling);
+      return;
+    }
+    
+    newPass.style.borderColor = '';
+    confirmPass.style.borderColor = '';
+    const existingMsg = confirmPass.nextElementSibling;
+    if (existingMsg && existingMsg.tagName === 'P') existingMsg.remove();
     
     btn.disabled = true;
     btn.textContent = 'Verifying...';
     
-    const { error: verifyError } = await supabaseClient.auth.verifyOtp({ email, token: code, type: 'email' });
-    if (verifyError) return alert('Invalid code'), btn.disabled = false, btn.textContent = 'Reset Password';
-    
-    btn.textContent = 'Resetting...';
-    const { error: updateError } = await supabaseClient.auth.updateUser({ password: newPass });
-    
-    if (updateError) return alert('Failed to reset: ' + updateError.message), btn.disabled = false;
-    
-    sessionStorage.removeItem('resetEmail');
-    alert('Password reset! Login with new password.');
-    window.location.href = '../login.html';
+    supabaseClient.auth.verifyOtp({ email: email, token: confirmPass.value, type: 'email' })
+      .then(function(verifyResponse) {
+        const verifyError = verifyResponse.error;
+        if (verifyError) {
+          confirmPass.style.borderColor = '#dc3545';
+          const msg = document.createElement('p');
+          msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 0 0;';
+          msg.textContent = 'Invalid code';
+          confirmPass.parentNode.insertBefore(msg, confirmPass.nextSibling);
+          btn.disabled = false;
+          btn.textContent = 'Reset Password';
+          return;
+        }
+        
+        return supabaseClient.auth.updateUser({ password: newPass.value })
+          .then(function(updateResponse) {
+            const updateError = updateResponse.error;
+            if (updateError) {
+              const msg = document.createElement('p');
+              msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 0 0;';
+              msg.textContent = updateError.message;
+              btn.parentNode.insertBefore(msg, btn);
+              btn.disabled = false;
+              btn.textContent = 'Reset Password';
+              return;
+            }
+            
+            sessionStorage.removeItem('resetEmail');
+            showMessage('Password reset! Redirecting...', false);
+            setTimeout(function() {
+              window.location.href = '/index.html';
+            }, 1500);
+          });
+      });
   });
+}
+
+function showMessage(msg, isError) {
+  const existing = document.getElementById('formMessage');
+  if (existing) existing.remove();
+  
+  const msgEl = document.createElement('div');
+  msgEl.id = 'formMessage';
+  const color = isError ? '#dc3545' : '#28a745';
+  msgEl.style.cssText = 'color: ' + color + '; font-size: 0.875rem; margin-top: 8px;';
+  msgEl.textContent = msg;
+  
+  const btn = resetPassForm.querySelector('button');
+  if (btn) btn.insertAdjacentElement('afterend', msgEl);
 }

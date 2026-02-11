@@ -74,7 +74,7 @@ async function logout() {
   localStorage.removeItem('userEmail');
   localStorage.removeItem('userId');
   localStorage.removeItem('userType');
-  window.location.href = '../../Login_Path/login.html';
+  window.location.href = '../../index.html';
 }
 
 function setupProfileMenu() {

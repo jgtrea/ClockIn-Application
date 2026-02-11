@@ -72,7 +72,7 @@ const authentification = {
   },
 
   redirectToLogin() {
-    window.location.href = '../Login_Path/login.html';
+    window.location.href = '../index.html';
   },
 
   async signOut() {

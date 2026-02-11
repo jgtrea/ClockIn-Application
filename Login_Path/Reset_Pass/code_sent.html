@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Code Sent — ClockIn</title>
+  <link rel="stylesheet" href="../styles/login_ui.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-right">
+      <div class="hero">
+        <div class="hero-content">
+          <div class="hero-title">CLOCK IN</div>
+          <p class="hero-sub">See what is going on with your business</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-left">
+      <div class="login-container">
+        <main>
+          <div class="login-form" style="text-align: center;">
+            <p class="form-title" style="color: #28a745; margin-bottom: 8px;">Code Sent</p>
+            <p class="form-sub" style="color: #000;">We sent a 6-digit code to <span id="userEmail"></span>.<br>Please enter it on the next screen.</p>
+            
+            <a href="reset_pass.html" class="btn" style="display: inline-block; width: auto; padding: 12px 40px; text-decoration: none;">Proceed to Reset</a>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('userEmail').textContent = sessionStorage.getItem('resetEmail') || '';
+  </script>
+</body>
+</html>

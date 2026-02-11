@@ -6,7 +6,7 @@
   <title>Reset Code — ClockIn</title>
   <link rel="stylesheet" href="../styles/login_ui.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="scripts/reset_password.js" defer></script>
+  <script type="module" src="scripts/otp_email.js" defer></script>
 </head>
 <body>
   <div class="auth-wrapper">
@@ -23,41 +23,21 @@
       <div class="login-container">
         <main>
           <form class="login-form" id="resetCodeForm" action="#" method="get" novalidate>
-            <h2 class="form-title">Forgot Password?</h2>
-            <p class="form-sub">Enter your email to receive a login code</p>
+            <h2 class="form-title" style="text-align: center;">Request OTP Code</h2>
+            <p class="form-sub" style="text-align: center;">Enter your email to receive a login code.</p>
 
             <label for="email">Email</label>
             <input type="email" id="email" name="email" required placeholder="email@example.com">
 
-            <div id="codeSection" style="display:none;">
-              <label for="code">6-Digit Code</label>
-              <input type="text" id="code" name="code" placeholder="******" maxlength="6">
-              <p class="form-sub">We sent a code to <span id="userEmail"></span></p>
-            </div>
-
-            <div class="btn-wrapper">
-              <button type="submit" class="btn" id="sendBtn">Send Code</button>
-              <button type="button" class="btn" id="proceedBtn" style="display:none;">Proceed to Reset</button>
-            </div>
+            <button type="submit" class="btn" id="sendBtn">Send Code</button>
 
             <div class="back-link">
-              <a href="../login.html">Back to Login</a>
+              <a href="/index.html">Back to Login</a>
             </div>
           </form>
         </main>
       </div>
     </div>
   </div>
-
-  <script>
-    const codeSection = document.getElementById('codeSection');
-    const sendBtn = document.getElementById('sendBtn');
-    const proceedBtn = document.getElementById('proceedBtn');
-    const userEmailSpan = document.getElementById('userEmail');
-    
-    proceedBtn.addEventListener('click', () => {
-      window.location.href = 'reset_pass.html';
-    });
-  </script>
 </body>
 </html>

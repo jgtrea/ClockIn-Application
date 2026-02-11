@@ -1,0 +1,107 @@
+const supabaseUrl = 'https://ckgvtzsslrxklmbkztxe.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo';
+
+const { createClient } = supabase;
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+const resetPassForm = document.getElementById('resetPassForm');
+if (resetPassForm) {
+  document.getElementById('email').value = sessionStorage.getItem('resetEmail') || '';
+  
+  resetPassForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = resetPassForm.querySelector('button');
+    const newPass = document.getElementById('newPassword');
+    const confirmPass = document.getElementById('confirmPassword');
+    const email = document.getElementById('email').value.trim();
+    
+    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(newPass.value);
+    const hasNumber = /\d/.test(newPass.value);
+    const isLongEnough = newPass.value.length >= 8;
+    
+    if (!hasSymbol || !hasNumber || !isLongEnough) {
+      newPass.style.borderColor = '#dc3545';
+      const msg = document.createElement('p');
+      msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
+      msg.textContent = 'Password must contain: a symbol, a number, at least 8 text long';
+      newPass.parentNode.insertBefore(msg, newPass.nextSibling);
+      return;
+    }
+    
+    if (newPass.value !== confirmPass.value) {
+      newPass.style.borderColor = '';
+      confirmPass.style.borderColor = '#dc3545';
+      const msg = document.createElement('p');
+      msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
+      msg.textContent = 'Passwords do not match';
+      confirmPass.parentNode.insertBefore(msg, confirmPass.nextSibling);
+      return;
+    }
+    
+    newPass.style.borderColor = '';
+    confirmPass.style.borderColor = '';
+    const existingMsg = confirmPass.nextElementSibling;
+    if (existingMsg && existingMsg.tagName === 'P') existingMsg.remove();
+    
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+    
+    verifyOTPAndReset(email, confirmPass.value, newPass.value, btn);
+  });
+}
+
+function verifyOTPAndReset(email, code, newPassword, btn) {
+  supabaseClient.auth.verifyOtp({ email: email, token: code, type: 'email' })
+    .then(function(verifyResponse) {
+      const verifyError = verifyResponse.error;
+      if (verifyError) {
+        const confirmPass = document.getElementById('confirmPass');
+        confirmPass.style.borderColor = '#dc3545';
+        const msg = document.createElement('p');
+        msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
+        msg.textContent = 'Invalid code';
+        confirmPass.parentNode.insertBefore(msg, confirmPass.nextSibling);
+        btn.disabled = false;
+        btn.textContent = 'Reset Password';
+        return;
+      }
+      
+      updatePassword(email, newPassword, btn);
+    });
+}
+
+function updatePassword(email, newPassword, btn) {
+  supabaseClient.auth.updateUser({ password: newPassword })
+    .then(function(updateResponse) {
+      const updateError = updateResponse.error;
+      if (updateError) {
+        const msg = document.createElement('p');
+        msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
+        msg.textContent = updateError.message;
+        btn.parentNode.insertBefore(msg, btn);
+        btn.disabled = false;
+        btn.textContent = 'Reset Password';
+        return;
+      }
+      
+      sessionStorage.removeItem('resetEmail');
+      showMessage('Password reset! Redirecting...', false);
+      setTimeout(function() {
+        window.location.href = '/index.html';
+      }, 1500);
+    });
+}
+
+function showMessage(msg, isError) {
+  const existing = document.getElementById('formMessage');
+  if (existing) existing.remove();
+  
+  const msgEl = document.createElement('div');
+  msgEl.id = 'formMessage';
+  const color = isError ? '#dc3545' : '#28a745';
+  msgEl.style.cssText = 'color: ' + color + '; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
+  msgEl.textContent = msg;
+  
+  const btn = resetPassForm.querySelector('button');
+  if (btn) btn.insertAdjacentElement('afterend', msgEl);
+}

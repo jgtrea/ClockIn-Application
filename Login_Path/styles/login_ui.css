@@ -195,7 +195,7 @@ body {
 .forgot {
 	font-size: 0.9rem;
 	color: var(--accent);
-	text-decoration: none;
+	text-decoration: underline;
 }
 
 .btn {
@@ -234,7 +234,7 @@ body {
 
 .back-link a {
 	color: var(--accent);
-	text-decoration: none;
+	text-decoration: underline;
 	font-size: 0.9rem;
 }
 
