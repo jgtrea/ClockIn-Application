@@ -1,5 +1,3 @@
-// Supabase Configuration
-
 const supabaseUrl = 'https://ckgvtzsslrxklmbkztxe.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo';
 
@@ -88,5 +86,3 @@ async function rpc(functionName, params = {}) {
   if (error) throw error;
   return data;
 }
-
-console.log('Supabase client initialized');

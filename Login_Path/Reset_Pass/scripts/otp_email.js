@@ -1,52 +1,60 @@
-const supabaseUrl = 'https://ckgvtzsslrxklmbkztxe.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo';
+function clearError(input) {
+  input.style.borderColor = '';
+  const existing = input.nextElementSibling;
+  if (existing && existing.tagName === 'P' && existing.style.color === 'rgb(220, 53, 69)') {
+    existing.remove();
+  }
+}
 
-const { createClient } = supabase;
-const supabaseClient = createClient(supabaseUrl, supabaseKey);
+function showError(input, message) {
+  clearError(input);
+  const msg = document.createElement('p');
+  msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
+  msg.textContent = message;
+  input.parentNode.insertBefore(msg, input.nextSibling);
+}
 
 const resetCodeForm = document.getElementById('resetCodeForm');
 if (resetCodeForm) {
+  const email = document.getElementById('email');
+  
+  email.addEventListener('input', function() {
+    clearError(email);
+  });
+  
   resetCodeForm.addEventListener('submit', function(e) {
     e.preventDefault();
-    const email = document.getElementById('email');
     const btn = resetCodeForm.querySelector('button');
     
     if (!email.value.trim() || !email.value.includes('@')) {
-      email.style.borderColor = '#dc3545';
-      const msg = document.createElement('p');
-      msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
-      msg.textContent = 'Enter a valid email.';
-      email.parentNode.insertBefore(msg, email.nextSibling);
+      showError(email, 'Enter a valid email.');
       return;
     }
     
-    email.style.borderColor = '';
-    const existingMsg = email.nextElementSibling;
-    if (existingMsg && existingMsg.tagName === 'P') existingMsg.remove();
-    
+    clearError(email);
     sessionStorage.setItem('resetEmail', email.value.trim());
     btn.disabled = true;
     btn.textContent = 'Sending...';
     
-    sendOTPEmail(email.value.trim());
+    sendOTPEmail(email.value.trim(), btn);
   });
 }
 
-function sendOTPEmail(email) {
-  const btn = resetCodeForm.querySelector('button');
+function sendOTPEmail(email, btn) {
+  const supabase = window.supabaseClient;
   
-  supabaseClient.auth.signInWithOtp({
+  supabase.auth.signInWithOtp({
     email: email,
     options: { shouldCreateUser: false }
   }).then(function(response) {
     const error = response.error;
     if (error) {
-      const emailInput = document.getElementById('email');
-      emailInput.style.borderColor = '#dc3545';
-      const msg = document.createElement('p');
-      msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
-      msg.textContent = error.message;
-      emailInput.parentNode.insertBefore(msg, emailInput.nextSibling);
+      const errorMsg = error.message.toLowerCase();
+      if (errorMsg.includes('rate limit') || errorMsg.includes('too many') || errorMsg.includes('limit')) {
+        showError(document.getElementById('email'), 'Password reset limit reached.');
+      } else {
+        showError(document.getElementById('email'), 'Email does not exist.');
+      }
       btn.disabled = false;
       btn.textContent = 'Send Code';
     } else {
@@ -55,18 +63,4 @@ function sendOTPEmail(email) {
       }, 1000);
     }
   });
-}
-
-function showMessage(msg, isError) {
-  const existing = document.getElementById('formMessage');
-  if (existing) existing.remove();
-  
-  const msgEl = document.createElement('div');
-  msgEl.id = 'formMessage';
-  const color = isError ? '#dc3545' : '#28a745';
-  msgEl.style.cssText = 'color: ' + color + '; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
-  msgEl.textContent = msg;
-  
-  const btn = resetPassForm.querySelector('button');
-  if (btn) btn.insertAdjacentElement('afterend', msgEl);
 }

@@ -1,15 +1,7 @@
-console.log('scripts/login.js loaded');
-
-const supabaseUrl = 'https://ckgvtzsslrxklmbkztxe.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo';
-
-const { createClient } = supabase;
-const supabaseClient = createClient(supabaseUrl, supabaseKey);
-
-window.supabaseClient = supabaseClient;
-
 async function getUserIdByEmail(email) {
-  const { data: adminData, error: adminError } = await supabaseClient
+  const supabase = window.supabaseClient;
+  
+  const { data: adminData, error: adminError } = await supabase
     .from('user_admin_data')
     .select('adminId, email')
     .eq('email', email)
@@ -19,7 +11,7 @@ async function getUserIdByEmail(email) {
     return { id: adminData.adminId, type: 'admin' };
   }
   
-  const { data: empData, error: empError } = await supabaseClient
+  const { data: empData, error: empError } = await supabase
     .from('user_employee_data')
     .select('employeeId, email')
     .eq('email', email)
@@ -33,8 +25,10 @@ async function getUserIdByEmail(email) {
 }
 
 async function checkExistingSession() {
+  const supabase = window.supabaseClient;
+  
   try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     if (session && session.user) {
       const email = session.user.email;
       const userInfo = await getUserIdByEmail(email);
@@ -50,9 +44,9 @@ async function checkExistingSession() {
 }
 
 function setupAuthListener() {
-  return supabaseClient.auth.onAuthStateChanged(async (event, session) => {
-    console.log('onAuthStateChanged ->', event, session);
-
+  const supabase = window.supabaseClient;
+  
+  return supabase.auth.onAuthStateChanged(async (event, session) => {
     if (session && session.user) {
       try {
         const userInfo = await getUserIdByEmail(session.user.email);
@@ -93,7 +87,9 @@ if (loginForm) {
     const remember = rememberCheckbox ? rememberCheckbox.checked : false;
 
     try {
-      const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+      const supabase = window.supabaseClient;
+      
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
