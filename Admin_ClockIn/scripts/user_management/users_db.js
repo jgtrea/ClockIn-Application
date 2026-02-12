@@ -404,27 +404,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.toggleFilterMenu = function() {
     const filterMenu = document.getElementById('filterMenu');
-    const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
-    const isOpen = filterMenu.style.display === 'block';
+    const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+    const isOpen = filterMenu && filterMenu.style.display === 'block';
     
-    filterMenu.style.display = isOpen ? 'none' : 'block';
-    document.getElementById('sortMenu').style.display = 'none';
+    if (filterMenu) {
+      filterMenu.style.display = isOpen ? 'none' : 'block';
+    }
+    const sortMenu = document.getElementById('sortMenu');
+    if (sortMenu) {
+      sortMenu.style.display = 'none';
+    }
     
-    if (filterBtn) {
-      filterBtn.classList.toggle('active', !isOpen);
+    if (filterWrapper) {
+      filterWrapper.classList.toggle('active', !isOpen);
     }
   };
 
   window.toggleSortMenu = function() {
     const sortMenu = document.getElementById('sortMenu');
-    const sortBtn = document.querySelector('.table-filter-wrapper:last-child .filter-btn');
-    const isOpen = sortMenu.style.display === 'block';
+    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+    const isOpen = sortMenu && sortMenu.style.display === 'block';
     
-    sortMenu.style.display = isOpen ? 'none' : 'block';
-    document.getElementById('filterMenu').style.display = 'none';
+    if (sortMenu) {
+      sortMenu.style.display = isOpen ? 'none' : 'block';
+    }
+    const filterMenu = document.getElementById('filterMenu');
+    if (filterMenu) {
+      filterMenu.style.display = 'none';
+    }
     
-    if (sortBtn) {
-      sortBtn.classList.toggle('active', !isOpen);
+    if (sortWrapper) {
+      sortWrapper.classList.toggle('active', !isOpen);
     }
   };
 
@@ -499,7 +509,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         <option value="createdAt">Date Created</option>
       </select>
       <span>:</span>
-      <input type="text" class="filter-value-input" placeholder="asc or desc">
+      <select class="filter-column-select">
+        <option value="asc">Ascending</option>
+        <option value="desc">Descending</option>
+      </select>
       <button class="remove-filter-btn" onclick="this.parentElement.remove()">
         <span class="material-symbols-outlined">close</span>
       </button>
@@ -547,8 +560,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     Paginate.setPage(1);
     toggleFilterMenu();
     
-    const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
-    if (filterBtn) filterBtn.classList.remove('active');
+    const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+    if (filterWrapper) filterWrapper.classList.remove('active');
+    
+    renderUsers();
   };
 
   window.applySort = function() {
@@ -556,13 +571,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sorts = [];
     
     sortRows.forEach(row => {
-      const select = row.querySelector('select');
-      const input = row.querySelector('input');
-      if (select && input && input.value.trim()) {
-        const orderValue = input.value.trim().toLowerCase();
+      const selects = row.querySelectorAll('select');
+      if (selects.length >= 2) {
+        const column = selects[0].value;
+        const orderValue = selects[1].value;
         sorts.push({
-          column: select.value,
-          ascending: orderValue === 'asc' || orderValue === 'ascending'
+          column: column,
+          ascending: orderValue === 'asc'
         });
       }
     });
@@ -590,8 +605,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     Paginate.setPage(1);
-    renderUsers();
     toggleSortMenu();
+    
+    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+    if (sortWrapper) sortWrapper.classList.remove('active');
+    
+    renderUsers();
   };
 
   window.clearFilters = function() {
