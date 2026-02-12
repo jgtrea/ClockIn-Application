@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initializeAttendance() {
   const supabase = window.supabaseClient;
   
-  PaginationManager.init({
+  Paginate.init({
     containerId: 'attendance_db',
     itemsPerPage: 10,
     onPageChange: () => render()
@@ -40,7 +40,7 @@ function initializeAttendance() {
     supabaseClient: supabase,
     primaryKey: 'employeeId',
     render: () => {
-      PaginationManager.setTotalItems(DataTableManager.getFilteredData().length);
+      Paginate.setTotalItems(DataTableManager.getFilteredData().length);
       render();
     }
   });
@@ -96,7 +96,7 @@ async function loadUsersFromDB() {
     
     DataTableManager.setSearchTerm('');
     DataTableManager.applySearch(['name', 'email']);
-    PaginationManager.setTotalItems(userAttendance.length);
+    Paginate.setTotalItems(userAttendance.length);
     render();
   } catch (err) {
     console.error('Error loading data:', err);
@@ -110,7 +110,7 @@ window.performAttendanceSearch = function(term) {
 };
 
 function render() {
-  const pageData = PaginationManager.getPageData(DataTableManager.getFilteredData());
+  const pageData = Paginate.getPageData(DataTableManager.getFilteredData());
   
   attendanceList.innerHTML = '';
   
@@ -173,7 +173,7 @@ function render() {
 }
 
 function updatePagination() {
-  const totalPages = PaginationManager.getTotalPages();
+  const totalPages = Paginate.getTotalPages();
   const pagination = document.getElementById('pagination');
   const pageInfo = document.getElementById('pageInfo');
   const prevBtn = document.getElementById('prevBtn');
@@ -183,18 +183,18 @@ function updatePagination() {
   
   if (totalPages > 1) {
     pagination.style.display = 'block';
-    if (pageInfo) pageInfo.textContent = `Page ${PaginationManager.getCurrentPage()} of ${totalPages}`;
-    if (prevBtn) prevBtn.disabled = PaginationManager.getCurrentPage() === 1;
-    if (nextBtn) nextBtn.disabled = PaginationManager.getCurrentPage() === totalPages;
-    if (prevBtn) prevBtn.style.opacity = PaginationManager.getCurrentPage() === 1 ? '0.5' : '1';
-    if (nextBtn) nextBtn.style.opacity = PaginationManager.getCurrentPage() === totalPages ? '0.5' : '1';
+    if (pageInfo) pageInfo.textContent = `Page ${Paginate.getCurrentPage()} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = Paginate.getCurrentPage() === 1;
+    if (nextBtn) nextBtn.disabled = Paginate.getCurrentPage() === totalPages;
+    if (prevBtn) prevBtn.style.opacity = Paginate.getCurrentPage() === 1 ? '0.5' : '1';
+    if (nextBtn) nextBtn.style.opacity = Paginate.getCurrentPage() === totalPages ? '0.5' : '1';
   } else {
     pagination.style.display = 'none';
   }
 }
 
 function changePage(direction) {
-  PaginationManager.changePage(direction);
+  Paginate.changePage(direction);
 }
 
 function toggleUser(uid) {
@@ -371,7 +371,7 @@ function sortAttendance(field) {
     return sortAscending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
   });
   sortAscending = !sortAscending;
-  PaginationManager.setPage(1);
+  Paginate.setPage(1);
   render();
 }
 

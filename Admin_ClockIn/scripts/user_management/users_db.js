@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let filteredUsers = [];
   let searchTerm = '';
 
-  PaginationManager.init({
+  Paginate.init({
     containerId: 'users_db',
     itemsPerPage: 10,
     onPageChange: () => renderUsers()
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     supabaseClient: supabase,
     primaryKey: 'employeeId',
     render: () => {
-      PaginationManager.setTotalItems(DataTableManager.getFilteredData().length);
+      Paginate.setTotalItems(DataTableManager.getFilteredData().length);
       renderUsers();
     }
   });
@@ -43,13 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         return username.includes(searchTerm.toLowerCase());
       });
     }
-    PaginationManager.setTotalItems(filteredUsers.length);
-    PaginationManager.setPage(1);
+    Paginate.setTotalItems(filteredUsers.length);
+    Paginate.setPage(1);
     renderUsers();
   };
 
   function renderUsers() {
-    const pageData = PaginationManager.getPageData(DataTableManager.getFilteredData());
+    const pageData = Paginate.getPageData(DataTableManager.getFilteredData());
     const totalItems = DataTableManager.getFilteredData().length;
     
     usersList.innerHTML = '';
@@ -167,8 +167,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     filteredUsers = [...users];
     DataTableManager.setSearchTerm('');
     DataTableManager.applySearch(['name', 'email', 'employment']);
-    PaginationManager.setTotalItems(users.length);
-    PaginationManager.setPage(1);
+    Paginate.setTotalItems(users.length);
+    Paginate.setPage(1);
   }
 
   window.editUser = (uid) => {
@@ -543,8 +543,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     DataTableManager.setSearchTerm('');
     DataTableManager.applySearch(['name', 'email', 'employment']);
-    PaginationManager.setTotalItems(filteredUsers.length);
-    PaginationManager.setPage(1);
+    Paginate.setTotalItems(filteredUsers.length);
+    Paginate.setPage(1);
     toggleFilterMenu();
     
     const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
     
-    PaginationManager.setPage(1);
+    Paginate.setPage(1);
     renderUsers();
     toggleSortMenu();
   };
@@ -603,8 +603,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     DataTableManager.setSearchTerm('');
     DataTableManager.applySearch(['name', 'email', 'employment']);
-    PaginationManager.setTotalItems(users.length);
-    PaginationManager.setPage(1);
+    Paginate.setTotalItems(users.length);
+    Paginate.setPage(1);
     renderUsers();
   };
 

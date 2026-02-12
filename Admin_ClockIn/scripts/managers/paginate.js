@@ -1,4 +1,4 @@
-const PaginationManager = (function() {
+const Paginate = (function() {
   let currentPage = 1;
   let itemsPerPage = 10;
   let totalItems = 0;
@@ -178,4 +178,4 @@ const PaginationManager = (function() {
   };
 })();
 
-window.PaginationManager = PaginationManager;
+window.Paginate = Paginate;
