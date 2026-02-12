@@ -259,6 +259,10 @@ fun LoginScreen(
     var savedAccounts by remember { mutableStateOf(mapOf<String, String>()) }
     var expanded by remember { mutableStateOf(false) }
 
+    // DEVICE MANAGEMENT: Add these state variables
+    var showDeviceConflict by remember { mutableStateOf(false) }
+    var registeredDeviceInfo by remember { mutableStateOf("") }
+
     LaunchedEffect(Unit) {
         val rawString = prefs.getString("saved_accounts", "") ?: ""
         if (rawString.isNotEmpty()) {
@@ -382,7 +386,8 @@ fun LoginScreen(
                                 isLoading = true
 
                                 scope.launch {
-                                    val result = SupabaseManager.signIn(emailInput, passwordInput)
+                                    // DEVICE MANAGEMENT: Use signInWithDeviceCheck instead of signIn
+                                    val result = SupabaseManager.signInWithDeviceCheck(context, emailInput, passwordInput)
                                     isLoading = false
 
                                     if (result.isSuccess) {
@@ -394,10 +399,15 @@ fun LoginScreen(
                                         NotificationManager.show("Success", "Login Successful")
                                         onLoginSuccess()
                                     } else {
-                                        NotificationManager.show(
-                                            "Login Failed",
-                                            result.exceptionOrNull()?.message ?: "Unknown Error"
-                                        )
+                                        val errorMsg = result.exceptionOrNull()?.message ?: "Unknown Error"
+
+                                        // DEVICE MANAGEMENT: Check for device conflict
+                                        if (errorMsg.contains("already registered on another device")) {
+                                            registeredDeviceInfo = errorMsg.substringAfter("another device: ")
+                                            showDeviceConflict = true
+                                        } else {
+                                            NotificationManager.show("Login Failed", errorMsg)
+                                        }
                                     }
                                 }
                             },
@@ -426,6 +436,145 @@ fun LoginScreen(
                             Text("Have a Code? Reset Password", color = Color.Gray, fontSize = 12.sp)
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // DEVICE MANAGEMENT: Device Conflict Dialog
+    if (showDeviceConflict) {
+        DeviceConflictDialog(
+            registeredDevice = registeredDeviceInfo,
+            currentDevice = "${Build.MANUFACTURER} ${Build.MODEL}",
+            onDismiss = { showDeviceConflict = false }
+        )
+    }
+}
+// DEVICE MANAGEMENT: Device Conflict Dialog
+@Composable
+fun DeviceConflictDialog(
+    registeredDevice: String,
+    currentDevice: String,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Warning Icon
+                Box(
+                    modifier = Modifier
+                        .height(64.dp)
+                        .fillMaxWidth()
+                        .background(
+                            Color(0xFFFF7F66).copy(alpha = 0.1f),
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "⚠",
+                        fontSize = 40.sp,
+                        color = Color(0xFFFF7F66)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "Account Already Active",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    "This account is already registered on another device.",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Registered Device Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFE8F5E9)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Registered Device:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4CAF50)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            registeredDevice,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Current Device Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFF3E0)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Current Device:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFF9800)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            currentDevice,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    "To switch devices, please contact IT support.",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("OK", modifier = Modifier.padding(vertical = 4.dp))
                 }
             }
         }

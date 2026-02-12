@@ -1,6 +1,9 @@
 package com.example.clockin
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.createSupabaseClient
@@ -20,6 +23,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -476,6 +480,98 @@ object SupabaseManager {
                 Result.success(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Submit feedback error", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    // ============================================
+    // DEVICE MANAGEMENT FUNCTIONS
+    // ============================================
+
+    /**
+     * Get unique device ID
+     */
+    @SuppressLint("HardwareIds")
+    private fun getDeviceId(context: Context): String {
+        val prefs = context.getSharedPreferences("device_prefs", Context.MODE_PRIVATE)
+        val savedId = prefs.getString("device_id", null)
+        if (savedId != null) return savedId
+
+        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        val fingerprint = "$androidId${Build.MANUFACTURER}${Build.MODEL}${Build.BRAND}${Build.DEVICE}"
+        val deviceId = MessageDigest.getInstance("SHA-256")
+            .digest(fingerprint.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+
+        prefs.edit().putString("device_id", deviceId).apply()
+        return deviceId
+    }
+
+    /**
+     * Get device info for display
+     */
+    private fun getDeviceInfo(): String = "${Build.MANUFACTURER} ${Build.MODEL}"
+
+    /**
+     * Sign in with device check
+     */
+    suspend fun signInWithDeviceCheck(context: Context, email: String, pass: String): Result<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                cachedUser = null
+                client.auth.signInWith(Email) {
+                    this.email = email
+                    this.password = pass
+                }
+
+                val user = getCurrentUser() ?: return@withContext Result.failure(Exception("User not found"))
+                val deviceId = getDeviceId(context)
+                val deviceInfo = getDeviceInfo()
+
+                val existingDevice = client.from("user_devices")
+                    .select { filter { eq("employeeId", user.id) } }
+                    .decodeSingleOrNull<Map<String, String>>()
+
+                if (existingDevice != null) {
+                    val registeredId = existingDevice["deviceId"]
+                    if (registeredId == deviceId) {
+                        client.from("user_devices").update({
+                            set("lastLogin", SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date()))
+                        }) { filter { eq("employeeId", user.id) } }
+                        Result.success("Login successful")
+                    } else {
+                        signOut()
+                        Result.failure(Exception("This account is already registered on another device: ${existingDevice["deviceInfo"]}"))
+                    }
+                } else {
+                    val deviceData = mapOf(
+                        "deviceId" to deviceId,
+                        "employeeId" to user.id,
+                        "deviceInfo" to deviceInfo,
+                        "registeredAt" to SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date()),
+                        "lastLogin" to SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                    )
+                    client.from("user_devices").insert(deviceData)
+                    Result.success("Login successful")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Sign in with device check error", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    /**
+     * Unregister device (admin function)
+     */
+    suspend fun unregisterDevice(employeeId: String): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.from("user_devices").delete { filter { eq("employeeId", employeeId) } }
+                Result.success(true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Unregister device error", e)
                 Result.failure(e)
             }
         }
