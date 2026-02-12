@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Schedule Details — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/topbar.css">
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/schedule_detail.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../Supabase/supabase_config.js" defer></script>
+  <script src="profile/profile_icon.js" defer></script>
+  <script src="scripts/managers/clock_index.js" defer></script>
+  <script src="scripts/index.js" defer></script>
+  <script src="scripts/user_management/schedule_detail.js" defer></script>
+</head>
+
+<body data-page="schedule_detail">
+
+<div class="app">
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar">
+        <input type="text" placeholder="Search..." id="globalSearch">
+        <button class="material-symbols-outlined" onclick="performSearch()">search</button>   
+      </div>
+      <div class="top-actions">
+        <div class="profile-wrapper">
+          <div class="profile-circle" id="profileCircle">A</div>
+          <div class="profile-menu" id="profileMenu">
+            <div class="profile-header">
+              <div class="profile-circle small" id="profileCircleMenu">A</div>
+              <div>
+                <div class="profile-name" id="profileName">User</div>
+                <div class="profile-email" id="profileEmail"></div>
+              </div>
+            </div>
+            <hr>
+            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
+            <a class="menu-item">Send Feedback</a>
+            <button class="menu-item logout" id="logoutBtn">Logout</button>
+          </div>
+        </div>
+      </div>
+    </header>
+   
+    <main class="content">
+
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <button class="btn-outline" onclick="window.location.href='schedule_db.html'" style="margin-bottom: 12px;">
+              <span class="material-symbols-outlined">arrow_back</span>
+              Back to Schedules
+            </button>
+            <h1 id="userName">Schedule Details</h1>
+            <p class="tagline" id="userEmail"></p>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+
+      <div class="add-schedule-form">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Weekday</label>
+            <select id="addWeekday" class="form-input">
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+              <option value="Sunday">Sunday</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Start Time</label>
+            <input type="time" id="addStartTime" class="form-input">
+          </div>
+          <div class="form-field">
+            <label>End Time</label>
+            <input type="time" id="addEndTime" class="form-input">
+          </div>
+          <div class="form-field">
+            <label>Subject</label>
+            <input type="text" id="addSubject" class="form-input" placeholder="Enter subject">
+          </div>
+          <div class="form-field">
+            <label>Section</label>
+            <select id="addSection" class="form-input"></select>
+          </div>
+          <div class="form-field-button">
+            <button class="export-btn" onclick="saveSchedule()">
+              <span class="material-symbols-outlined">add</span>
+              Add
+            </button>
+          </div>
+        </div>
+      </div>
+        
+      <div id="scheduleDetailContainer" class="schedule-detail-container">
+      </div>
+
+    </main>
+  </div>
+
+</div>
+
+</body>
+</html>

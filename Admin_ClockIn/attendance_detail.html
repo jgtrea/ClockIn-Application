@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Attendance Details — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/topbar.css">
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/attendance_detail.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../Supabase/supabase_config.js" defer></script>
+  <script src="profile/profile_icon.js" defer></script>
+  <script src="scripts/managers/clock_index.js" defer></script>
+  <script src="scripts/index.js" defer></script>
+  <script src="scripts/user_management/attendance_detail.js" defer></script>
+</head>
+
+<body data-page="attendance_detail">
+
+<div class="app">
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar">
+        <input type="text" placeholder="Search..." id="globalSearch">
+        <button class="material-symbols-outlined" onclick="performSearch()">search</button>   
+      </div>
+      <div class="top-actions">
+        <div class="profile-wrapper">
+          <div class="profile-circle" id="profileCircle">A</div>
+          <div class="profile-menu" id="profileMenu">
+            <div class="profile-header">
+              <div class="profile-circle small" id="profileCircleMenu">A</div>
+              <div>
+                <div class="profile-name" id="profileName">User</div>
+                <div class="profile-email" id="profileEmail"></div>
+              </div>
+            </div>
+            <hr>
+            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
+            <a class="menu-item">Send Feedback</a>
+            <button class="menu-item logout" id="logoutBtn">Logout</button>
+          </div>
+        </div>
+      </div>
+    </header>
+   
+    <main class="content">
+
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <button class="btn-outline" onclick="window.location.href='attendance_db.html'" style="margin-bottom: 12px;">
+              <span class="material-symbols-outlined">arrow_back</span>
+              Back to Attendance
+            </button>
+            <h1 id="userName">Attendance Records</h1>
+            <p class="tagline" id="userEmail"></p>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+        
+      <div class="attendance-detail-container">
+        <div class="calendar-section">
+          <div class="calendar-header">
+            <button class="btn-icon" onclick="previousMonth()">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <h2 id="currentMonth" onclick="openDatePicker()" style="cursor: pointer;"></h2>
+            <button class="btn-icon" onclick="nextMonth()">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+          <div id="datePickerModal" class="date-picker-modal" style="display: none;">
+            <div class="date-picker-content">
+              <select id="monthSelect" class="date-picker-select"></select>
+              <select id="yearSelect" class="date-picker-select"></select>
+              <div class="date-picker-actions">
+                <button class="btn-outline" onclick="closeDatePicker()">Cancel</button>
+                <button class="export-btn" onclick="applyDatePicker()">Apply</button>
+              </div>
+            </div>
+          </div>
+          <div class="calendar-weekdays">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="records-section">
+          <div class="records-header">
+            <h3 id="recordsTitle">Select a date</h3>
+          </div>
+          <div class="attendance-table-container">
+            <table class="attendance-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Time In</th>
+                  <th>Time Out</th>
+                  <th>Subject</th>
+                  <th>Section</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceRecordsList">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+</div>
+
+</body>
+</html>

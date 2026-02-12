@@ -14,189 +14,186 @@
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
-
   <script src="profile/profile_icon.js" defer></script>
   <script src="scripts/managers/clock_index.js" defer></script>
   <script src="scripts/managers/schedule_overview.js" defer></script>
   <script src="scripts/managers/paginate.js" defer></script>
   <script src="scripts/managers/data-table.js" defer></script>
-
   <script src="scripts/index.js" defer></script>
   <script src="scripts/user_management/attendance_db.js" defer></script>
-
   <script src="scripts/filter/filter_user.js" defer></script>
 </head>
 
 <body data-page="attendance_db">
 
-  <div class="app">
-    <div class="main">
-      <header class="topbar">
-        <div class="search-bar">
-          <input type="text" placeholder="Search..." id="globalSearch">
-          <button class="material-symbols-outlined" onclick="performSearch()">search</button>   
-        </div>
-        <div class="top-actions">
-          <div class="profile-wrapper">
-            <div class="profile-circle" id="profileCircle">A</div>
-            <div class="profile-menu" id="profileMenu">
-              <div class="profile-header">
-                <div class="profile-circle small" id="profileCircleMenu">A</div>
-                <div>
-                  <div class="profile-name" id="profileName">User</div>
-                  <div class="profile-email" id="profileEmail"></div>
-                </div>
+<div class="app">
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar">
+        <input type="text" placeholder="Search..." id="globalSearch">
+        <button class="material-symbols-outlined" onclick="performSearch()">search</button>   
+      </div>
+      <div class="top-actions">
+        <div class="profile-wrapper">
+          <div class="profile-circle" id="profileCircle">A</div>
+          <div class="profile-menu" id="profileMenu">
+            <div class="profile-header">
+              <div class="profile-circle small" id="profileCircleMenu">A</div>
+              <div>
+                <div class="profile-name" id="profileName">User</div>
+                <div class="profile-email" id="profileEmail"></div>
               </div>
-              <hr>
-              <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
-              <a class="menu-item">Send Feedback</a>
-              <button class="menu-item logout" id="logoutBtn">Logout</button>
             </div>
+            <hr>
+            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
+            <a class="menu-item">Send Feedback</a>
+            <button class="menu-item logout" id="logoutBtn">Logout</button>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
+   
+    <main class="content">
 
-      <main class="content">
-
-        <div class="dashboard-header">
-          <div class="dashboard-title-wrapper">
-            <div>
-              <h1>Attendance</h1>
-              <p class="tagline">Track and manage user attendance records.</p>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <div class="dropdown-wrapper">
-                <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
-                  <span class="material-symbols-outlined">download</span>
-                  Export
-                </button>
-                <div id="exportMenu" class="action-dropdown" style="display: none;">
-                  <button class="action-dropdown-item" onclick="exportAllUsersAttendanceCSV()">
-                    <span class="material-symbols-outlined">table_chart</span>
-                    Export as CSV
-                  </button>
-                  <button class="action-dropdown-item" onclick="exportAllUsersAttendanceJSON()">
-                    <span class="material-symbols-outlined">code</span>
-                    Export as JSON
-                  </button>
-                </div>
-              </div>
-            </div>
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Attendance</h1>
+            <p class="tagline">Track and manage attendance records.</p>
           </div>
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
-          
-        <div class="users-table-container">
-          <div class="table-header">
-            <div class="table-actions-left">
-              <div class="search-username-wrapper">
-                <input type="text" id="searchUsernameInput" class="search-username-input" placeholder="Search Username" oninput="searchAttendanceUser(this.value)" autocomplete="off">
-              </div>
-              <div class="table-filter-wrapper">
-                <button class="filter-btn" onclick="toggleFilterMenu()">
-                  <span class="material-symbols-outlined">filter_list</span>
-                  Filter
-                </button>
-                <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
-                  <div id="activeFilters"></div>
-                  <hr class="filter-separator">
-                  <div class="filter-footer">
-                    <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
-                      <span class="material-symbols-outlined">add</span>
-                      Add Filter
-                    </button>
-                    <div class="filter-actions">
-                      <button class="export-btn" onclick="applyFilters()">Apply</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="table-filter-wrapper">
-                <button class="filter-btn" onclick="toggleSortMenu()">
-                  <span class="material-symbols-outlined">sort</span>
-                  Sort
-                </button>
-                <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
-                  <div id="activeSorts"></div>
-                  <hr class="filter-separator">
-                  <div class="filter-footer">
-                    <button class="filter-btn add-filter-btn" onclick="addSortRow()">
-                      <span class="material-symbols-outlined">add</span>
-                      Add Sort
-                    </button>
-                    <div class="filter-actions">
-                      <button class="export-btn" onclick="applySort()">Sort</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="table-info">
-              <span id="filterStatus"></span>
-            </div>
-          </div>
-          <div id="selectionActionRow" class="selection-action-row" style="display: none;">
-            <div class="selection-info">
-              <span id="selectedCount">0</span> user(s) selected
-            </div>
-            <div class="selection-actions">
-              <button class="selection-action-btn export-btn" onclick="exportSelectedUsersAttendance()">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="dropdown-wrapper">
+              <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
                 <span class="material-symbols-outlined">download</span>
-                Export CSV
+                Export
               </button>
-              <button class="selection-action-btn export-btn" onclick="exportSelectedUsersAttendanceJSON()">
-                <span class="material-symbols-outlined">code</span>
-                Export JSON
-              </button>
-              <button class="selection-action-btn" onclick="clearSelection()">
-                <span class="material-symbols-outlined">close</span>
-                Clear
-              </button>
-            </div>
-          </div>
-          <table class="users-table">
-            <thead>
-              <tr>
-                <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllUsers" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Employment</th>
-                <th>Date Created</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="attendanceList">
-            </tbody>
-          </table>
-          <div class="pagination-container">
-            <div class="pagination-left">
-              <span>Show</span>
-              <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
-              <span>from <span id="totalUsersCount">0</span> users</span>
-            </div>
-            <div class="pagination-right">
-              <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
-                <span class="material-symbols-outlined">first_page</span>
-              </button>
-              <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
-                <span class="material-symbols-outlined">chevron_left</span>
-              </button>
-              <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
-              <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
-                <span class="material-symbols-outlined">chevron_right</span>
-              </button>
-              <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
-                <span class="material-symbols-outlined">last_page</span>
-              </button>
+              <div id="exportMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="exportToCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Export as CSV
+                </button>
+                <button class="action-dropdown-item" onclick="exportToJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Export as JSON
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-      </main>
-    </div>
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+        
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchUsernameInput" class="search-username-input" placeholder="Search Username" oninput="searchUsername(this.value)" autocomplete="off">
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleFilterMenu()">
+                <span class="material-symbols-outlined">filter_list</span>
+                Filter
+              </button>
+              <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeFilters"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Filter
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applyFilters()">Apply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleSortMenu()">
+                <span class="material-symbols-outlined">sort</span>
+                Sort
+              </button>
+              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeSorts"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Sort
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applySort()">Sort</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
+        </div>
+        <div id="selectionActionRow" class="selection-action-row" style="display: none;">
+          <div class="selection-info">
+            <span id="selectedCount">0</span> row(s) selected
+          </div>
+          <div class="selection-actions">
+            <button class="selection-action-btn export-btn" onclick="exportSelectedRows()">
+              <span class="material-symbols-outlined">download</span>
+              Export CSV
+            </button>
+            <button class="selection-action-btn export-btn" onclick="exportSelectedRowsJSON()">
+              <span class="material-symbols-outlined">code</span>
+              Export JSON
+            </button>
+            <button class="selection-action-btn" onclick="clearSelection()">
+              <span class="material-symbols-outlined">close</span>
+              Clear
+            </button>
+          </div>
+        </div>
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllAttendance" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Employment</th>
+              <th>Total Records</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="attendanceList">
+          </tbody>
+        </table>
+        <div class="pagination-container">
+          <div class="pagination-left">
+            <span>Show</span>
+            <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
+            <span>from <span id="totalAttendanceCount">0</span> data</span>
+          </div>
+          <div class="pagination-right">
+            <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
+              <span class="material-symbols-outlined">first_page</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
+            <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
+              <span class="material-symbols-outlined">last_page</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
+    </main>
   </div>
+
+</div>
 
 </body>
 </html>
