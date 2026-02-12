@@ -150,7 +150,7 @@ class ScheduleOverview {
       const endMinutes = this.timeToMinutes(schedule.endTime);
 
       if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
-        currentSubject = schedule.subject || 'Class';
+        currentSubject = schedule.subject || 'No Subject';
         timeRange = `${schedule.startTime} - ${schedule.endTime}`;
         currentSchedule = schedule;
         return { currentSubject, timeRange, currentSchedule };
@@ -161,7 +161,7 @@ class ScheduleOverview {
       const firstSchedule = sectionSchedules[0];
       const firstStartMinutes = this.timeToMinutes(firstSchedule.startTime);
       if (currentMinutes < firstStartMinutes) {
-        timeRange = `Next: ${firstSchedule.subject || 'Class'} at ${firstSchedule.startTime}`;
+        timeRange = `Next: ${firstSchedule.subject || 'No Subject'} at ${firstSchedule.startTime}`;
       }
     }
 
@@ -175,7 +175,7 @@ class ScheduleOverview {
 
     return sectionSchedules.map(s => `
       <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between;">
-        <span style="font-weight: 500;">${s.subject || 'Class'}</span>
+        <span style="font-weight: 500;">${s.subject || 'No Subject'}</span>
         <span style="color: #9ca3af; font-size: 12px;">${s.startTime} - ${s.endTime}</span>
       </div>
     `).join('');
@@ -246,7 +246,7 @@ class ScheduleOverview {
           <h4 style="margin: 0 0 12px 0; color: #111827;">${day} Schedule</h4>
           ${schedulesData.map(s => 
             `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between;">
-              <span style="font-weight: 600; color: #111827;">${s.subject || 'Class'}</span>
+              <span style="font-weight: 600; color: #111827;">${s.subject || 'No Subject'}</span>
               <span style="color: #6b7280;">${s.startTime} - ${s.endTime}</span>
             </div>`
           ).join('')}

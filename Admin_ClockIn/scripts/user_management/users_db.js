@@ -353,6 +353,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  window.removeDeviceRecords = async function() {
+    const selectedIds = [];
+    document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
+      selectedIds.push(cb.value);
+    });
+    
+    if (selectedIds.length === 0) {
+      alert('No rows selected');
+      return;
+    }
+    
+    if (confirm(`Remove device records for ${selectedIds.length} user(s)?`)) {
+      try {
+        const { error } = await supabase
+          .from('user_devices')
+          .delete()
+          .in('employeeId', selectedIds);
+        
+        if (error) throw error;
+        alert('Device records removed successfully');
+        console.log('users_db: Removed device records for ' + selectedIds.length + ' users');
+      } catch (err) {
+        console.error('users_db: Remove device records error', err);
+        alert('Failed to remove device records: ' + err.message);
+      }
+    }
+  };
+
   window.addNewUser = function() {
     console.log('Add new user clicked');
     const addUserMenu = document.getElementById('addUserMenu');
