@@ -4,31 +4,59 @@ const SCHEDULE_TABLE = 'schedule';
 const SECTIONS_TABLE = 'sections';
 
 let userSchedules = [];
-let allUserSchedules = [];
-let filteredSchedules = [];
 let searchTerm = '';
-let currentPage = 1;
-const usersPerPage = 10;
-let expandedRows = {};   
-let expandedAddForms = {}; 
+let expandedRows = {};
+let expandedAddForms = {};
 let editingSlotId = null;
-let editingDaySchedules = {}; 
+let editingDaySchedules = {};
 let sortAscending = true;
-
 let selectedDays = {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const supabase = window.supabaseClient;
+  
+  if (!supabase) {
+    setTimeout(() => {
+      if (typeof initializeSchedule === 'function') {
+        initializeSchedule();
+      }
+    }, 500);
+    return;
+  }
+  
+  initializeSchedule();
+});
+
+function initializeSchedule() {
+  const supabase = window.supabaseClient;
+  
+  PaginationManager.init({
+    containerId: 'schedule_db',
+    itemsPerPage: 10,
+    onPageChange: () => render()
+  });
+  
+  DataTableManager.init({
+    tableName: USERS_TABLE,
+    supabaseClient: supabase,
+    primaryKey: 'employeeId',
+    render: () => {
+      PaginationManager.setTotalItems(DataTableManager.getFilteredData().length);
+      render();
+    }
+  });
+  
+  loadUsersFromDB();
+}
 
 function applyScheduleSearch() {
   if (!searchTerm) {
-    filteredSchedules = [...userSchedules];
+    DataTableManager.setSearchTerm('');
+    DataTableManager.applySearch(['name', 'subtitle']);
   } else {
-    filteredSchedules = userSchedules.filter(user => {
-      const searchText = `${user.name || ''} ${user.subtitle || ''}`.toLowerCase();
-      return searchText.includes(searchTerm.toLowerCase());
-    });
+    DataTableManager.setSearchTerm(searchTerm);
+    DataTableManager.applySearch(['name', 'subtitle']);
   }
-  allUserSchedules = [...filteredSchedules];
-  currentPage = 1;
-  render();
 }
 
 window.performScheduleSearch = function(term) {
@@ -45,7 +73,7 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
   selectedDays[userId] = selectedDay;
   
   scheduleTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">Loading...</p>';
-
+  
   try {
     const { data: scheduleData, error } = await supabase
       .from(SCHEDULE_TABLE)
@@ -53,18 +81,18 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
       .eq('employeeId', userId)
       .eq('weekday', selectedDay)
       .order('startTime', { ascending: true });
-
+    
     if (error) {
       console.error('Error loading schedule:', error);
       scheduleTable.innerHTML = '<p style="text-align:center; color:#ef4444; padding:10px;">Error loading schedule.</p>';
       return;
     }
-
+    
     if (!scheduleData || scheduleData.length === 0) {
       scheduleTable.innerHTML = '<p style="text-align:center; color:#999; padding:10px;">No schedule found for ' + selectedDay + '.</p>';
       return;
     }
-
+    
     const sectIds = [...new Set(scheduleData.map(item => item.sectId).filter(Boolean))];
     let sectionNames = {};
     
@@ -80,7 +108,7 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
         });
       }
     }
-
+    
     scheduleTable.innerHTML = scheduleData.map(item => {
       const isEditing = editingSlotId === item.schedId;
       const editingKey = `${userId}-${selectedDay}`;
@@ -112,7 +140,7 @@ async function loadSchedule(userId, selectedDay = 'Monday') {
         </div>
       `;
     }).join('');
-
+    
   } catch (error) {
     console.error('Error loading teacher schedule:', error);
     scheduleTable.innerHTML = '<p style="text-align:center; color:#ef4444; padding:10px;">Error loading schedule.</p>';
@@ -130,7 +158,6 @@ async function toggleScheduleEdit(userId, schedId, day) {
   }
   await loadSchedule(userId, day);
   
-  // Load sections for dropdown after schedule is loaded
   if (editingSlotId === schedId) {
     const sections = await loadSectionsForDropdown(userId);
     const sectionSelect = document.getElementById(`edit-section-${schedId}`);
@@ -163,12 +190,12 @@ async function updateSchedule(userId, schedId, day) {
   const newEndTime = document.getElementById(`edit-end-${schedId}`).value;
   const newSectId = document.getElementById(`edit-section-${schedId}`).value;
   const newSubject = document.getElementById(`edit-subject-${schedId}`).value;
-
+  
   if (!newStartTime || !newEndTime || !newSectId || !newSubject) {
     alert('Please fill in all required fields');
     return;
   }
-
+  
   try {
     const { error } = await supabase
       .from(SCHEDULE_TABLE)
@@ -179,7 +206,7 @@ async function updateSchedule(userId, schedId, day) {
         subject: newSubject
       })
       .eq('schedId', schedId);
-
+    
     if (error) {
       console.error('Error updating schedule:', error);
       alert('Error updating schedule: ' + error.message);
@@ -200,29 +227,29 @@ window.updateSchedule = updateSchedule;
 
 async function loadUsersFromDB() {
   const supabase = window.supabaseClient;
-  if (!supabase) {
-    setTimeout(loadUsersFromDB, 500); 
-    return;
-  }
-
+  if (!supabase) return;
+  
   try {
     const { data: usersData, error } = await supabase
       .from(USERS_TABLE)
       .select('*')
       .order('createdAt', { ascending: false });
-
+    
     if (error) {
       console.error('Error loading users:', error);
       return;
     }
-
+    
     userSchedules = usersData.map(user => ({
       uid: user.employeeId,
       name: user.name || '',
       subtitle: `${user.email || 'N/A'} | ${user.employment || 'N/A'}`
     }));
-
-    applyScheduleSearch();
+    
+    DataTableManager.setSearchTerm('');
+    DataTableManager.applySearch(['name', 'subtitle']);
+    PaginationManager.setTotalItems(userSchedules.length);
+    render();
   } catch (err) {
     console.error('Error loading users:', err);
   }
@@ -241,7 +268,7 @@ async function loadSectionsForDropdown(userId) {
       .from('sections')
       .select('sectId, sectionName')
       .order('sectionName', { ascending: true });
-
+    
     if (error) {
       console.error('Error loading sections:', error);
       return [];
@@ -264,7 +291,6 @@ function toggleUser(uid) {
       }
     });
   } else {
-    // Set current day before rendering
     if (!selectedDays[uid]) {
       selectedDays[uid] = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     }
@@ -315,7 +341,7 @@ async function saveSchedule(uid) {
         endTime: endTime,
         weekday: selectedDays[uid] || new Date().toLocaleDateString('en-US', { weekday: 'long' })
       });
-
+    
     if (error) {
       console.error('Error saving schedule:', error);
       alert('Error saving schedule: ' + error.message);
@@ -343,7 +369,7 @@ async function deleteSchedule(uid, schedId) {
       .from(SCHEDULE_TABLE)
       .delete()
       .eq('schedId', schedId);
-
+    
     if (error) {
       console.error('Error deleting schedule:', error);
       alert('Error deleting schedule: ' + error.message);
@@ -360,25 +386,22 @@ async function deleteSchedule(uid, schedId) {
 window.deleteSchedule = deleteSchedule;
 
 function render() {
-  const totalPages = Math.ceil(allUserSchedules.length / usersPerPage);
-  const startIndex = (currentPage - 1) * usersPerPage;
-  const endIndex = startIndex + usersPerPage;
-  const pageUsers = allUserSchedules.slice(startIndex, endIndex);
+  const pageData = PaginationManager.getPageData(DataTableManager.getFilteredData());
   
   scheduleList.innerHTML = '';
   
-  if (!pageUsers || pageUsers.length === 0) {
+  if (!pageData || pageData.length === 0) {
     scheduleList.innerHTML = '<div class="no-records">No user records found.</div>';
     document.getElementById('pagination').style.display = 'none';
     return;
   }
   
-  pageUsers.forEach(user => {
+  pageData.forEach(user => {
     const isExpanded = !!expandedRows[user.uid];
     const isAddFormOpen = !!expandedAddForms[user.uid];
     const row = document.createElement('div');
     row.className = `user-row ${isExpanded ? 'expanded' : ''}`;
-
+    
     if (!isExpanded) {
       row.innerHTML = `
         <div class="user-collapsed-content">
@@ -398,7 +421,7 @@ function render() {
               <span class="user-name">${user.name}</span>
               <span class="user-subtitle">${user.subtitle}</span>
             </div>
-
+            
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; font-weight: 600;">Select Day:</label>
               <select id="day-select-${user.uid}" onchange="window.loadScheduleForDay('${user.uid}', this.value)" style="width: 200px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
@@ -411,7 +434,7 @@ function render() {
                 <option value="Sunday" ${selectedDays[user.uid] === 'Sunday' ? 'selected' : ''}>Sunday</option>
               </select>
             </div>
-
+            
             <div class="schedule-table-header">
               <span>Start Time</span><span>End Time</span><span>Section</span><span>Subject</span><span>Actions</span>
             </div>
@@ -453,7 +476,7 @@ function render() {
               </div>
             </div>` : `<div id="add-schedule-form-${user.uid}" style="display: none;"></div>`}
           </div>
-
+          
           <div class="sidebar-actions">
             <div class="btn-group">
               <button type="button" class="btn-outline" onclick="window.toggleUser('${user.uid}')">Close</button>
@@ -464,10 +487,11 @@ function render() {
     scheduleList.appendChild(row);
   });
   
-  updatePagination(totalPages);
+  updatePagination();
 }
 
-function updatePagination(totalPages) {
+function updatePagination() {
+  const totalPages = PaginationManager.getTotalPages();
   const pagination = document.getElementById('pagination');
   const pageInfo = document.getElementById('pageInfo');
   const prevBtn = document.getElementById('prevBtn');
@@ -477,40 +501,35 @@ function updatePagination(totalPages) {
   
   if (totalPages > 1) {
     pagination.style.display = 'block';
-    if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    if (prevBtn) prevBtn.disabled = currentPage === 1;
-    if (nextBtn) nextBtn.disabled = currentPage === totalPages;
-    if (prevBtn) prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
-    if (nextBtn) nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
+    if (pageInfo) pageInfo.textContent = `Page ${PaginationManager.getCurrentPage()} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = PaginationManager.getCurrentPage() === 1;
+    if (nextBtn) nextBtn.disabled = PaginationManager.getCurrentPage() === totalPages;
+    if (prevBtn) prevBtn.style.opacity = PaginationManager.getCurrentPage() === 1 ? '0.5' : '1';
+    if (nextBtn) nextBtn.style.opacity = PaginationManager.getCurrentPage() === totalPages ? '0.5' : '1';
   } else {
     pagination.style.display = 'none';
   }
 }
 
 function changePage(direction) {
-  const totalPages = Math.ceil(allUserSchedules.length / usersPerPage);
-  const newPage = currentPage + direction;
-  
-  if (newPage >= 1 && newPage <= totalPages) {
-    currentPage = newPage;
-    render();
-  }
+  PaginationManager.changePage(direction);
 }
 
 function sortSchedules(field) {
-  allUserSchedules.sort((a, b) => {
+  const data = DataTableManager.getFilteredData();
+  data.sort((a, b) => {
     let valueA, valueB;
     if (field === 'name') {
       valueA = (a.name || '').toLowerCase();
       valueB = (b.name || '').toLowerCase();
     } else if (field === 'createdAt') {
-      valueA = a.createdat || 0;
-      valueB = b.createdat || 0;
+      valueA = a.createdAt || 0;
+      valueB = b.createdAt || 0;
     }
     return sortAscending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
   });
   sortAscending = !sortAscending;
-  currentPage = 1;
+  PaginationManager.setPage(1);
   render();
 }
 
@@ -518,11 +537,3 @@ window.loadScheduleForDay = function(userId, selectedDay) {
   loadSchedule(userId, selectedDay);
 };
 window.loadSchedule = loadSchedule;
-
-loadUsersFromDB();
-
-window.addEventListener('message', function(event) {
-  if (event.data.type === 'search') {
-    window.performScheduleSearch(event.data.term);
-  }
-});

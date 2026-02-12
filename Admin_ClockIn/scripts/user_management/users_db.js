@@ -1,38 +1,40 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const usersList = document.getElementById('usersList');
   const addUserBtn = document.getElementById('addUserBtn');
-
+  
   const supabase = window.supabaseClient;
   const USERS_TABLE = 'user_employee_data';
-
+  
+  let users = [];
   let filteredUsers = [];
   let searchTerm = '';
 
-  function applySearch() {
-    if (!searchTerm) {
-      filteredUsers = [...users];
-    } else {
-      filteredUsers = users.filter(user => {
-        const searchText = `${user.name || ''} ${user.email || ''} ${user.employment || ''}`.toLowerCase();
-        return searchText.includes(searchTerm.toLowerCase());
-      });
+  PaginationManager.init({
+    containerId: 'users_db',
+    itemsPerPage: 10,
+    onPageChange: () => renderUsers()
+  });
+
+  DataTableManager.init({
+    tableName: USERS_TABLE,
+    supabaseClient: supabase,
+    primaryKey: 'employeeId',
+    render: () => {
+      PaginationManager.setTotalItems(DataTableManager.getFilteredData().length);
+      renderUsers();
     }
-    allUsers = [...filteredUsers];
-    currentPage = 1;
-    renderUsers();
-  }
+  });
 
   window.performUserSearch = function(term) {
     searchTerm = term || '';
-    applySearch();
+    DataTableManager.setSearchTerm(searchTerm);
+    DataTableManager.applySearch(['name', 'email', 'employment']);
   };
 
   window.searchUsername = function(term) {
     searchTerm = term || '';
-    applyUsernameSearch();
-  };
-
-  function applyUsernameSearch() {
+    DataTableManager.setSearchTerm(searchTerm);
+    
     if (!searchTerm) {
       filteredUsers = [...users];
     } else {
@@ -41,37 +43,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         return username.includes(searchTerm.toLowerCase());
       });
     }
-    allUsers = [...filteredUsers];
-    currentPage = 1;
+    PaginationManager.setTotalItems(filteredUsers.length);
+    PaginationManager.setPage(1);
     renderUsers();
-  }
-
-  let users = [];
-  let allUsers = [];
-  let currentPage = 1;
-  let usersPerPage = 10;
-
-  if (!supabase) {
-    console.error('users_db: Supabase client is not initialized.');
-    usersList.innerHTML = '<div class="error">Supabase not initialized.</div>';
-    return;
-  }
+  };
 
   function renderUsers() {
-    const totalPages = Math.ceil(allUsers.length / usersPerPage);
-    const startIndex = (currentPage - 1) * usersPerPage;
-    const endIndex = startIndex + usersPerPage;
-    const pageUsers = allUsers.slice(startIndex, endIndex);
+    const pageData = PaginationManager.getPageData(DataTableManager.getFilteredData());
+    const totalItems = DataTableManager.getFilteredData().length;
     
     usersList.innerHTML = '';
-    if (!pageUsers || pageUsers.length === 0) {
+    
+    if (!pageData || pageData.length === 0) {
       usersList.innerHTML = '<tr><td colspan="6" class="no-records">No user records found.</td></tr>';
-      updatePagination(0);
       return;
     }
 
-    pageUsers.forEach((user) => {
-      const createdDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-';
+    pageData.forEach((user) => {
+      const createdDate = DataTableManager.formatDate(user.createdAt);
       const row = document.createElement('tr');
       row.className = 'user-table-row';
       row.id = `row-${user.employeeId}`;
@@ -104,20 +93,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       usersList.appendChild(row);
     });
-    
-    updatePagination(totalPages);
   }
+
+  window.toggleUserSelection = function(employeeId) {
+    const checkbox = document.querySelector(`.user-checkbox[value="${employeeId}"]`);
+    if (checkbox) {
+      checkbox.checked = checkbox.checked;
+    }
+    updateSelectAllState();
+  };
 
   function updateSelectAllState() {
     const selectAllBtn = document.getElementById('selectAllUsers');
     const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
-    const allCheckboxes = document.querySelectorAll('.user-checkbox');
     const selectionActionRow = document.getElementById('selectionActionRow');
     const selectedCount = document.getElementById('selectedCount');
     
     if (!selectAllBtn) return;
     
-    if (checkedBoxes.length > 0) {
+    const hasSelection = checkedBoxes.length > 0;
+    if (hasSelection) {
       selectAllBtn.classList.add('has-selection');
       if (selectionActionRow) {
         selectionActionRow.style.display = 'flex';
@@ -133,121 +128,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  window.toggleUserSelection = function(employeeId) {
-    const checkbox = document.querySelector(`.user-checkbox[value="${employeeId}"]`);
-    if (checkbox) {
-      checkbox.checked = checkbox.checked;
+  window.toggleSelectAll = function() {
+    const selectAllBtn = document.getElementById('selectAllUsers');
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    
+    if (selectAllBtn.classList.contains('has-selection')) {
+      checkboxes.forEach(cb => cb.checked = false);
+      DataTableManager.deselectAll();
+    } else {
+      checkboxes.forEach(cb => cb.checked = true);
+      DataTableManager.selectAll();
     }
+    
     updateSelectAllState();
   };
 
-  function updatePagination(totalPages) {
-    const firstBtn = document.getElementById('firstBtn');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const lastBtn = document.getElementById('lastBtn');
-    const pageInput = document.getElementById('pageNumberInput');
-    const totalUsersSpan = document.getElementById('totalUsersCount');
-    const itemsPerPageInput = document.getElementById('itemsPerPageInput');
-    
-    const totalUsers = allUsers.length;
-    totalUsersSpan.textContent = totalUsers;
-    
-    if (itemsPerPageInput) {
-      itemsPerPageInput.value = usersPerPage;
-    }
-    
-    pageInput.value = currentPage;
-    pageInput.max = totalPages || 1;
-    
-    firstBtn.disabled = currentPage === 1;
-    prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled = currentPage === totalPages || totalPages === 0;
-    lastBtn.disabled = currentPage === totalPages || totalPages === 0;
-    
-    firstBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
-    prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
-    nextBtn.style.opacity = (currentPage === totalPages || totalPages === 0) ? '0.5' : '1';
-    lastBtn.style.opacity = (currentPage === totalPages || totalPages === 0) ? '0.5' : '1';
-    
+  window.clearSelection = function() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    DataTableManager.clearSelection();
     updateSelectAllState();
-  }
-  
-  window.changeItemsPerPage = function(count) {
-    let newCount = parseInt(count);
-    if (isNaN(newCount) || newCount < 1) newCount = 10;
-    usersPerPage = newCount;
-    currentPage = 1;
-    renderUsers();
-  };
-  
-  window.changePage = function(direction) {
-    const totalPages = Math.ceil(allUsers.length / usersPerPage);
-    const newPage = currentPage + direction;
-    
-    if (newPage >= 1 && newPage <= totalPages) {
-      currentPage = newPage;
-      renderUsers();
-    }
   };
 
-  window.goToPage = function(pageNum) {
-    const totalPages = Math.ceil(allUsers.length / usersPerPage);
-    let newPage = parseInt(pageNum);
-    
-    if (isNaN(newPage)) newPage = 1;
-    if (newPage < 1) newPage = 1;
-    if (newPage > totalPages) newPage = totalPages || 1;
-    
-    currentPage = newPage;
-    renderUsers();
-  };
-
-  window.goToFirstPage = function() {
-    currentPage = 1;
-    renderUsers();
-  };
-
-  window.goToLastPage = function() {
-    const totalPages = Math.ceil(allUsers.length / usersPerPage);
-    currentPage = totalPages || 1;
-    renderUsers();
-  };
-
-  let unsubscribe = null;
   async function loadUsers() {
-    try {
-      const { data, error } = await supabase
-        .from(USERS_TABLE)
-        .select('*')
-        .order('createdAt', { ascending: false });
-
-      if (error) throw error;
-
-      users = data.map(user => ({
-        employeeId: user.employeeId,
-        name: user.name || '',
-        email: user.email || '',
-        employment: user.employment || '',
-        createdAt: user.createdAt
-      }));
-
-      applySearch();
-    } catch (err) {
-      console.error('users_db: Error loading users:', err);
-    }
+    users = await DataTableManager.loadData({
+      orderBy: 'createdAt',
+      orderAsc: false
+    });
+    
+    users = users.map(user => ({
+      employeeId: user.employeeId,
+      name: user.name || '',
+      email: user.email || '',
+      employment: user.employment || '',
+      createdAt: user.createdAt
+    }));
+    
+    filteredUsers = [...users];
+    DataTableManager.setSearchTerm('');
+    DataTableManager.applySearch(['name', 'email', 'employment']);
+    PaginationManager.setTotalItems(users.length);
+    PaginationManager.setPage(1);
   }
 
   window.editUser = (uid) => {
     const user = users.find(u => u.employeeId === uid);
     if (!user) return;
     
-    window.originalValues = window.originalValues || {};
-    window.originalValues[uid] = {
-      name: user.name || '',
-      email: user.email || '',
-      employment: user.employment || ''
-    };
+    DataTableManager.startEdit(uid, ['name', 'email', 'employment']);
     
     const nameCell = document.getElementById(`name-${uid}`);
     nameCell.innerHTML = `<input type="text" class="edit-input" id="edit-name-${uid}" value="${user.name || ''}">`;
@@ -268,20 +196,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.cancelEdit = (uid) => {
-    const originalValues = window.originalValues?.[uid];
-    if (!originalValues) return;
+    if (!DataTableManager.hasOriginalValues(uid)) return;
     
-    const nameCell = document.getElementById(`name-${uid}`);
-    nameCell.textContent = originalValues.name || 'New User';
+    const originalValues = DataTableManager.getOriginalValue(uid, 'name') ? {
+      name: DataTableManager.getOriginalValue(uid, 'name'),
+      email: DataTableManager.getOriginalValue(uid, 'email'),
+      employment: DataTableManager.getOriginalValue(uid, 'employment')
+    } : null;
     
-    const emailCell = document.getElementById(`email-${uid}`);
-    emailCell.textContent = originalValues.email || '-';
-    
-    const employmentCell = document.getElementById(`employment-${uid}`);
-    employmentCell.textContent = originalValues.employment || '-';
+    if (originalValues) {
+      const nameCell = document.getElementById(`name-${uid}`);
+      nameCell.textContent = originalValues.name || 'New User';
+      
+      const emailCell = document.getElementById(`email-${uid}`);
+      emailCell.textContent = originalValues.email || '-';
+      
+      const employmentCell = document.getElementById(`employment-${uid}`);
+      employmentCell.textContent = originalValues.employment || '-';
+    }
     
     document.getElementById(`actions-${uid}`).style.display = 'flex';
     document.getElementById(`edit-actions-${uid}`).style.display = 'none';
+    DataTableManager.cancelEdit(uid);
   };
 
   window.saveUser = async (uid) => {
@@ -296,211 +232,124 @@ document.addEventListener('DOMContentLoaded', async () => {
       empVal !== (userInArray.employment || '');
 
     if (hasChanged) {
-      try {
-        const { error } = await supabase
-          .from(USERS_TABLE)
-          .update({
-            name: nameVal,
-            email: emailVal,
-            employment: empVal
-          })
-          .eq('employeeId', uid);
+      const result = await DataTableManager.update(uid, {
+        name: nameVal,
+        email: emailVal,
+        employment: empVal
+      });
 
-        if (error) throw error;
+      if (result.error) {
+        console.error('users_db: Save error:', result.error);
+      } else {
         console.log('users_db: User data saved successfully.');
-        
-        const userIndex = users.findIndex(u => u.employeeId === uid);
-        if (userIndex !== -1) {
-          users[userIndex] = {
-            ...users[userIndex],
-            name: nameVal,
-            email: emailVal,
-            employment: empVal
-          };
-          applySearch();
-        }
-      } catch (err) {
-        console.error('users_db: Save error:', err);
+        loadUsers();
       }
     } else {
       console.log('users_db: No changes detected.');
     }
   };
 
-  window.closeEditModal = () => {
-    const modal = document.getElementById('editUserModal');
-    if (modal) modal.style.display = 'none';
-  };
-
   window.deleteUser = async (uid) => {
     if (!confirm('Delete this user?')) return;
-    try {
-      const { error } = await supabase
-        .from(USERS_TABLE)
-        .delete()
-        .eq('employeeId', uid);
-
-      if (error) throw error;
-      loadUsers();
-    } catch (err) {
-      console.error('users_db: delete error', err);
-    }
-  };
-
-  async function checkAdminAndLoad() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      const userEmail = sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
-      if (!userEmail) {
-        users = [];
-        renderUsers();
-        addUserBtn.style.display = 'none';
-        return;
-      }
-    }
-
-    const userEmail = session?.user?.email || sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
-    if (userEmail) {
-      const { data: adminData, error } = await supabase
-        .from('user_admin_data')
-        .select('*')
-        .eq('email', userEmail);
-
-      const isAdmin = !error && adminData && adminData.length > 0;
-      addUserBtn.style.display = isAdmin ? '' : 'none';
-      console.log('users_db: signed in as', userEmail, 'admin?', isAdmin);
-    }
-    loadUsers();
-  }
-
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT') {
-      users = [];
-      renderUsers();
-      addUserBtn.style.display = 'none';
-    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      checkAdminAndLoad();
-    }
-  });
-
-  checkAdminAndLoad();
-  
-  window.toggleSelectAll = function() {
-    const selectAllBtn = document.getElementById('selectAllUsers');
-    const checkboxes = document.querySelectorAll('.user-checkbox');
     
-    if (selectAllBtn.classList.contains('has-selection')) {
-      checkboxes.forEach(cb => cb.checked = false);
+    const result = await DataTableManager.remove(uid);
+    if (result.error) {
+      console.error('users_db: delete error', result.error);
     } else {
-      checkboxes.forEach(cb => cb.checked = true);
+      loadUsers();
     }
-    
-    updateSelectAllState();
   };
 
-  document.addEventListener('click', function(event) {
-    const filterWrapper = document.querySelector('.table-filter-wrapper');
-    const filterMenu = document.getElementById('filterMenu');
-    const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
-    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-    const sortMenu = document.getElementById('sortMenu');
-    const sortBtn = document.querySelector('.table-filter-wrapper:last-child .filter-btn');
-    const addUserBtn = document.getElementById('addUserBtn');
-    const addUserMenu = document.getElementById('addUserMenu');
-    const exportBtn = document.getElementById('exportBtn');
-    const exportMenu = document.getElementById('exportMenu');
-    const importMenu = document.getElementById('importMenu');
-    
-    if (filterWrapper && filterMenu && !filterWrapper.contains(event.target)) {
-      filterMenu.style.display = 'none';
-      if (filterBtn) filterBtn.classList.remove('active');
-    }
-    if (sortWrapper && sortMenu && !sortWrapper.contains(event.target)) {
-      sortMenu.style.display = 'none';
-      if (sortBtn) sortBtn.classList.remove('active');
-    }
-    if (addUserBtn && addUserMenu && !addUserBtn.contains(event.target) && !addUserMenu.contains(event.target)) {
-      addUserMenu.style.display = 'none';
-    }
-    if (exportBtn && exportMenu && !exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
-      exportMenu.style.display = 'none';
-    }
-    if (importMenu && !addUserBtn?.contains(event.target) && !importMenu.contains(event.target)) {
-      importMenu.style.display = 'none';
-    }
-  });
+  window.exportToCSV = function() {
+    DataTableManager.exportToCSV('users_export.csv');
+  };
 
-  window.toggleFilterMenu = function() {
-    const filterMenu = document.getElementById('filterMenu');
-    const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
-    const isOpen = filterMenu.style.display === 'block';
+  window.exportToJSON = function() {
+    DataTableManager.exportToJSON('users_export.json');
+  };
+
+  window.exportSelectedRows = function() {
+    const selectedIds = DataTableManager.getSelectedItems();
+    if (selectedIds.length === 0) {
+      alert('No rows selected');
+      return;
+    }
     
-    filterMenu.style.display = isOpen ? 'none' : 'block';
-    document.getElementById('sortMenu').style.display = 'none';
+    const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
+    const headers = ['Name', 'Email', 'Employment', 'Date Created'];
+    const rows = [headers.join(',')];
     
-    if (filterBtn) {
-      if (isOpen) {
-        filterBtn.classList.remove('active');
-      } else {
-        filterBtn.classList.add('active');
-        const sortBtn = document.querySelector('.table-filter-wrapper:last-child .filter-btn');
-        if (sortBtn) sortBtn.classList.remove('active');
+    selectedData.forEach(user => {
+      const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
+      const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
+      const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
+      const createdAt = DataTableManager.formatDate(user.createdAt);
+      rows.push(`${name},${email},${employment},${createdAt}`);
+    });
+    
+    const csvContent = rows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'users_selected_export.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  window.exportSelectedRowsJSON = function() {
+    const selectedIds = DataTableManager.getSelectedItems();
+    if (selectedIds.length === 0) {
+      alert('No rows selected');
+      return;
+    }
+    
+    const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
+    const exportData = selectedData.map(user => ({
+      name: user.name || '',
+      email: user.email || '',
+      employment: user.employment || '',
+      createdAt: user.createdAt || ''
+    }));
+    
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'users_selected_export.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  window.deleteSelectedRows = async function() {
+    const selectedIds = DataTableManager.getSelectedItems();
+    if (selectedIds.length === 0) {
+      alert('No rows selected');
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} row(s)?`)) {
+      console.log('Delete selected rows:', selectedIds);
+      
+      try {
+        const { error } = await supabase
+          .from(USERS_TABLE)
+          .delete()
+          .in('employeeId', selectedIds);
+        
+        if (error) throw error;
+        console.log('users_db: Deleted ' + selectedIds.length + ' users');
+        loadUsers();
+      } catch (err) {
+        console.error('users_db: Delete error', err);
+        alert('Failed to delete: ' + err.message);
       }
-    }
-  };
-
-  window.toggleSortMenu = function() {
-    const sortMenu = document.getElementById('sortMenu');
-    const sortBtn = document.querySelector('.table-filter-wrapper:last-child .filter-btn');
-    const isOpen = sortMenu.style.display === 'block';
-    
-    sortMenu.style.display = isOpen ? 'none' : 'block';
-    document.getElementById('filterMenu').style.display = 'none';
-    
-    if (sortBtn) {
-      if (isOpen) {
-        sortBtn.classList.remove('active');
-      } else {
-        sortBtn.classList.add('active');
-        const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
-        if (filterBtn) filterBtn.classList.remove('active');
-      }
-    }
-  };
-
-  window.showImportMenu = function() {
-    const importMenu = document.getElementById('importMenu');
-    const addUserMenu = document.getElementById('addUserMenu');
-    
-    if (importMenu) {
-      importMenu.style.display = importMenu.style.display === 'none' ? 'block' : 'none';
-    }
-    if (addUserMenu) {
-      addUserMenu.style.display = 'none';
-    }
-  };
-
-  window.toggleExportMenu = function() {
-    const exportMenu = document.getElementById('exportMenu');
-    const addUserMenu = document.getElementById('addUserMenu');
-    
-    if (exportMenu) {
-      exportMenu.style.display = exportMenu.style.display === 'none' ? 'block' : 'none';
-    }
-    if (addUserMenu) {
-      addUserMenu.style.display = 'none';
-    }
-  };
-
-  window.toggleAddUserMenu = function() {
-    const addUserMenu = document.getElementById('addUserMenu');
-    const exportMenu = document.getElementById('exportMenu');
-    
-    if (addUserMenu) {
-      addUserMenu.style.display = addUserMenu.style.display === 'none' ? 'block' : 'none';
-    }
-    if (exportMenu) {
-      exportMenu.style.display = 'none';
+      DataTableManager.clearSelection();
     }
   };
 
@@ -539,41 +388,233 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     closeAddUserModal();
     
-    try {
-      const { data, error } = await supabase
-        .from(USERS_TABLE)
-        .insert({
-          name: name || 'New User',
-          email: email,
-          employment: employment
-        })
-        .select()
-        .single();
+    const result = await DataTableManager.create({
+      name: name || 'New User',
+      email: email,
+      employment: employment
+    });
 
-      if (error) throw error;
-      loadUsers();
+    if (result.error) {
+      console.error('users_db: add user error', result.error);
+    } else {
       console.log('users_db: New user added successfully');
-    } catch (err) {
-      console.error('users_db: add user error', err);
+      loadUsers();
     }
   };
 
-  let importFileInput = null;
-  
-  function createImportFileInput(acceptTypes) {
-    if (!importFileInput) {
-      importFileInput = document.createElement('input');
-      importFileInput.type = 'file';
-      importFileInput.style.display = 'none';
-      document.body.appendChild(importFileInput);
+  window.toggleFilterMenu = function() {
+    const filterMenu = document.getElementById('filterMenu');
+    const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
+    const isOpen = filterMenu.style.display === 'block';
+    
+    filterMenu.style.display = isOpen ? 'none' : 'block';
+    document.getElementById('sortMenu').style.display = 'none';
+    
+    if (filterBtn) {
+      filterBtn.classList.toggle('active', !isOpen);
     }
-    importFileInput.accept = acceptTypes;
-    return importFileInput;
-  }
+  };
+
+  window.toggleSortMenu = function() {
+    const sortMenu = document.getElementById('sortMenu');
+    const sortBtn = document.querySelector('.table-filter-wrapper:last-child .filter-btn');
+    const isOpen = sortMenu.style.display === 'block';
+    
+    sortMenu.style.display = isOpen ? 'none' : 'block';
+    document.getElementById('filterMenu').style.display = 'none';
+    
+    if (sortBtn) {
+      sortBtn.classList.toggle('active', !isOpen);
+    }
+  };
+
+  window.toggleAddUserMenu = function() {
+    const addUserMenu = document.getElementById('addUserMenu');
+    const exportMenu = document.getElementById('exportMenu');
+    
+    if (addUserMenu) {
+      addUserMenu.style.display = addUserMenu.style.display === 'none' ? 'block' : 'none';
+    }
+    if (exportMenu) {
+      exportMenu.style.display = 'none';
+    }
+  };
+
+  window.toggleExportMenu = function() {
+    const exportMenu = document.getElementById('exportMenu');
+    const addUserMenu = document.getElementById('addUserMenu');
+    
+    if (exportMenu) {
+      exportMenu.style.display = exportMenu.style.display === 'none' ? 'block' : 'none';
+    }
+    if (addUserMenu) {
+      addUserMenu.style.display = 'none';
+    }
+  };
+
+  window.showImportMenu = function() {
+    const importMenu = document.getElementById('importMenu');
+    const addUserMenu = document.getElementById('addUserMenu');
+    
+    if (importMenu) {
+      importMenu.style.display = importMenu.style.display === 'none' ? 'block' : 'none';
+    }
+    if (addUserMenu) {
+      addUserMenu.style.display = 'none';
+    }
+  };
+
+  window.addFilterRow = function() {
+    const activeFilters = document.getElementById('activeFilters');
+    const filterRow = document.createElement('div');
+    filterRow.className = 'filter-row';
+    
+    filterRow.innerHTML = `
+      <select class="filter-column-select">
+        <option value="name">Username</option>
+        <option value="email">Email</option>
+        <option value="employment">Employment</option>
+        <option value="createdAt">Date Created</option>
+      </select>
+      <span>:</span>
+      <input type="text" class="filter-value-input" placeholder="Enter value...">
+      <button class="remove-filter-btn" onclick="this.parentElement.remove()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    `;
+    
+    activeFilters.appendChild(filterRow);
+  };
+
+  window.addSortRow = function() {
+    const activeSorts = document.getElementById('activeSorts');
+    const sortRow = document.createElement('div');
+    sortRow.className = 'filter-row';
+    
+    sortRow.innerHTML = `
+      <select class="filter-column-select">
+        <option value="name">Username</option>
+        <option value="email">Email</option>
+        <option value="employment">Employment</option>
+        <option value="createdAt">Date Created</option>
+      </select>
+      <span>:</span>
+      <input type="text" class="filter-value-input" placeholder="asc or desc">
+      <button class="remove-filter-btn" onclick="this.parentElement.remove()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    `;
+    
+    activeSorts.appendChild(sortRow);
+  };
+
+  window.applyFilters = function() {
+    const filterRows = document.querySelectorAll('#activeFilters .filter-row');
+    const filters = [];
+    
+    filterRows.forEach(row => {
+      const select = row.querySelector('select');
+      const input = row.querySelector('input');
+      if (select && input && input.value.trim()) {
+        filters.push({
+          column: select.value,
+          value: input.value.trim().toLowerCase()
+        });
+      }
+    });
+    
+    if (filters.length === 0) {
+      filteredUsers = [...users];
+      document.getElementById('filterStatus').textContent = '';
+    } else {
+      filteredUsers = users.filter(user => {
+        return filters.every(filter => {
+          if (filter.column === 'createdAt') {
+            const dateStr = DataTableManager.formatDate(user.createdAt);
+            return dateStr.toLowerCase().includes(filter.value);
+          } else {
+            const cellValue = user[filter.column] || '';
+            return String(cellValue).toLowerCase().includes(filter.value);
+          }
+        });
+      });
+      document.getElementById('filterStatus').textContent = `Filtered (${filters.length})`;
+    }
+    
+    DataTableManager.setSearchTerm('');
+    DataTableManager.applySearch(['name', 'email', 'employment']);
+    PaginationManager.setTotalItems(filteredUsers.length);
+    PaginationManager.setPage(1);
+    toggleFilterMenu();
+    
+    const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
+    if (filterBtn) filterBtn.classList.remove('active');
+  };
+
+  window.applySort = function() {
+    const sortRows = document.querySelectorAll('#activeSorts .filter-row');
+    const sorts = [];
+    
+    sortRows.forEach(row => {
+      const select = row.querySelector('select');
+      const input = row.querySelector('input');
+      if (select && input && input.value.trim()) {
+        const orderValue = input.value.trim().toLowerCase();
+        sorts.push({
+          column: select.value,
+          ascending: orderValue === 'asc' || orderValue === 'ascending'
+        });
+      }
+    });
+    
+    if (sorts.length > 0) {
+      filteredUsers.sort((a, b) => {
+        for (const sort of sorts) {
+          const { column, ascending } = sort;
+          let valueA, valueB;
+          
+          if (column === 'createdAt') {
+            valueA = a.createdAt || '';
+            valueB = b.createdAt || '';
+          } else {
+            valueA = (a[column] || '').toLowerCase();
+            valueB = (b[column] || '').toLowerCase();
+          }
+          
+          if (valueA !== valueB) {
+            return ascending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
+          }
+        }
+        return 0;
+      });
+    }
+    
+    PaginationManager.setPage(1);
+    renderUsers();
+    toggleSortMenu();
+  };
+
+  window.clearFilters = function() {
+    const activeFilters = document.getElementById('activeFilters');
+    if (activeFilters) activeFilters.innerHTML = '';
+    
+    filteredUsers = [...users];
+    document.getElementById('filterStatus').textContent = '';
+    
+    DataTableManager.setSearchTerm('');
+    DataTableManager.applySearch(['name', 'email', 'employment']);
+    PaginationManager.setTotalItems(users.length);
+    PaginationManager.setPage(1);
+    renderUsers();
+  };
 
   window.importFromCSV = function() {
     console.log('Import from CSV clicked');
-    const fileInput = createImportFileInput('.csv');
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
     
     fileInput.onchange = async (event) => {
       const file = event.target.files[0];
@@ -596,7 +637,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.importFromJSON = function() {
     console.log('Import from JSON clicked');
-    const fileInput = createImportFileInput('.json');
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
     
     fileInput.onchange = async (event) => {
       const file = event.target.files[0];
@@ -606,41 +651,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const jsonContent = await file.text();
         const data = JSON.parse(jsonContent);
         const rows = Array.isArray(data) ? data : [data];
-        const csvRows = convertJSONToCSVFormat(rows);
-        await importUsersFromData(csvRows, 'JSON');
+        await importUsersFromData(rows, 'JSON');
       } catch (err) {
         console.error('users_db: JSON import error', err);
         alert('Failed to import JSON: ' + err.message);
-      }
-      fileInput.value = '';
-    };
-    
-    fileInput.click();
-    showImportMenu();
-  };
-
-  window.importFromExcel = function() {
-    console.log('Import from Excel clicked');
-    const fileInput = createImportFileInput('.xlsx,.xls');
-    
-    fileInput.onchange = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      
-      try {
-        if (typeof XLSX !== 'undefined') {
-          const workbook = await readExcelFile(file);
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-          await importUsersFromData(rows, 'Excel');
-        } else {
-          const csvContent = await file.text();
-          const rows = parseCSV(csvContent);
-          await importUsersFromData(rows, 'Excel');
-        }
-      } catch (err) {
-        console.error('users_db: Excel import error', err);
-        alert('Failed to import Excel: ' + err.message);
       }
       fileInput.value = '';
     };
@@ -669,33 +683,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       result.push(current.trim());
       return result;
     });
-  }
-
-  function convertJSONToCSVFormat(jsonArray) {
-    if (!jsonArray || jsonArray.length === 0) return [];
-    
-    const firstItem = jsonArray[0];
-    const hasHeaders = 'name' in firstItem || 'email' in firstItem || 'employment' in firstItem;
-    
-    if (!hasHeaders) {
-      return jsonArray.map(item => [item.name || '', item.email || '', item.employment || '']);
-    }
-    
-    const rows = [];
-    
-    for (const item of jsonArray) {
-      const name = String(item.name || '');
-      const email = String(item.email || '');
-      const employment = String(item.employment || '');
-      
-      const escapedName = name.includes(',') || name.includes('"') || name.includes('\n') ? '"' + name.replace(/"/g, '""') + '"' : name;
-      const escapedEmail = email.includes(',') || email.includes('"') || email.includes('\n') ? '"' + email.replace(/"/g, '""') + '"' : email;
-      const escapedEmployment = employment.includes(',') || employment.includes('"') || employment.includes('\n') ? '"' + employment.replace(/"/g, '""') + '"' : employment;
-      
-      rows.push([escapedName, escapedEmail, escapedEmployment]);
-    }
-    
-    return rows;
   }
 
   async function importUsersFromData(rows, sourceType) {
@@ -780,374 +767,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function downloadFile(content, filename, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  window.exportToCSV = function() {
-    console.log('Export to CSV clicked');
-    
-    const data = getFilteredAndSortedData();
-    if (data.length === 0) {
-      alert('No data to export');
-      toggleExportMenu();
-      return;
-    }
-    
-    const rows = [];
-    
-    for (const user of data) {
-      const name = escapeCSVField(user.name || '');
-      const email = escapeCSVField(user.email || '');
-      const employment = escapeCSVField(user.employment || '');
-      const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '';
-      
-      rows.push(`${name},${email},${employment},${createdAt}`);
-    }
-    
-    const csvContent = rows.join('\n');
-    downloadFile(csvContent, 'users_export.csv', 'text/csv;charset=utf-8;');
-    
-    console.log('users_db: Exported ' + data.length + ' users to CSV');
-    toggleExportMenu();
-  };
-
-  function escapeCSVField(field) {
-    const str = String(field);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return '"' + str.replace(/"/g, '""') + '"';
-    }
-    return str;
-  }
-
-  window.exportToJSON = function() {
-    console.log('Export to JSON clicked');
-    
-    const data = getFilteredAndSortedData();
-    if (data.length === 0) {
-      alert('No data to export');
-      toggleExportMenu();
-      return;
-    }
-    
-    const exportData = data.map(user => ({
-      name: user.name || '',
-      email: user.email || '',
-      employment: user.employment || '',
-      createdAt: user.createdAt || ''
-    }));
-    
-    const jsonContent = JSON.stringify(exportData, null, 2);
-    downloadFile(jsonContent, 'users_export.json', 'application/json;charset=utf-8;');
-    
-    console.log('users_db: Exported ' + data.length + ' users to JSON');
-    toggleExportMenu();
-  };
-
-  window.exportToExcel = function() {
-    console.log('Export to Excel clicked');
-    
-    const data = getFilteredAndSortedData();
-    if (data.length === 0) {
-      alert('No data to export');
-      toggleExportMenu();
-      return;
-    }
-    
-    if (typeof XLSX !== 'undefined') {
-      const rows = [];
-      
-      for (const user of data) {
-        rows.push([
-          user.name || '',
-          user.email || '',
-          user.employment || '',
-          user.createdAt ? new Date(user.createdAt).toLocaleDateString() : ''
-        ]);
-      }
-      
-      const worksheet = XLSX.utils.aoa_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
-      XLSX.writeFile(workbook, 'users_export.xlsx');
-    } else {
-      alert('SheetJS library not available. Exporting as CSV instead.');
-      exportToCSV();
-      return;
-    }
-    
-    console.log('users_db: Exported ' + data.length + ' users to Excel');
-    toggleExportMenu();
-  };
-
-  function getFilteredAndSortedData() {
-    return [...allUsers];
-  }
-
-  async function readExcelFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          resolve(workbook);
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  window.deleteSelectedRows = async function() {
-    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-      alert('No rows selected');
-      return;
-    }
-    
-    if (confirm(`Are you sure you want to delete ${checkedBoxes.length} row(s)?`)) {
-      const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
-      console.log('Delete selected rows:', selectedIds);
-      
-      try {
-        const { error } = await supabase
-          .from(USERS_TABLE)
-          .delete()
-          .in('employeeId', selectedIds);
-        
-        if (error) throw error;
-        console.log('users_db: Deleted ' + selectedIds.length + ' users');
-        loadUsers();
-      } catch (err) {
-        console.error('users_db: Delete error', err);
-        alert('Failed to delete: ' + err.message);
-      }
-      clearSelection();
-    }
-  };
-
-  window.exportSelectedRows = function() {
-    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-      alert('No rows selected');
-      return;
-    }
-    
-    const selectedIds = new Set(Array.from(checkedBoxes).map(cb => cb.value));
-    const selectedData = allUsers.filter(user => selectedIds.has(user.employeeId));
-    
-    if (selectedData.length === 0) {
-      alert('No data to export');
-      return;
-    }
-    
-    const headers = ['Name', 'Email', 'Employment', 'Date Created'];
-    const rows = [headers.join(',')];
-    
-    for (const user of selectedData) {
-      const name = escapeCSVField(user.name || '');
-      const email = escapeCSVField(user.email || '');
-      const employment = escapeCSVField(user.employment || '');
-      const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '';
-      
-      rows.push(`${name},${email},${employment},${createdAt}`);
-    }
-    
-    const csvContent = rows.join('\n');
-    downloadFile(csvContent, 'users_selected_export.csv', 'text/csv;charset=utf-8;');
-    
-    console.log('users_db: Exported ' + selectedData.length + ' selected users to CSV');
-  };
-
-  window.exportSelectedRowsJSON = function() {
-    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-      alert('No rows selected');
-      return;
-    }
-    
-    const selectedIds = new Set(Array.from(checkedBoxes).map(cb => cb.value));
-    const selectedData = allUsers.filter(user => selectedIds.has(user.employeeId));
-    
-    if (selectedData.length === 0) {
-      alert('No data to export');
-      return;
-    }
-    
-    const exportData = selectedData.map(user => ({
-      name: user.name || '',
-      email: user.email || '',
-      employment: user.employment || '',
-      createdAt: user.createdAt || ''
-    }));
-    
-    const jsonContent = JSON.stringify(exportData, null, 2);
-    downloadFile(jsonContent, 'users_selected_export.json', 'application/json;charset=utf-8;');
-    
-    console.log('users_db: Exported ' + selectedData.length + ' selected users to JSON');
-  };
-
-  window.clearSelection = function() {
-    const checkboxes = document.querySelectorAll('.user-checkbox');
-    checkboxes.forEach(cb => cb.checked = false);
-    updateSelectAllState();
-  };
-
-  window.applySort = function() {
-    const sorts = [];
-    
-    const sortRows = document.querySelectorAll('#activeSorts .filter-row');
-    sortRows.forEach(row => {
-      const select = row.querySelector('select');
-      const input = row.querySelector('input');
-      if (select && input && input.value.trim()) {
-        const orderValue = input.value.trim().toLowerCase();
-        sorts.push({
-          column: select.value,
-          ascending: orderValue === 'asc' || orderValue === 'ascending'
-        });
-      }
-    });
-    
-    if (sorts.length > 0) {
-      allUsers.sort((a, b) => {
-        for (const sort of sorts) {
-          const { column, ascending } = sort;
-          let valueA, valueB;
-          
-          if (column === 'createdAt') {
-            valueA = a.createdAt || '';
-            valueB = b.createdAt || '';
-          } else {
-            valueA = (a[column] || '').toLowerCase();
-            valueB = (b[column] || '').toLowerCase();
-          }
-          
-          if (valueA !== valueB) {
-            return ascending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
-          }
-        }
-        return 0;
-      });
-    }
-    
-    currentPage = 1;
-    renderUsers();
-    toggleSortMenu();
-  };
-
-  window.clearFilters = function() {
-    const activeFilters = document.getElementById('activeFilters');
-    if (activeFilters) activeFilters.innerHTML = '';
-    
-    filteredUsers = [...users];
-    allUsers = [...filteredUsers];
-    document.getElementById('filterStatus').textContent = '';
-    currentPage = 1;
-    renderUsers();
-  };
-
-  window.addFilterRow = function() {
-    const activeFilters = document.getElementById('activeFilters');
-    const filterRow = document.createElement('div');
-    filterRow.className = 'filter-row';
-    
-    filterRow.innerHTML = `
-      <select class="filter-column-select">
-        <option value="name">Username</option>
-        <option value="email">Email</option>
-        <option value="employment">Employment</option>
-        <option value="createdAt">Date Created</option>
-      </select>
-      <span>:</span>
-      <input type="text" class="filter-value-input" placeholder="Enter value...">
-      <button class="remove-filter-btn" onclick="this.parentElement.remove()">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    `;
-    
-    activeFilters.appendChild(filterRow);
-  };
-
-  window.addSortRow = function() {
-    const activeSorts = document.getElementById('activeSorts');
-    const sortRow = document.createElement('div');
-    sortRow.className = 'filter-row';
-    
-    sortRow.innerHTML = `
-      <select class="filter-column-select">
-        <option value="name">Username</option>
-        <option value="email">Email</option>
-        <option value="employment">Employment</option>
-        <option value="createdAt">Date Created</option>
-      </select>
-      <span>:</span>
-      <input type="text" class="filter-value-input" placeholder="asc or desc">
-      <button class="remove-filter-btn" onclick="this.parentElement.remove()">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    `;
-    
-    activeSorts.appendChild(sortRow);
-  };
-
-  window.applyFilters = function() {
-    const filters = [];
-    
-    const filterRows = document.querySelectorAll('#activeFilters .filter-row');
-    filterRows.forEach(row => {
-      const select = row.querySelector('select');
-      const input = row.querySelector('input');
-      if (select && input && input.value.trim()) {
-        filters.push({
-          column: select.value,
-          value: input.value.trim().toLowerCase()
-        });
-      }
-    });
-    
-    if (filters.length === 0) {
-      filteredUsers = [...users];
-      allUsers = [...filteredUsers];
-      document.getElementById('filterStatus').textContent = '';
-    } else {
-      filteredUsers = users.filter(user => {
-        return filters.every(filter => {
-          if (filter.column === 'createdAt') {
-            const dateStr = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '';
-            return dateStr.toLowerCase().includes(filter.value);
-          } else {
-            const cellValue = user[filter.column] || '';
-            return cellValue.toLowerCase().includes(filter.value);
-          }
-        });
-      });
-      allUsers = [...filteredUsers];
-      document.getElementById('filterStatus').textContent = `Filtered (${filters.length})`;
-    }
-    
-    currentPage = 1;
-    renderUsers();
-    toggleFilterMenu();
-    
+  document.addEventListener('click', function(event) {
+    const filterWrapper = document.querySelector('.table-filter-wrapper');
+    const filterMenu = document.getElementById('filterMenu');
     const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
-    if (filterBtn) filterBtn.classList.remove('active');
-  };
-
-  window.addEventListener('message', function(event) {
-    if (event.data.type === 'search') {
-      window.performUserSearch(event.data.term);
+    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+    const sortMenu = document.getElementById('sortMenu');
+    const sortBtn = document.querySelector('.table-filter-wrapper:last-child .filter-btn');
+    const addUserBtn = document.getElementById('addUserBtn');
+    const addUserMenu = document.getElementById('addUserMenu');
+    const exportBtn = document.getElementById('exportBtn');
+    const exportMenu = document.getElementById('exportMenu');
+    const importMenu = document.getElementById('importMenu');
+    
+    if (filterWrapper && filterMenu && !filterWrapper.contains(event.target)) {
+      filterMenu.style.display = 'none';
+      if (filterBtn) filterBtn.classList.remove('active');
+    }
+    if (sortWrapper && sortMenu && !sortWrapper.contains(event.target)) {
+      sortMenu.style.display = 'none';
+      if (sortBtn) sortBtn.classList.remove('active');
+    }
+    if (addUserBtn && addUserMenu && !addUserBtn.contains(event.target) && !addUserMenu.contains(event.target)) {
+      addUserMenu.style.display = 'none';
+    }
+    if (exportBtn && exportMenu && !exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
+      exportMenu.style.display = 'none';
+    }
+    if (importMenu && !addUserBtn?.contains(event.target) && !importMenu.contains(event.target)) {
+      importMenu.style.display = 'none';
     }
   });
 
@@ -1157,4 +805,48 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeAddUserModal();
     }
   });
+
+  window.addEventListener('message', function(event) {
+    if (event.data.type === 'search') {
+      window.performUserSearch(event.data.term);
+    }
+  });
+
+  async function checkAdminAndLoad() {
+    if (!supabase) {
+      console.error('users_db: Supabase client is not initialized.');
+      usersList.innerHTML = '<div class="error">Supabase not initialized.</div>';
+      return;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const userEmail = session?.user?.email || sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
+    
+    if (userEmail) {
+      const { data: adminData, error } = await supabase
+        .from('user_admin_data')
+        .select('*')
+        .eq('email', userEmail);
+
+      const isAdmin = !error && adminData && adminData.length > 0;
+      addUserBtn.style.display = isAdmin ? '' : 'none';
+      console.log('users_db: signed in as', userEmail, 'admin?', isAdmin);
+    }
+    
+    await loadUsers();
+  }
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      users = [];
+      filteredUsers = [];
+      DataTableManager.clearSelection();
+      renderUsers();
+      addUserBtn.style.display = 'none';
+    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      checkAdminAndLoad();
+    }
+  });
+
+  checkAdminAndLoad();
 });
