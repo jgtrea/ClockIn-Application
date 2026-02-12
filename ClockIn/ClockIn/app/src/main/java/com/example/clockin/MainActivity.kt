@@ -1,7 +1,9 @@
 package com.example.clockin
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -38,12 +40,15 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,9 +61,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -73,6 +82,7 @@ val BorderGray = Color(0xFFE0E0E0)
 
 class MainActivity : ComponentActivity() {
     var targetBleName by mutableStateOf("")
+    var watchdogTimer by mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,6 +93,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val context = LocalContext.current
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
             var isCheckingSession by remember { mutableStateOf(true) }
             var startDestination by remember { mutableStateOf("login") }
@@ -99,6 +110,26 @@ class MainActivity : ComponentActivity() {
                         header = "Permissions Required",
                         message = "Bluetooth and Location are needed for attendance."
                     )
+                }
+            }
+
+            val enableBluetoothLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { }
+
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+                        if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled) {
+                            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                            enableBluetoothLauncher.launch(enableBtIntent)
+                        }
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
                 }
             }
 
@@ -199,6 +230,9 @@ class MainActivity : ComponentActivity() {
                                 beaconDistance = beaconDistance,
                                 isBeaconFound = isBeaconFound,
                                 deviceName = targetBleName,
+                                timeOutOfRange = watchdogTimer,
+                                onTimerTick = { watchdogTimer++ },
+                                onTimerReset = { watchdogTimer = 0L },
                                 onTargetBleChanged = { newBleName ->
                                     targetBleName = newBleName
                                     isBeaconFound = false
@@ -259,7 +293,6 @@ fun LoginScreen(
     var savedAccounts by remember { mutableStateOf(mapOf<String, String>()) }
     var expanded by remember { mutableStateOf(false) }
 
-    // DEVICE MANAGEMENT: Add these state variables
     var showDeviceConflict by remember { mutableStateOf(false) }
     var registeredDeviceInfo by remember { mutableStateOf("") }
 
@@ -333,7 +366,8 @@ fun LoginScreen(
                                 onValueChange = { emailInput = it },
                                 placeholder = { Text("Enter Email") },
                                 modifier = Modifier
-                                    .fillMaxWidth(),
+                                    .fillMaxWidth()
+                                    .menuAnchor(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                                 shape = RoundedCornerShape(8.dp),
                                 singleLine = true,
@@ -386,7 +420,6 @@ fun LoginScreen(
                                 isLoading = true
 
                                 scope.launch {
-                                    // DEVICE MANAGEMENT: Use signInWithDeviceCheck instead of signIn
                                     val result = SupabaseManager.signInWithDeviceCheck(context, emailInput, passwordInput)
                                     isLoading = false
 
@@ -401,7 +434,6 @@ fun LoginScreen(
                                     } else {
                                         val errorMsg = result.exceptionOrNull()?.message ?: "Unknown Error"
 
-                                        // DEVICE MANAGEMENT: Check for device conflict
                                         if (errorMsg.contains("already registered on another device")) {
                                             registeredDeviceInfo = errorMsg.substringAfter("another device: ")
                                             showDeviceConflict = true
@@ -441,7 +473,6 @@ fun LoginScreen(
         }
     }
 
-    // DEVICE MANAGEMENT: Device Conflict Dialog
     if (showDeviceConflict) {
         DeviceConflictDialog(
             registeredDevice = registeredDeviceInfo,
@@ -450,15 +481,15 @@ fun LoginScreen(
         )
     }
 }
-// DEVICE MANAGEMENT: Device Conflict Dialog
+
 @Composable
 fun DeviceConflictDialog(
     registeredDevice: String,
     currentDevice: String,
     onDismiss: () -> Unit
 ) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        androidx.compose.material3.Surface(
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
             shape = RoundedCornerShape(24.dp),
             color = Color.White,
             modifier = Modifier.fillMaxWidth().padding(16.dp)
@@ -467,7 +498,6 @@ fun DeviceConflictDialog(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Warning Icon
                 Box(
                     modifier = Modifier
                         .height(64.dp)
@@ -491,7 +521,7 @@ fun DeviceConflictDialog(
                     "Account Already Active",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -500,12 +530,11 @@ fun DeviceConflictDialog(
                     "This account is already registered on another device.",
                     fontSize = 14.sp,
                     color = Color.Gray,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Registered Device Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -532,7 +561,6 @@ fun DeviceConflictDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Current Device Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -563,7 +591,7 @@ fun DeviceConflictDialog(
                     "To switch devices, please contact IT support.",
                     fontSize = 12.sp,
                     color = Color.Gray,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))

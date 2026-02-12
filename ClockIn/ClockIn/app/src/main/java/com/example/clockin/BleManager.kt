@@ -18,8 +18,8 @@ object BleManager {
     private var currentScanCallback: ScanCallback? = null
 
 
-    // ETO UNG DISTANCE NG BLE // NEED NETO NG RESEARCH KUNG GANO KALAYO UNG ACCEPTABLE
-    private const val BLE_DISTANCE_LIMIT = 10.0
+    // ETO UNG DISTANCE NG BLE
+    private const val BLE_DISTANCE_LIMIT = 2.0
     private const val TX_POWER = -59
 
     @SuppressLint("MissingPermission")

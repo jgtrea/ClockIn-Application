@@ -28,6 +28,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 
 @Serializable
 data class UserProfile(
@@ -261,17 +262,6 @@ object SupabaseManager {
         }
     }
 
-    suspend fun getAllSections(): List<Map<String, String>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                client.from("sections").select().decodeList<Map<String, String>>()
-            } catch (e: Exception) {
-                Log.e("SupabaseManager", "Error fetching sections: ${e.message}")
-                emptyList()
-            }
-        }
-    }
-
     suspend fun getEmployeeSchedule(): List<Schedule> {
         val user = getCurrentUser() ?: return emptyList()
         return withContext(Dispatchers.IO) {
@@ -485,13 +475,53 @@ object SupabaseManager {
         }
     }
 
-    // ============================================
-    // DEVICE MANAGEMENT FUNCTIONS
-    // ============================================
+    suspend fun getActiveAttendanceId(schedId: String? = null): String? {
+        val user = getCurrentUser() ?: return null
+        return withContext(Dispatchers.IO) {
+            try {
+                val result = client.from("attendance")
+                    .select(columns = Columns.list("attendId", "schedId")) {
+                        filter {
+                            eq("employeeId", user.id)
 
-    /**
-     * Get unique device ID
-     */
+                            filter("timeOut", FilterOperator.IS, "null")
+                        }
+                    }
+                    .decodeList<Map<String, String>>()
+
+                if (result.isNotEmpty()) {
+                    val activeSession = result.first()
+                    Log.d("SupabaseManager", "Found Active Session: ${activeSession["attendId"]} for Schedule: ${activeSession["schedId"]}")
+                    return@withContext activeSession["attendId"]
+                } else {
+                    Log.d("SupabaseManager", "User is not clocked in for ANY class.")
+                    return@withContext null
+                }
+            } catch (e: Exception) {
+                Log.e("SupabaseManager", "Error checking active attendance: ${e.message}")
+                null
+            }
+        }
+    }
+
+    suspend fun forceMarkAbsent(attendanceId: String): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+
+                client.from("attendance").update({
+                    set("timeOut", nowStr)
+                    set("status", "Incomplete")
+                }) {
+                    filter { eq("attendId", attendanceId) }
+                }
+                Result.success(true)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
     @SuppressLint("HardwareIds")
     private fun getDeviceId(context: Context): String {
         val prefs = context.getSharedPreferences("device_prefs", Context.MODE_PRIVATE)
@@ -508,18 +538,13 @@ object SupabaseManager {
         return deviceId
     }
 
-    /**
-     * Get device info for display
-     */
     private fun getDeviceInfo(): String = "${Build.MANUFACTURER} ${Build.MODEL}"
 
-    /**
-     * Sign in with device check
-     */
     suspend fun signInWithDeviceCheck(context: Context, email: String, pass: String): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
                 cachedUser = null
+                client.from("user_devices")
                 client.auth.signInWith(Email) {
                     this.email = email
                     this.password = pass
@@ -562,17 +587,47 @@ object SupabaseManager {
         }
     }
 
-    /**
-     * Unregister device (admin function)
-     */
-    suspend fun unregisterDevice(employeeId: String): Result<Boolean> {
+    suspend fun sendHeartbeat() {
+        val user = getCurrentUser() ?: return
+        withContext(Dispatchers.IO) {
+            try {
+                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                client.from("user_devices").update({
+                    set("lastActive", nowStr)
+                }) {
+                    filter { eq("employeeId", user.id) }
+                }
+                Log.d("SupabaseManager", "Heartbeat successfully sent: $nowStr")
+            } catch (e: Exception) {
+                Log.e("SupabaseManager", "Heartbeat failed: ${e.message}")
+            }
+        }
+    }
+
+    suspend fun checkLastHeartbeat(): Boolean {
+        val user = getCurrentUser() ?: return true
         return withContext(Dispatchers.IO) {
             try {
-                client.from("user_devices").delete { filter { eq("employeeId", employeeId) } }
-                Result.success(true)
+                val result = client.from("user_devices")
+                    .select(columns = Columns.list("lastActive")) {
+                        filter { eq("employeeId", user.id) }
+                    }
+                    .decodeSingleOrNull<Map<String, String>>()
+
+                val lastActiveStr = result?.get("lastActive") ?: return@withContext true
+
+                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                val lastActive = format.parse(lastActiveStr)
+                val now = Date()
+
+                if (lastActive != null) {
+                    val diff = now.time - lastActive.time
+                    val minutesGone = diff / (1000 * 60)
+                    return@withContext minutesGone < 3
+                }
+                true
             } catch (e: Exception) {
-                Log.e(TAG, "Unregister device error", e)
-                Result.failure(e)
+                true
             }
         }
     }
