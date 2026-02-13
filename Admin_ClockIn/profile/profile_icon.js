@@ -63,9 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         this.supabase.auth.onAuthStateChange((event, session) => {
-          if (event === 'SIGNED_IN' && session) {
-            window.location.reload();
-          } else if (event === 'SIGNED_OUT') {
+          if (event === 'SIGNED_OUT') {
             window.top.location.href = '../../index.html';
           }
         });

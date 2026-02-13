@@ -6,47 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
-  <link rel="stylesheet" href="styles/topbar.css">
   <link rel="stylesheet" href="styles/user_ui.css">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
-  <script src="profile/profile_icon.js" defer></script>
   <script src="scripts/managers/clock_index.js" defer></script>
   <script src="scripts/managers/schedule_overview.js" defer></script>
-  <script src="scripts/filter/search_bar.js" defer></script>
-  <script src="scripts/index.js" defer></script>
 </head>
 
 <body>
 
 <div class="app">
   <div class="main">
-    <header class="topbar">
-      <div class="search-bar">
-        <input type="text" placeholder="Search" id="sectionSearch">
-        <button class="material-symbols-outlined" onclick="searchSections()">search</button>   
-      </div>
-      <div class="top-actions">
-        <div class="profile-wrapper">
-          <div class="profile-circle" id="profileCircle">A</div>
-          <div class="profile-menu" id="profileMenu">
-            <div class="profile-header">
-              <div class="profile-circle small" id="profileCircleMenu">A</div>
-              <div>
-                <div class="profile-name" id="profileName">User</div>
-                <div class="profile-email" id="profileEmail"></div>
-              </div>
-            </div>
-            <hr>
-            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
-            <a class="menu-item">Send Feedback</a>
-            <button class="menu-item logout" id="logoutBtn">Logout</button>
-          </div>
-        </div>
-      </div>
-    </header>
-
     <main class="content">
       <div style="display: flex; justify-content: space-between; align-items: baseline;">
         <h1>Section Overview</h1>
@@ -75,6 +46,37 @@
     <div id="modalContent"></div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const supabase = window.supabaseClient;
+  const clockManager = new ClockManager();
+  const scheduleOverview = new ScheduleOverview(supabase, clockManager);
+
+  window.scheduleOverview = scheduleOverview;
+
+  clockManager.init();
+  scheduleOverview.init();
+});
+
+function showWeeklySchedule(sectionId, sectionName) {
+  if (window.scheduleOverview) {
+    window.scheduleOverview.showWeeklySchedule(sectionId, sectionName);
+  }
+}
+
+function loadDaySchedule(sectionId, day) {
+  if (window.scheduleOverview) {
+    window.scheduleOverview.loadDaySchedule(sectionId, day);
+  }
+}
+
+function closeModal() {
+  if (window.scheduleOverview) {
+    window.scheduleOverview.closeModal();
+  }
+}
+</script>
 
 </body>
 </html>

@@ -6,53 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
-  <link rel="stylesheet" href="styles/topbar.css">
   <link rel="stylesheet" href="styles/user_ui.css">
   <link rel="stylesheet" href="styles/container_card/dashboard_db.css">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
-
-  <script src="profile/profile_icon.js" defer></script>
   <script src="scripts/managers/clock_index.js" defer></script>
   <script src="scripts/managers/schedule_overview.js" defer></script>
-
-  <script src="scripts/index.js" defer></script>
   <script src="scripts/user_management/attendance_trend_db.js" defer></script>
   <script src="scripts/user_management/dashboard_db.js" defer></script>
-
-  <script src="scripts/filter/filter_user.js" defer></script>
 </head>
 
 <body>
 
 <div class="app">
   <div class="main">
-    <header class="topbar">
-      <div class="search-bar">
-        <input type="text" placeholder="Search..." id="globalSearch">
-        <button class="material-symbols-outlined" onclick="performSearch()">search</button>      
-      </div>
-      <div class="top-actions">
-        <div class="profile-wrapper">
-          <div class="profile-circle" id="profileCircle">A</div>
-          <div class="profile-menu" id="profileMenu">
-            <div class="profile-header">
-              <div class="profile-circle small" id="profileCircleMenu">A</div>
-              <div>
-                <div class="profile-name" id="profileName">User</div>
-                <div class="profile-email" id="profileEmail"></div>
-              </div>
-            </div>
-            <hr>
-            <a class="menu-item" href="user_profile.html" target="contentFrame">Profile</a>
-            <a class="menu-item">Send Feedback</a>
-            <button class="menu-item logout" id="logoutBtn">Logout</button>
-          </div>
-        </div>
-      </div>
-    </header>
-
     <main class="content">
 
       <div class="dashboard-title-wrapper">
@@ -134,16 +102,16 @@
   </div>
 </div>
 
-  <div id="datePickerModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-    <div class="modal-content" style="background: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 300px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3 style="margin: 0;">Select Date</h3>
-        <button onclick="closeDatePicker()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
-      </div>
-      <input type="date" id="selectedDate" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 15px;">
-      <button onclick="showAttendanceByDate()" class="btn-primary" style="width: 100%; padding: 10px; background: #FF725E; color: white; border: none; border-radius: 6px; cursor: pointer;">Show Attendance</button>
+<div id="datePickerModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+  <div class="modal-content" style="background: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 300px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Select Date</h3>
+      <button onclick="closeDatePicker()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
     </div>
+    <input type="date" id="selectedDate" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 15px;">
+    <button onclick="showAttendanceByDate()" class="btn-primary" style="width: 100%; padding: 10px; background: #FF725E; color: white; border: none; border-radius: 6px; cursor: pointer;">Show Attendance</button>
   </div>
+</div>
 
 </body>
 </html>

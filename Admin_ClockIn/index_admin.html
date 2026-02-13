@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ClockIn — Dashboard</title>
+  <link rel="stylesheet" href="styles/topbar.css">
   <link rel="stylesheet" href="styles/user_ui.css">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   
@@ -11,10 +12,6 @@
   <script src="../Authentification/authentification.js"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
   <script src="profile/profile_icon.js" defer></script>
-  <script src="scripts/managers/clock_index.js" defer></script>
-  <script src="scripts/managers/schedule_overview.js" defer></script>
-  <script src="scripts/filter/search_bar.js" defer></script>
-  <script src="scripts/index.js" defer></script>
 </head>
 <body>
 
@@ -31,33 +28,37 @@
     </div>
 
     <nav class="menu">
-      <a href="home.html" target="contentFrame" class="active" onclick="setActive(this)">
+      <a href="home.html" target="contentFrame" data-page="home.html" class="active" onclick="setActive(this)">
         <span class="material-symbols-outlined">home</span>
         <span class="label">Home</span>
       </a>
-      <a href="dashboard_db.html" target="contentFrame" onclick="setActive(this)">
+      <a href="dashboard_db.html" target="contentFrame" data-page="dashboard_db.html" onclick="setActive(this)">
         <span class="material-symbols-outlined">dashboard</span>
         <span class="label">Dashboard</span>
       </a>
-      <a href="users_db.html" target="contentFrame" onclick="setActive(this)">
+      <a href="users_db.html" target="contentFrame" data-page="users_db.html" onclick="setActive(this)">
         <span class="material-symbols-outlined">group</span>
         <span class="label">Users</span>
       </a>      
-      <a href="schedule_db.html" target="contentFrame" onclick="setActive(this)">
+      <a href="schedule_db.html" target="contentFrame" data-page="schedule_db.html" onclick="setActive(this)">
         <span class="material-symbols-outlined">calendar_month</span>
         <span class="label">Schedule</span>
       </a>      
-      <a href="attendance_db.html" target="contentFrame" onclick="setActive(this)">
+      <a href="attendance_db.html" target="contentFrame" data-page="attendance_db.html" onclick="setActive(this)">
         <span class="material-symbols-outlined">how_to_reg</span>
         <span class="label">Attendance</span>
       </a>
-      <a href="push_notification.html" target="contentFrame" onclick="setActive(this)">
+      <a href="push_notification.html" target="contentFrame" data-page="push_notification.html" onclick="setActive(this)">
         <span class="material-symbols-outlined">notifications_active</span>
         <span class="label">Push Notification</span>
       </a>
-      <a href="feedback.html" target="contentFrame" onclick="setActive(this)">
+      <a href="feedback.html" target="contentFrame" data-page="feedback.html" onclick="setActive(this)">
         <span class="material-symbols-outlined">feedback</span>
         <span class="label">Feedback</span>
+      </a>
+      <a href="user_profile.html" target="contentFrame" data-page="user_profile.html" onclick="setActive(this)">
+        <span class="material-symbols-outlined">person</span>
+        <span class="label">User Profile</span>
       </a>
     </nav>
 
@@ -69,20 +70,93 @@
     </div>
   </aside>
 
-  <div class="main">    
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar-wrapper">
+        <span class="search-icon material-symbols-outlined">search</span>
+        <input type="text" id="sectionSearch" placeholder="Search..." autocomplete="off">
+        <div id="searchResults" class="search-results"></div>
+      </div>
+      <div class="profile-wrapper">
+        <div class="profile-circle" id="profileCircle">A</div>
+        <div class="profile-menu" id="profileMenu">
+          <div class="profile-header">
+            <div class="profile-circle" id="profileCircleMenu">A</div>
+            <div class="profile-text">
+              <div class="profile-name" id="profileName">User</div>
+              <div class="profile-email" id="profileEmail"></div>
+            </div>
+          </div>
+          <hr>
+          <a class="menu-item" href="user_profile.html" onclick="navigateTo('user_profile.html')">Profile</a>
+          <a class="menu-item" href="feedback.html" onclick="navigateTo('feedback.html')">Send Feedback</a>
+          <button class="menu-item logout" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+    </header>
     <iframe name="contentFrame" src="home.html" frameborder="0" id="contentFrame"></iframe>
   </div>
 </div>
-  
-</body>
-</html>
+
 <script>
-function setActive(clickedLink) {
+// Interface search functionality
+const interfaces = [
+  { name: 'Home', url: 'home.html', icon: 'home' },
+  { name: 'Dashboard', url: 'dashboard_db.html', icon: 'dashboard' },
+  { name: 'Users', url: 'users_db.html', icon: 'group' },
+  { name: 'Schedule', url: 'schedule_db.html', icon: 'calendar_month' },
+  { name: 'Attendance', url: 'attendance_db.html', icon: 'how_to_reg' },
+  { name: 'Push Notification', url: 'push_notification.html', icon: 'notifications_active' },
+  { name: 'Feedback', url: 'feedback.html', icon: 'feedback' },
+  { name: 'User Profile', url: 'user_profile.html', icon: 'person' }
+];
+
+const searchInput = document.getElementById('sectionSearch');
+const searchResults = document.getElementById('searchResults');
+
+searchInput.addEventListener('input', function() {
+  const query = this.value.toLowerCase().trim();
+  
+  if (query.length === 0) {
+    searchResults.classList.remove('show');
+    return;
+  }
+  
+  const matches = interfaces.filter(iface => 
+    iface.name.toLowerCase().includes(query)
+  );
+  
+  if (matches.length === 0) {
+    searchResults.innerHTML = '<div class="search-no-result">No interfaces found</div>';
+  } else {
+    searchResults.innerHTML = matches.map(iface => `
+      <div class="search-result-item" onclick="navigateTo('${iface.url}')">
+        ${iface.name}
+      </div>
+    `).join('');
+  }
+  
+  searchResults.classList.add('show');
+});
+
+function navigateTo(url) {
+  searchInput.value = '';
+  searchResults.classList.remove('show');
+  
+  const iframe = document.getElementById('contentFrame');
+  if (iframe) {
+    iframe.src = url;
+  }
+  
+  // Update active state in sidebar
   document.querySelectorAll('#sidebar a').forEach(link => {
     link.classList.remove('active');
+    if (link.getAttribute('data-page') === url || link.getAttribute('href') === url) {
+      link.classList.add('active');
+    }
   });
-  clickedLink.classList.add('active');
   
+  // Collapse sidebar
   const sidebar = document.getElementById('sidebar');
   if (sidebar) {
     sidebar.classList.add('collapsed');
@@ -90,10 +164,51 @@ function setActive(clickedLink) {
   }
 }
 
+function setActive(clickedLink) {
+  const url = clickedLink.getAttribute('href');
+  navigateToPage(url);
+}
+
+function navigateToPage(url) {
+  const iframe = document.getElementById('contentFrame');
+  if (iframe) {
+    iframe.src = url;
+  }
+  
+  // Update active state in sidebar
+  document.querySelectorAll('#sidebar a').forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('data-page') === url || link.getAttribute('href') === url) {
+      link.classList.add('active');
+    }
+  });
+  
+  // Collapse sidebar
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.classList.add('collapsed');
+    sidebar.classList.remove('expanded');
+  }
+}
+
+// Profile menu toggle
 document.addEventListener('DOMContentLoaded', () => {
+  const profileCircle = document.getElementById('profileCircle');
+  const profileMenu = document.getElementById('profileMenu');
   const sidebar = document.getElementById('sidebar');
   const hamburger = document.getElementById('hamburger');
   const sidebarLogout = document.getElementById('sidebarLogout');
+  
+  if (profileCircle && profileMenu) {
+    profileCircle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileMenu.classList.toggle('show');
+    });
+    
+    document.addEventListener('click', () => {
+      profileMenu.classList.remove('show');
+    });
+  }
   
   if (hamburger && sidebar) {
     hamburger.addEventListener('click', () => {
@@ -118,3 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+
+</body>
+</html>
