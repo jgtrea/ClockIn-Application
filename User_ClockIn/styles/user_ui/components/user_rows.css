@@ -1,0 +1,25 @@
+.user-row:not(.expanded) .user-bar,
+.user-row:not(.expanded) .user-collapsed-content {
+  padding: 10px 15px;
+  min-height: 60px;
+  max-height: 60px;
+}
+
+.user-text-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.user-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
