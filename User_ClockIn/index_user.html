@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ClockIn — User Dashboard</title>
   <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/user_ui/topbar.css">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Authentification/authentification.js"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
   <script src="profile/profile_icon.js" defer></script>
-  <script src="scripts/home_user.js" defer></script>
 </head>
 <body data-allow-employees="true">
 
@@ -54,8 +54,63 @@
     </div>
   </aside>
 
-  <div class="main">    
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar-wrapper">
+        <span class="search-icon material-symbols-outlined">search</span>
+        <input type="text" id="sectionSearch" placeholder="Search..." autocomplete="off">
+        <div id="searchResults" class="search-results"></div>
+      </div>
+      <div class="profile-wrapper">
+        <div class="profile-circle" id="profileCircle">?</div>
+        <div class="profile-menu" id="profileMenu">
+          <div class="profile-header">
+            <div class="profile-circle" id="profileCircleMenu">?</div>
+            <div class="profile-text">
+              <div class="profile-name" id="profileName">User</div>
+              <div class="profile-email" id="profileEmail"></div>
+            </div>
+          </div>
+          <hr>
+          <a class="menu-item" href="user_profile.html" target="contentFrame" onclick="setActiveMenuItem(this)">
+            <span class="material-symbols-outlined">person</span>
+            Profile
+          </a>
+          <a class="menu-item" href="#" id="feedbackBtn">
+            <span class="material-symbols-outlined">feedback</span>
+            Send Feedback
+          </a>
+          <a class="menu-item" href="../Login_Path/Policies/privacy_policy.html" target="_blank">
+            <span class="material-symbols-outlined">policy</span>
+            Policies
+          </a>
+          <a class="menu-item" href="../Login_Path/Policies/terms.html" target="_blank">
+            <span class="material-symbols-outlined">description</span>
+            Terms of Service
+          </a>
+          <hr>
+          <button class="menu-item logout" id="logoutBtn">
+            <span class="material-symbols-outlined">logout</span>
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+    
     <iframe name="contentFrame" src="home_user.html" frameborder="0" id="contentFrame"></iframe>
+  </div>
+</div>
+
+<div id="feedbackModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Send Feedback</h2>
+      <button class="modal-close" id="closeFeedbackModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="feedbackText" placeholder="Tell us what you think..." rows="5"></textarea>
+      <button class="btn-primary" id="submitFeedback">Submit Feedback</button>
+    </div>
   </div>
 </div>
    
@@ -73,6 +128,10 @@ function setActive(clickedLink) {
     sidebar.classList.add('collapsed');
     sidebar.classList.remove('expanded');
   }
+}
+
+function setActiveMenuItem(clickedLink) {
+  setActive(clickedLink);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -101,5 +160,187 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  const interfaces = [
+    { name: 'Home', url: 'home_user.html', icon: 'home' },
+    { name: 'Check In/Out', url: 'checkin_user.html', icon: 'login' },
+    { name: 'Schedule', url: 'schedule_user.html', icon: 'calendar_month' },
+    { name: 'Attendance', url: 'attendance_user.html', icon: 'how_to_reg' },
+  ];
+
+  const searchInput = document.getElementById('sectionSearch');
+  const searchResults = document.getElementById('searchResults');
+
+  searchInput.addEventListener('input', function() {
+    const query = this.value.toLowerCase().trim();
+    
+    if (query.length === 0) {
+      searchResults.classList.remove('show');
+      return;
+    }
+    
+    const matches = interfaces.filter(iface => 
+      iface.name.toLowerCase().includes(query)
+    );
+    
+    if (matches.length === 0) {
+      searchResults.innerHTML = '<div class="search-no-result">No interfaces found</div>';
+    } else {
+      searchResults.innerHTML = matches.map(iface => `
+        <div class="search-result-item" onclick="navigateTo('${iface.url}')">
+          ${iface.name}
+        </div>
+      `).join('');
+    }
+    
+    searchResults.classList.add('show');
+  });
+
+  searchInput.addEventListener('blur', () => {
+    setTimeout(() => {
+      searchResults.classList.remove('show');
+    }, 200);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-bar-wrapper')) {
+      searchResults.classList.remove('show');
+    }
+    if (!e.target.closest('.profile-wrapper')) {
+      document.getElementById('profileMenu')?.classList.remove('show');
+    }
+  });
+
+  const feedbackBtn = document.getElementById('feedbackBtn');
+  const feedbackModal = document.getElementById('feedbackModal');
+  const closeFeedbackModal = document.getElementById('closeFeedbackModal');
+  const submitFeedback = document.getElementById('submitFeedback');
+
+  if (feedbackBtn && feedbackModal) {
+    feedbackBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      feedbackModal.style.display = 'flex';
+    });
+  }
+
+  if (closeFeedbackModal && feedbackModal) {
+    closeFeedbackModal.addEventListener('click', () => {
+      feedbackModal.style.display = 'none';
+    });
+  }
+
+  if (submitFeedback) {
+    submitFeedback.addEventListener('click', async () => {
+      const feedbackText = document.getElementById('feedbackText');
+      const text = feedbackText?.value?.trim();
+      
+      if (!text) {
+        alert('Please enter your feedback');
+        return;
+      }
+
+      const supabase = window.supabaseClient;
+      if (!supabase) return;
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      
+      const email = session.user.email;
+      const { data: empData } = await supabase.from('user_employee_data').select('employeeId').eq('email', email).maybeSingle();
+      
+      if (empData?.id) {
+        await supabase.from('feedback').insert({
+          title: 'User Feedback',
+          message: text,
+          employeeId: empData.employeeId
+        });
+        
+        feedbackModal.style.display = 'none';
+        feedbackText.value = '';
+        alert('Thank you for your feedback!');
+      }
+    });
+  }
+
+  if (feedbackModal) {
+    feedbackModal.addEventListener('click', (e) => {
+      if (e.target === feedbackModal) {
+        feedbackModal.style.display = 'none';
+      }
+    });
+  }
+
+  loadUserSession();
 });
+
+function navigateTo(url) {
+  const iframe = document.getElementById('contentFrame');
+  iframe.src = url;
+  
+  document.querySelectorAll('#sidebar a').forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === url) {
+      link.classList.add('active');
+    }
+  });
+}
+
+async function loadUserSession() {
+  const supabase = window.supabaseClient;
+  if (!supabase) {
+    setTimeout(() => loadUserSession(), 100);
+    return;
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session && session.user) {
+      const email = session.user.email;
+      let displayName = session.user.user_metadata?.displayName || email.split('@')[0];
+      
+      const { data: empData } = await supabase.from('user_employee_data').select('name').eq('email', email).maybeSingle();
+      if (empData?.name) {
+        displayName = empData.name;
+      }
+      
+      const letter = displayName.charAt(0).toUpperCase();
+      
+      const profileCircle = document.getElementById('profileCircle');
+      const profileCircleMenu = document.getElementById('profileCircleMenu');
+      const profileName = document.getElementById('profileName');
+      const profileEmail = document.getElementById('profileEmail');
+      
+      if (profileCircle) profileCircle.textContent = letter;
+      if (profileCircleMenu) profileCircleMenu.textContent = letter;
+      if (profileName) profileName.textContent = displayName;
+      if (profileEmail) profileEmail.textContent = email;
+    }
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        window.top.location.href = '../../index.html';
+      }
+    });
+  } catch (err) {
+    console.error('Failed to load session:', err);
+  }
+}
+
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async () => {
+    const supabase = window.supabaseClient;
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    sessionStorage.removeItem('userEmail');
+    sessionStorage.removeItem('userId');
+    sessionStorage.removeItem('userType');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userType');
+    window.top.location.href = '../../index.html';
+  });
+}
 </script>

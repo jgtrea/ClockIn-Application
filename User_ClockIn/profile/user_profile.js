@@ -5,8 +5,19 @@ document.addEventListener("DOMContentLoaded", () => {
     email: document.getElementById("email"),
     username: document.getElementById("username"),
     emailField: document.getElementById("emailField"),
-    employmentField: document.getElementById("employmentField")
+    employmentField: document.getElementById("employmentField"),
+    backBtn: document.getElementById("backBtn")
   };
+
+  if (elements.backBtn) {
+    elements.backBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const iframe = window.parent.document.getElementById('contentFrame');
+      if (iframe) {
+        iframe.src = 'home_user.html';
+      }
+    });
+  }
 
   loadUserProfile();
 

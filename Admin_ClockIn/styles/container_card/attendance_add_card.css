@@ -44,6 +44,8 @@
   background: #fff;
   text-align: center;
   -moz-appearance: textfield;
+  -webkit-appearance: textfield;
+  appearance: textfield;
 }
 
 .items-per-page-input::-webkit-outer-spin-button,
@@ -95,6 +97,8 @@
   color: #111827;
   background: #fff;
   -moz-appearance: textfield;
+  -webkit-appearance: textfield;
+  appearance: textfield;
 }
 
 .page-number-input::-webkit-outer-spin-button,
