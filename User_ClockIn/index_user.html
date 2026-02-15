@@ -11,7 +11,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Authentification/authentification.js"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
-  <script src="profile/profile_icon.js" defer></script>
 </head>
 <body data-allow-employees="true">
 
@@ -28,19 +27,19 @@
     </div>
 
     <nav class="menu">
-      <a href="home_user.html" target="contentFrame" class="active" onclick="setActive(this)">
+      <a href="#" data-url="home_user.html" class="active">
         <span class="material-symbols-outlined">home</span>
         <span class="label">Home</span>
       </a>
-      <a href="checkin_user.html" target="contentFrame" onclick="setActive(this)">
+      <a href="#" data-url="checkin_user.html">
         <span class="material-symbols-outlined">login</span>
         <span class="label">Check In/Out</span>
       </a>
-      <a href="schedule_user.html" target="contentFrame" onclick="setActive(this)">
+      <a href="#" data-url="schedule_user.html">
         <span class="material-symbols-outlined">calendar_month</span>
         <span class="label">Schedule</span>
       </a>
-      <a href="attendance_user.html" target="contentFrame" onclick="setActive(this)">
+      <a href="#" data-url="attendance_user.html">
         <span class="material-symbols-outlined">how_to_reg</span>
         <span class="label">Attendance</span>
       </a>
@@ -72,7 +71,7 @@
             </div>
           </div>
           <hr>
-          <a class="menu-item" href="user_profile.html" target="contentFrame" onclick="setActiveMenuItem(this)">
+          <a class="menu-item" href="#" data-url="user_profile.html">
             <span class="material-symbols-outlined">person</span>
             Profile
           </a>
@@ -117,21 +116,37 @@
 </body>
 </html>
 <script>
-function setActive(clickedLink) {
-  document.querySelectorAll('#sidebar a').forEach(link => {
-    link.classList.remove('active');
-  });
-  clickedLink.classList.add('active');
-  
-  const sidebar = document.getElementById('sidebar');
-  if (sidebar) {
-    sidebar.classList.add('collapsed');
-    sidebar.classList.remove('expanded');
-  }
-}
+const interfaces = [
+  { name: 'Home', url: 'home_user.html', icon: 'home' },
+  { name: 'Check In/Out', url: 'checkin_user.html', icon: 'login' },
+  { name: 'Schedule', url: 'schedule_user.html', icon: 'calendar_month' },
+  { name: 'Attendance', url: 'attendance_user.html', icon: 'how_to_reg' },
+];
 
-function setActiveMenuItem(clickedLink) {
-  setActive(clickedLink);
+document.querySelectorAll('.menu a, .menu-item[data-url]').forEach(link => {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    const url = this.getAttribute('data-url');
+    if (url) {
+      navigateTo(url);
+      
+      document.querySelectorAll('.menu a').forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+      
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar) {
+        sidebar.classList.add('collapsed');
+        sidebar.classList.remove('expanded');
+      }
+    }
+  });
+});
+
+function navigateTo(url) {
+  const iframe = document.getElementById('contentFrame');
+  if (iframe) {
+    iframe.src = url;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -161,46 +176,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const interfaces = [
-    { name: 'Home', url: 'home_user.html', icon: 'home' },
-    { name: 'Check In/Out', url: 'checkin_user.html', icon: 'login' },
-    { name: 'Schedule', url: 'schedule_user.html', icon: 'calendar_month' },
-    { name: 'Attendance', url: 'attendance_user.html', icon: 'how_to_reg' },
-  ];
-
   const searchInput = document.getElementById('sectionSearch');
   const searchResults = document.getElementById('searchResults');
 
-  searchInput.addEventListener('input', function() {
-    const query = this.value.toLowerCase().trim();
-    
-    if (query.length === 0) {
-      searchResults.classList.remove('show');
-      return;
-    }
-    
-    const matches = interfaces.filter(iface => 
-      iface.name.toLowerCase().includes(query)
-    );
-    
-    if (matches.length === 0) {
-      searchResults.innerHTML = '<div class="search-no-result">No interfaces found</div>';
-    } else {
-      searchResults.innerHTML = matches.map(iface => `
-        <div class="search-result-item" onclick="navigateTo('${iface.url}')">
-          ${iface.name}
-        </div>
-      `).join('');
-    }
-    
-    searchResults.classList.add('show');
-  });
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const query = this.value.toLowerCase().trim();
+      
+      if (query.length === 0) {
+        searchResults.classList.remove('show');
+        return;
+      }
+      
+      const matches = interfaces.filter(iface => 
+        iface.name.toLowerCase().includes(query)
+      );
+      
+      if (matches.length === 0) {
+        searchResults.innerHTML = '<div class="search-no-result">No interfaces found</div>';
+      } else {
+        searchResults.innerHTML = matches.map(iface => `
+          <div class="search-result-item" onclick="navigateTo('${iface.url}')">
+            ${iface.name}
+          </div>
+        `).join('');
+      }
+      
+      searchResults.classList.add('show');
+    });
 
-  searchInput.addEventListener('blur', () => {
-    setTimeout(() => {
-      searchResults.classList.remove('show');
-    }, 200);
-  });
+    searchInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        searchResults.classList.remove('show');
+      }, 200);
+    });
+  }
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.search-bar-wrapper')) {
@@ -248,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const email = session.user.email;
       const { data: empData } = await supabase.from('user_employee_data').select('employeeId').eq('email', email).maybeSingle();
       
-      if (empData?.id) {
+      if (empData?.employeeId) {
         await supabase.from('feedback').insert({
           title: 'User Feedback',
           message: text,
@@ -272,18 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadUserSession();
 });
-
-function navigateTo(url) {
-  const iframe = document.getElementById('contentFrame');
-  iframe.src = url;
-  
-  document.querySelectorAll('#sidebar a').forEach(link => {
-    link.classList.remove('active');
-    if (link.getAttribute('href') === url) {
-      link.classList.add('active');
-    }
-  });
-}
 
 async function loadUserSession() {
   const supabase = window.supabaseClient;

@@ -547,12 +547,131 @@
   color: #9ca3af;
 }
 
+.attendance-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.stat-item.present {
+  border-left: 4px solid #16a34a;
+}
+
+.stat-item.absent {
+  border-left: 4px solid #dc2626;
+}
+
+.stat-item.late {
+  border-left: 4px solid #d97706;
+}
+
+.stat-item.total {
+  border-left: 4px solid #2563eb;
+}
+
+.stat-number {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.attendance-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.present {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.late {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.unknown {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.schedule-container {
+  display: flex;
+  flex-direction: column;
+}
+
 .no-announcements {
   text-align: center;
   color: #9ca3af;
   padding: 32px;
   font-size: 14px;
 }
+
+.attendance-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.stat-item.present { border-left: 4px solid #16a34a; }
+.stat-item.absent { border-left: 4px solid #dc2626; }
+.stat-item.late { border-left: 4px solid #d97706; }
+.stat-item.total { border-left: 4px solid #2563eb; }
+
+.stat-number { font-size: 32px; font-weight: 700; color: #111827; }
+.stat-label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+.attendance-container { display: flex; flex-direction: column; }
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.schedule-container { display: flex; flex-direction: column; }
 
 @media (max-width: 1024px) {
   .stats-grid {

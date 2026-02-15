@@ -7,10 +7,10 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/user_ui/topbar.css">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
-  <script src="profile/profile_icon.js" defer></script>
   <script src="scripts/user_shared.js" defer></script>
   <script src="scripts/attendance_user.js" defer></script>
 </head>
@@ -24,15 +24,53 @@
         <div class="dashboard-header">
           <div class="dashboard-title-wrapper">
             <div>
-              <h1>My Attendance</h1>
-              <p class="tagline">View your attendance records.</p>
+              <h1>Attendance</h1>
+              <p class="tagline">View attendance records.</p>
             </div>
           </div>
         </div>
 
-        <div id="attendanceList"></div>
-      </main>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+        
+        <div class="users-table-container">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Check In Time</th>
+                <th>Check Out Time</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceList">
+            </tbody>
+          </table>
+          <div class="pagination-container">
+            <div class="pagination-left">
+              <span>Show</span>
+              <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
+              <span>from <span id="totalAttendanceCount">0</span> data</span>
+            </div>
+            <div class="pagination-right">
+              <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
+                <span class="material-symbols-outlined">first_page</span>
+              </button>
+              <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
+                <span class="material-symbols-outlined">chevron_left</span>
+              </button>
+              <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
+              <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
+                <span class="material-symbols-outlined">chevron_right</span>
+              </button>
+              <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
+                <span class="material-symbols-outlined">last_page</span>
+              </button>
+            </div>
+          </div>
+        </div>
 
+      </main>
     </div>
   </div>
 </body>
