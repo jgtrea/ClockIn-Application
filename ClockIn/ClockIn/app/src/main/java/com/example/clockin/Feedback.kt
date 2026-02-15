@@ -1,6 +1,5 @@
 package com.example.clockin
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +23,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
 
     var title by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
+    var isAnonymous by remember { mutableStateOf(true) }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -40,7 +40,6 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     .padding(20.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -61,7 +60,6 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Title Field
                 Text(
                     "Title",
                     color = Color.DarkGray,
@@ -85,7 +83,6 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Message Field
                 Text(
                     "Description",
                     color = Color.DarkGray,
@@ -109,7 +106,25 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     )
                 )
 
-                // Error Message
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isAnonymous,
+                        onCheckedChange = { if (!isSubmitting) isAnonymous = it },
+                        colors = CheckboxDefaults.colors(checkedColor = PrimaryOrange),
+                        enabled = !isSubmitting
+                    )
+                    Text(
+                        text = "Send as Anonymous",
+                        fontSize = 14.sp,
+                        color = Color.DarkGray
+                    )
+                }
+
                 if (errorMessage != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -119,9 +134,8 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Submit Button
                 if (isSubmitting) {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -135,7 +149,6 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                 } else {
                     Button(
                         onClick = {
-                            // Validation
                             when {
                                 title.trim().isEmpty() -> {
                                     errorMessage = "Please enter a title"
@@ -152,7 +165,8 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                                     scope.launch {
                                         val result = SupabaseManager.submitFeedback(
                                             title = title.trim(),
-                                            message = message.trim()
+                                            message = message.trim(),
+                                            isAnonymous = isAnonymous
                                         )
 
                                         isSubmitting = false

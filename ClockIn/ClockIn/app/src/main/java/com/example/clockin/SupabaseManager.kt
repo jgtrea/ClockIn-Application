@@ -1,5 +1,7 @@
 package com.example.clockin
 
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
@@ -129,21 +131,6 @@ object SupabaseManager {
         }
     }
 
-    suspend fun signIn(email: String, pass: String): Result<Boolean> {
-        return withContext(Dispatchers.IO) {
-            try {
-                cachedUser = null
-                client.auth.signInWith(Email) {
-                    this.email = email
-                    this.password = pass
-                }
-                Result.success(true)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
-
     suspend fun sendOTP(email: String): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
@@ -181,26 +168,6 @@ object SupabaseManager {
                 Result.success(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Update password error", e)
-                Result.failure(e)
-            }
-        }
-    }
-
-    suspend fun updateUserName(employeeId: String, newName: String): Result<Boolean> {
-        return withContext(Dispatchers.IO) {
-            try {
-                client.from("user_employee_data")
-                    .update({
-                        set("name", newName)
-                    }) {
-                        filter {
-                            eq("employeeId", employeeId)
-                        }
-                    }
-                cachedUser = cachedUser?.copy(name = newName)
-                Result.success(true)
-            } catch (e: Exception) {
-                Log.e(TAG, "Update name error", e)
                 Result.failure(e)
             }
         }
@@ -450,7 +417,7 @@ object SupabaseManager {
         }
     }
 
-    suspend fun submitFeedback(title: String, message: String): Result<Boolean> {
+    suspend fun submitFeedback(title: String, message: String, isAnonymous: Boolean): Result<Boolean> {
         val user = getCurrentUser() ?: return Result.failure(Exception("User not logged in"))
 
         return withContext(Dispatchers.IO) {
@@ -458,15 +425,18 @@ object SupabaseManager {
                 val feedbackId = UUID.randomUUID().toString()
                 val dateCreated = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
 
-                val feedback = mapOf(
-                    "feedbackId" to feedbackId,
-                    "title" to title,
-                    "message" to message,
-                    "employeeId" to user.id,
-                    "dateCreated" to dateCreated
-                )
+                val feedbackJson = buildJsonObject {
+                    put("feedbackId", feedbackId)
+                    put("title", title)
+                    put("message", message)
+                    put("dateCreated", dateCreated)
 
-                client.from("feedback").insert(feedback)
+                    if (!isAnonymous) {
+                        put("employeeId", user.id)
+                    }
+                }
+
+                client.from("feedback").insert(feedbackJson)
                 Result.success(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Submit feedback error", e)
