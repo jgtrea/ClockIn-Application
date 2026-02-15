@@ -98,7 +98,7 @@ function setupAuthListener() {
   const supabase = window.supabaseClient;
   if (!supabase) return;
 
-  supabase.auth.onAuthStateChanged(async (event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       updateProfileDisplay(session.user);
       window.location.reload();

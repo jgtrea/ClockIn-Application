@@ -56,10 +56,6 @@
         <span class="material-symbols-outlined">feedback</span>
         <span class="label">Feedback</span>
       </a>
-      <a href="user_profile.html" target="contentFrame" data-page="user_profile.html" onclick="setActive(this)">
-        <span class="material-symbols-outlined">person</span>
-        <span class="label">User Profile</span>
-      </a>
     </nav>
 
     <div class="sidebar-footer">
@@ -88,8 +84,8 @@
             </div>
           </div>
           <hr>
-          <a class="menu-item" href="user_profile.html" onclick="navigateTo('user_profile.html')">Profile</a>
-          <a class="menu-item" href="feedback.html" onclick="navigateTo('feedback.html')">Send Feedback</a>
+          <a class="menu-item" href="#" onclick="navigateTo('user_profile.html'); return false;">Profile</a>
+          <a class="menu-item" href="#" onclick="navigateTo('feedback.html'); return false;">Send Feedback</a>
           <button class="menu-item logout" id="logoutBtn">Logout</button>
         </div>
       </div>
@@ -108,7 +104,6 @@ const interfaces = [
   { name: 'Attendance', url: 'attendance_db.html', icon: 'how_to_reg' },
   { name: 'Push Notification', url: 'push_notification.html', icon: 'notifications_active' },
   { name: 'Feedback', url: 'feedback.html', icon: 'feedback' },
-  { name: 'User Profile', url: 'user_profile.html', icon: 'person' }
 ];
 
 const searchInput = document.getElementById('sectionSearch');
@@ -193,22 +188,9 @@ function navigateToPage(url) {
 
 // Profile menu toggle
 document.addEventListener('DOMContentLoaded', () => {
-  const profileCircle = document.getElementById('profileCircle');
-  const profileMenu = document.getElementById('profileMenu');
   const sidebar = document.getElementById('sidebar');
   const hamburger = document.getElementById('hamburger');
   const sidebarLogout = document.getElementById('sidebarLogout');
-  
-  if (profileCircle && profileMenu) {
-    profileCircle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      profileMenu.classList.toggle('show');
-    });
-    
-    document.addEventListener('click', () => {
-      profileMenu.classList.remove('show');
-    });
-  }
   
   if (hamburger && sidebar) {
     hamburger.addEventListener('click', () => {

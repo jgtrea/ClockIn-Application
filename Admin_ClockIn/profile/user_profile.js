@@ -5,11 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
     email: document.getElementById("email"),
     username: document.getElementById("username"),
     emailField: document.getElementById("emailField"),
-    employmentField: document.getElementById("employmentField"),
-    editButtons: document.querySelectorAll(".edit")
+    employmentField: document.getElementById("employmentField")
   };
-
-  const fields = ["username", "employmentField"];
 
   loadUserProfile();
 
@@ -64,55 +61,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function setupAuthListener() {
-    window.supabaseClient.auth.onAuthStateChanged((event, session) => {
+    window.supabaseClient.auth.onAuthStateChange((event, session) => {
       if (!session) loadFromStorage();
       else if (event === 'SIGNED_IN') window.location.reload();
     });
   }
-
-  async function handleEdit(field) {
-    const supabase = window.supabaseClient;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return alert('Please log in to edit profile');
-
-    let currentValue;
-    switch(field) {
-      case "username": currentValue = elements.username.textContent; break;
-      case "employmentField": currentValue = elements.employmentField.textContent; break;
-    }
-
-    const newValue = prompt(`Edit ${field}`, currentValue);
-    if (!newValue) return;
-
-    try {
-      if (field === "username") {
-        elements.username.textContent = newValue;
-        elements.name.textContent = newValue;
-        elements.avatar.textContent = newValue.charAt(0).toUpperCase();
-        
-        const { data: adminData } = await supabase.from('user_admin_data').select('adminId').eq('email', session.user.email).maybeSingle();
-        if (adminData?.adminId) {
-          await supabase.from('user_admin_data').update({ name: newValue }).eq('adminId', adminData.adminId);
-        }
-        
-        window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { name: newValue } }));
-        
-        alert("Name updated successfully!");
-      } else if (field === "employmentField") {
-        elements.employmentField.textContent = newValue;
-        
-        const { data: adminData } = await supabase.from('user_admin_data').select('adminId').eq('email', session.user.email).maybeSingle();
-        if (adminData?.adminId) {
-          await supabase.from('user_admin_data').update({ employment: newValue }).eq('adminId', adminData.adminId);
-        }
-        alert("Employment updated successfully!");
-      }
-    } catch (err) {
-      alert(`Failed to update ${field}: ${err.message}`);
-    }
-  }
-
-  elements.editButtons.forEach((btn, index) => {
-    btn.addEventListener("click", () => handleEdit(fields[index]));
-  });
 });

@@ -77,7 +77,6 @@
 .suggestion .name { font-weight: 600; color: #111827; font-size: 14px; }
 .suggestion .email { color: #6b7280; font-size: 13px; }
 
-/* Message */
 .textarea {
   min-height: 120px;
   border: 1px solid #d1d5db;

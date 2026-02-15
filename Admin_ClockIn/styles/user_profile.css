@@ -126,6 +126,12 @@ html, body {
   visibility: hidden;
 }
 
+/* Keep grid alignment but disable/hide editing in profile */
+.info-grid .edit.edit-disabled {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .back-btn {
   display: inline-block;
   margin-top: 20px;

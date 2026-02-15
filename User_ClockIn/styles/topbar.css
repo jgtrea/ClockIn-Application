@@ -7,7 +7,7 @@
   border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 2000; /* keep profile dropdown above page content */
 }
 
 .search-bar {
@@ -87,6 +87,7 @@
   flex-direction: column;
   overflow: hidden;
   animation: profileFade 0.18s ease-out;
+  z-index: 2000; /* ensure it renders above page content */
 }
 
 .profile-menu.show {
