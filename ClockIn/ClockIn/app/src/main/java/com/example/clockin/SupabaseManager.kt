@@ -473,6 +473,49 @@ object SupabaseManager {
         }
     }
 
+    suspend fun getAttendanceForSchedule(schedId: String, datePrefix: String): Attendance? {
+        val user = getCurrentUser() ?: return null
+        return withContext(Dispatchers.IO) {
+            try {
+                client.from("attendance")
+                    .select {
+                        filter {
+                            eq("schedId", schedId)
+                            eq("employeeId", user.id)
+                            like("timeIn", "$datePrefix%")
+                        }
+                    }
+                    .decodeSingleOrNull<Attendance>()
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    suspend fun markAbsent(schedId: String, employeeId: String): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val absentId = UUID.randomUUID().toString()
+                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+
+                val absentRecord = Attendance(
+                    id = absentId,
+                    status = "Absent",
+                    timeIn = nowStr,
+                    timeOut = nowStr,
+                    schedId = schedId,
+                    employeeId = employeeId
+                )
+
+                client.from("attendance").insert(absentRecord)
+                Result.success(true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error marking absent", e)
+                Result.failure(e)
+            }
+        }
+    }
+
     @SuppressLint("HardwareIds")
     private fun getDeviceId(context: Context): String {
         val prefs = context.getSharedPreferences("device_prefs", Context.MODE_PRIVATE)

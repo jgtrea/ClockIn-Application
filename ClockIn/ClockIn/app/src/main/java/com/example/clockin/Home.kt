@@ -35,6 +35,7 @@ import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.Date
 
 val PrimaryOrange = Color(0xFFFF7F66)
 val AlertRed = Color(0xFFFF5252)
@@ -96,6 +97,43 @@ fun DashboardScreen(
             val classInfo = SupabaseManager.getCurrentClassBeacon()
             val attId = SupabaseManager.getActiveAttendanceId()
             activeAttendanceId = attId
+
+            try {
+                if (user != null) {
+                    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+                    val dayFormat = SimpleDateFormat("EEEE", Locale.US)
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
+                    val now = Date()
+                    val currentDay = dayFormat.format(now)
+                    val currentDateStr = dateFormat.format(now)
+
+                    val currentTime = timeFormat.parse(timeFormat.format(now))
+
+                    val allSchedules = SupabaseManager.client.from("schedule")
+                        .select { filter { eq("employeeId", user.id) } }
+                        .decodeList<Schedule>()
+
+                    val todaysSchedules = allSchedules.filter {
+                        it.weekday.trim().equals(currentDay, ignoreCase = true)
+                    }
+
+                    for (sched in todaysSchedules) {
+                        val endTime = timeFormat.parse(sched.endTime)
+
+                        if (currentTime != null && endTime != null && currentTime.after(endTime)) {
+                            val existingRecord = SupabaseManager.getAttendanceForSchedule(sched.id, currentDateStr)
+
+                            if (existingRecord == null) {
+                                SupabaseManager.markAbsent(sched.id, user.id)
+                                NotificationManager.show("Missed Class", "Marked ABSENT for ${sched.subject}")
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
 
             if (classInfo != null) {
                 currentSectionTitle = classInfo.sectionDisplay
