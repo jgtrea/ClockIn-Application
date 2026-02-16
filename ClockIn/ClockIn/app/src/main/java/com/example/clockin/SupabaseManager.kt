@@ -91,6 +91,7 @@ object SupabaseManager {
     private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo"
 
     private var cachedUser: UserProfile? = null
+    private val processedAbsentCache = mutableSetOf<String>()
 
     @OptIn(SupabaseInternal::class)
     val client = createSupabaseClient(
@@ -124,6 +125,7 @@ object SupabaseManager {
 
     suspend fun signOut() {
         cachedUser = null
+        processedAbsentCache.clear()
         try {
             client.auth.signOut()
         } catch (e: Exception) {
@@ -477,12 +479,16 @@ object SupabaseManager {
         val user = getCurrentUser() ?: return null
         return withContext(Dispatchers.IO) {
             try {
+                val startOfDay = "${datePrefix}T00:00:00"
+                val endOfDay = "${datePrefix}T23:59:59"
+
                 client.from("attendance")
                     .select {
                         filter {
                             eq("schedId", schedId)
                             eq("employeeId", user.id)
-                            like("timeIn", "$datePrefix%")
+                            gte("timeIn", startOfDay)
+                            lte("timeIn", endOfDay)
                         }
                     }
                     .decodeSingleOrNull<Attendance>()
@@ -492,9 +498,34 @@ object SupabaseManager {
         }
     }
 
-    suspend fun markAbsent(schedId: String, employeeId: String): Result<Boolean> {
+    suspend fun checkAndMarkAbsent(schedId: String, employeeId: String, datePrefix: String): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
+                val cacheKey = "$schedId-$datePrefix"
+                if (processedAbsentCache.contains(cacheKey)) {
+                    Log.d(TAG, "Skipping absent check: Already processed in this session.")
+                    return@withContext Result.success(false)
+                }
+
+                val startOfDay = "${datePrefix}T00:00:00"
+                val endOfDay = "${datePrefix}T23:59:59"
+
+                val existingRecord = client.from("attendance")
+                    .select {
+                        filter {
+                            eq("schedId", schedId)
+                            eq("employeeId", employeeId)
+                            gte("timeIn", startOfDay)
+                            lte("timeIn", endOfDay)
+                        }
+                    }
+                    .decodeSingleOrNull<Attendance>()
+
+                if (existingRecord != null) {
+                    processedAbsentCache.add(cacheKey)
+                    return@withContext Result.success(false)
+                }
+
                 val absentId = UUID.randomUUID().toString()
                 val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
 
@@ -508,6 +539,9 @@ object SupabaseManager {
                 )
 
                 client.from("attendance").insert(absentRecord)
+
+                processedAbsentCache.add(cacheKey)
+
                 Result.success(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Error marking absent", e)

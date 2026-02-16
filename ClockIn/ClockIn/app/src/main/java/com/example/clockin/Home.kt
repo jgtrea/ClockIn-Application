@@ -107,7 +107,6 @@ fun DashboardScreen(
                     val now = Date()
                     val currentDay = dayFormat.format(now)
                     val currentDateStr = dateFormat.format(now)
-
                     val currentTime = timeFormat.parse(timeFormat.format(now))
 
                     val allSchedules = SupabaseManager.client.from("schedule")
@@ -122,10 +121,9 @@ fun DashboardScreen(
                         val endTime = timeFormat.parse(sched.endTime)
 
                         if (currentTime != null && endTime != null && currentTime.after(endTime)) {
-                            val existingRecord = SupabaseManager.getAttendanceForSchedule(sched.id, currentDateStr)
+                            val result = SupabaseManager.checkAndMarkAbsent(sched.id, user.id, currentDateStr)
 
-                            if (existingRecord == null) {
-                                SupabaseManager.markAbsent(sched.id, user.id)
+                            if (result.getOrNull() == true) {
                                 NotificationManager.show("Missed Class", "Marked ABSENT for ${sched.subject}")
                             }
                         }
