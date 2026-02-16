@@ -232,6 +232,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       empVal !== (userInArray.employment || '');
 
     if (hasChanged) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org)$/i;
+      if (!emailRegex.test(emailVal)) {
+        showAlertPrompt('Invalid email format');
+        return;
+      }
+      
+      const existingName = users.find(u => u.employeeId !== uid && u.name && u.name.toLowerCase() === nameVal.toLowerCase());
+      if (existingName) {
+        showAlertPrompt('Username already exists');
+        return;
+      }
+      
+      const existingEmail = users.find(u => u.employeeId !== uid && u.email && u.email.toLowerCase() === emailVal.toLowerCase());
+      if (existingEmail) {
+        showAlertPrompt('Email already exists');
+        return;
+      }
+      
       const result = await DataTableManager.update(uid, {
         name: nameVal,
         email: emailVal,
@@ -271,7 +289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.exportSelectedRows = function() {
     const selectedIds = DataTableManager.getSelectedItems();
     if (selectedIds.length === 0) {
-      alert('No rows selected');
+      showAlertPrompt('No rows selected');
       return;
     }
     
@@ -302,7 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.exportSelectedRowsJSON = function() {
     const selectedIds = DataTableManager.getSelectedItems();
     if (selectedIds.length === 0) {
-      alert('No rows selected');
+      showAlertPrompt('No rows selected');
       return;
     }
     
@@ -329,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.deleteSelectedRows = async function() {
     const selectedIds = DataTableManager.getSelectedItems();
     if (selectedIds.length === 0) {
-      alert('No rows selected');
+      showAlertPrompt('No rows selected');
       return;
     }
     
@@ -347,7 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadUsers();
       } catch (err) {
         console.error('users_db: Delete error', err);
-        alert('Failed to delete: ' + err.message);
+        showAlertPrompt('Failed to delete user');
       }
       DataTableManager.clearSelection();
     }
@@ -360,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     if (selectedIds.length === 0) {
-      alert('No rows selected');
+      showAlertPrompt('No rows selected');
       return;
     }
     
@@ -372,11 +390,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           .in('employeeId', selectedIds);
         
         if (error) throw error;
-        alert('Device records removed successfully');
+        showAlertPrompt('Device records removed');
         console.log('users_db: Removed device records for ' + selectedIds.length + ' users');
       } catch (err) {
         console.error('users_db: Remove device records error', err);
-        alert('Failed to remove device records: ' + err.message);
+        showAlertPrompt('Failed to remove device records');
       }
     }
   };
@@ -410,7 +428,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const employment = document.getElementById('addUserEmployment').value;
     
     if (!name) {
-      alert('Please enter a username');
+      showAlertPrompt('Please enter a username');
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org)$/i;
+    if (!emailRegex.test(email)) {
+      showAlertPrompt('Invalid email format');
+      return;
+    }
+    
+    const existingName = users.find(u => u.name && u.name.toLowerCase() === name.toLowerCase());
+    if (existingName) {
+      showAlertPrompt('Username already exists');
+      return;
+    }
+    
+    const existingEmail = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+    if (existingEmail) {
+      showAlertPrompt('Email already exists');
       return;
     }
     
@@ -424,6 +460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (result.error) {
       console.error('users_db: add user error', result.error);
+      showAlertPrompt('Failed to add user');
     } else {
       console.log('users_db: New user added successfully');
       loadUsers();
@@ -550,6 +587,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.applyFilters = function() {
+    if (!users || users.length === 0) {
+      console.warn('No users data available for filtering');
+      return;
+    }
+    
     const filterRows = document.querySelectorAll('#activeFilters .filter-row');
     const filters = [];
     
@@ -564,11 +606,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
     
+    let sourceData = [...users];
+    
     if (filters.length === 0) {
-      filteredUsers = [...users];
+      filteredUsers = sourceData;
+      DataTableManager.setFilteredData(filteredUsers);
       document.getElementById('filterStatus').textContent = '';
     } else {
-      filteredUsers = users.filter(user => {
+      filteredUsers = sourceData.filter(user => {
         return filters.every(filter => {
           if (filter.column === 'createdAt') {
             const dateStr = DataTableManager.formatDate(user.createdAt);
@@ -579,11 +624,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         });
       });
+      DataTableManager.setFilteredData(filteredUsers);
       document.getElementById('filterStatus').textContent = `Filtered (${filters.length})`;
     }
     
-    DataTableManager.setSearchTerm('');
-    DataTableManager.applySearch(['name', 'email', 'employment']);
     Paginate.setTotalItems(filteredUsers.length);
     Paginate.setPage(1);
     toggleFilterMenu();
@@ -595,6 +639,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.applySort = function() {
+    if (!filteredUsers || filteredUsers.length === 0) {
+      console.warn('No data available for sorting');
+      return;
+    }
+    
     const sortRows = document.querySelectorAll('#activeSorts .filter-row');
     const sorts = [];
     
@@ -611,7 +660,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     if (sorts.length > 0) {
-      filteredUsers.sort((a, b) => {
+      const sortedData = [...filteredUsers].sort((a, b) => {
         for (const sort of sorts) {
           const { column, ascending } = sort;
           let valueA, valueB;
@@ -630,6 +679,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         return 0;
       });
+      filteredUsers = sortedData;
+      DataTableManager.setFilteredData(filteredUsers);
     }
     
     Paginate.setPage(1);
@@ -673,7 +724,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await importUsersFromData(rows, 'CSV');
       } catch (err) {
         console.error('users_db: CSV import error', err);
-        alert('Failed to import CSV: ' + err.message);
+        showAlertPrompt('Failed to import CSV');
       }
       fileInput.value = '';
     };
@@ -701,7 +752,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await importUsersFromData(rows, 'JSON');
       } catch (err) {
         console.error('users_db: JSON import error', err);
-        alert('Failed to import JSON: ' + err.message);
+        showAlertPrompt('Failed to import JSON');
       }
       fileInput.value = '';
     };
@@ -734,7 +785,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function importUsersFromData(rows, sourceType) {
     if (!rows || rows.length === 0) {
-      alert('No data found in ' + sourceType + ' file');
+      showAlertPrompt('No data found in file');
       return;
     }
     
@@ -767,8 +818,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!row || row.length === 0 || (row.length === 1 && !row[0])) continue;
       
       const name = nameIndex >= 0 ? (row[nameIndex] || 'New User') : 'New User';
-      const email = emailIndex >= 0 ? (row[emailIndex] || '') : '';
+      let email = emailIndex >= 0 ? (row[emailIndex] || '') : '';
       const employment = employmentIndex >= 0 ? (row[employmentIndex] || 'Full-time') : 'Full-time';
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org)$/i;
+      if (!emailRegex.test(email)) {
+        continue;
+      }
+      
+      const existingName = users.find(u => u.name && u.name.toLowerCase() === String(name).toLowerCase());
+      if (existingName) {
+        continue;
+      }
+      
+      const existingEmail = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+      if (existingEmail) {
+        continue;
+      }
       
       let empValue = String(employment).trim();
       if (empValue !== 'Full-time' && empValue !== 'Part-time') {
@@ -790,7 +856,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (newUsers.length === 0) {
-      alert('No valid user data found in ' + sourceType + ' file');
+      showAlertPrompt('No valid users found (check email format)');
       return;
     }
     
@@ -807,10 +873,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       console.log('users_db: Successfully imported ' + newUsers.length + ' users');
       loadUsers();
-      alert('Successfully imported ' + newUsers.length + ' user(s)');
+      showAlertPrompt('Successfully imported ' + newUsers.length + ' user(s)', 'success');
     } catch (err) {
       console.error('users_db: Import error', err);
-      alert('Failed to import users: ' + err.message);
+      showAlertPrompt('Failed to import users');
     }
   }
 

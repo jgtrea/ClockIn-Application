@@ -79,7 +79,7 @@ if (loginForm) {
     const password = document.getElementById('password').value;
 
     if (!email || !password) {
-      alert('Please fill in all fields.');
+      showAlertPrompt('Please fill in all fields.');
       return;
     }
 
@@ -118,7 +118,7 @@ if (loginForm) {
 
     } catch (err) {
       console.error('Login failed', err);
-      alert('Login failed. Please check your email and password.');
+      showAlertPrompt('Login failed. Please check your email and password.');
     }
   });
 }

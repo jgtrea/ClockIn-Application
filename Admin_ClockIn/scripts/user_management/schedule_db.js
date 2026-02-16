@@ -368,6 +368,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.applyFilters = function() {
+    if (!users || users.length === 0) {
+      console.warn('No users data available for filtering');
+      return;
+    }
+    
     const filterRows = document.querySelectorAll('#activeFilters .filter-row');
     const filters = [];
     
@@ -382,11 +387,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
     
+    let sourceData = [...users];
+    
     if (filters.length === 0) {
-      filteredUsers = [...users];
+      filteredUsers = sourceData;
       document.getElementById('filterStatus').textContent = '';
     } else {
-      filteredUsers = users.filter(user => {
+      filteredUsers = sourceData.filter(user => {
         return filters.every(filter => {
           const cellValue = user[filter.column] || '';
           return String(cellValue).toLowerCase().includes(filter.value);
@@ -406,6 +413,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.applySort = function() {
+    if (!filteredUsers || filteredUsers.length === 0) {
+      console.warn('No data available for sorting');
+      return;
+    }
+    
     const sortRows = document.querySelectorAll('#activeSorts .filter-row');
     const sorts = [];
     
@@ -422,7 +434,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     if (sorts.length > 0) {
-      filteredUsers.sort((a, b) => {
+      const sortedData = [...filteredUsers].sort((a, b) => {
         for (const sort of sorts) {
           const { column, ascending } = sort;
           let valueA = a[column] || '';
@@ -439,6 +451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         return 0;
       });
+      filteredUsers = sortedData;
     }
     
     Paginate.setPage(1);

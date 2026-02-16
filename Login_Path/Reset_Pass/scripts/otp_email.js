@@ -1,17 +1,5 @@
 function clearError(input) {
   input.style.borderColor = '';
-  const existing = input.nextElementSibling;
-  if (existing && existing.tagName === 'P' && existing.style.color === 'rgb(220, 53, 69)') {
-    existing.remove();
-  }
-}
-
-function showError(input, message) {
-  clearError(input);
-  const msg = document.createElement('p');
-  msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 12px 0; display: block;';
-  msg.textContent = message;
-  input.parentNode.insertBefore(msg, input.nextSibling);
 }
 
 const resetCodeForm = document.getElementById('resetCodeForm');
@@ -27,7 +15,7 @@ if (resetCodeForm) {
     const btn = resetCodeForm.querySelector('button');
     
     if (!email.value.trim() || !email.value.includes('@')) {
-      showError(email, 'Enter a valid email.');
+      showAlertPrompt('Enter a valid email.');
       return;
     }
     
@@ -51,9 +39,9 @@ function sendOTPEmail(email, btn) {
     if (error) {
       const errorMsg = error.message.toLowerCase();
       if (errorMsg.includes('rate limit') || errorMsg.includes('too many') || errorMsg.includes('limit')) {
-        showError(document.getElementById('email'), 'Password reset limit reached.');
+        showAlertPrompt('Password reset limit reached.');
       } else {
-        showError(document.getElementById('email'), 'Email does not exist.');
+        showAlertPrompt('Email does not exist.');
       }
       btn.disabled = false;
       btn.textContent = 'Send Code';

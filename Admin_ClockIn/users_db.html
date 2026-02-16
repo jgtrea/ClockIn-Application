@@ -8,6 +8,62 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   <link rel="stylesheet" href="styles/user_ui.css">
   <link rel="stylesheet" href="styles/container_card/user_add_card.css">
+  <style>
+    .alert-prompt {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      min-width: 300px;
+      max-width: 90%;
+      padding: 16px 20px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    .alert-prompt.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    .alert-prompt.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+    }
+    .alert-prompt.success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #16a34a;
+    }
+    .alert-prompt-message {
+      flex: 1;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+    .alert-prompt-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: inherit;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+    }
+    .alert-prompt-close:hover {
+      opacity: 1;
+    }
+  </style>
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
    
@@ -20,6 +76,32 @@
 </head>
 
 <body data-page="users_db">
+
+<!-- Alert Prompt Container -->
+<div id="alertPrompt" class="alert-prompt">
+  <span class="alert-prompt-message"></span>
+  <button class="alert-prompt-close" onclick="closeAlertPrompt()">
+    <span class="material-symbols-outlined">close</span>
+  </button>
+</div>
+
+<script>
+let alertTimeout;
+function showAlertPrompt(message, type = 'error') {
+  const alertEl = document.getElementById('alertPrompt');
+  const messageEl = alertEl.querySelector('.alert-prompt-message');
+  messageEl.textContent = message;
+  alertEl.className = 'alert-prompt ' + type;
+  alertEl.classList.add('show');
+  if (alertTimeout) clearTimeout(alertTimeout);
+  alertTimeout = setTimeout(() => closeAlertPrompt(), 5000);
+}
+function closeAlertPrompt() {
+  const alertEl = document.getElementById('alertPrompt');
+  alertEl.classList.remove('show');
+  if (alertTimeout) { clearTimeout(alertTimeout); alertTimeout = null; }
+}
+</script>
 
 <div class="app">
   <div class="main">

@@ -20,9 +20,47 @@
         toggleIcon.textContent = 'visibility';
       }
     }
+
+    // Alert Prompt Functions
+    let alertTimeout;
+
+    function showAlertPrompt(message, type = 'error') {
+      const alertEl = document.getElementById('alertPrompt');
+      const messageEl = alertEl.querySelector('.alert-prompt-message');
+      
+      messageEl.textContent = message;
+      alertEl.className = 'alert-prompt ' + type;
+      alertEl.classList.add('show');
+      
+      if (alertTimeout) {
+        clearTimeout(alertTimeout);
+      }
+      
+      alertTimeout = setTimeout(() => {
+        closeAlertPrompt();
+      }, 5000);
+    }
+
+    function closeAlertPrompt() {
+      const alertEl = document.getElementById('alertPrompt');
+      alertEl.classList.remove('show');
+      
+      if (alertTimeout) {
+        clearTimeout(alertTimeout);
+        alertTimeout = null;
+      }
+    }
   </script>
 </head>
 <body>
+  <!-- Alert Prompt Container -->
+  <div id="alertPrompt" class="alert-prompt">
+    <span class="alert-prompt-message"></span>
+    <button class="alert-prompt-close" onclick="closeAlertPrompt()">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+
   <header class="auth-header">
     <div class="logo">
       <img src="../../Images/clockin-logo.svg" alt="ClockIn Logo">

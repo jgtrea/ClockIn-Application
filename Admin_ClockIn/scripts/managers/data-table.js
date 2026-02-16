@@ -97,6 +97,10 @@ const DataTableManager = (function() {
     return filteredData;
   }
 
+  function setFilteredData(newFilteredData) {
+    filteredData = newFilteredData;
+  }
+
   function getAllData() {
     return data;
   }
@@ -292,6 +296,7 @@ const DataTableManager = (function() {
     setSearchTerm,
     getSearchTerm,
     getFilteredData,
+    setFilteredData,
     getAllData,
     create,
     update,
