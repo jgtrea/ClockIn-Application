@@ -91,7 +91,24 @@ class ScheduleOverview {
     
     let teacherStatus = '';
     if (currentSchedule) {
-      const attendance = attendanceData.find(a => a.schedId === currentSchedule.schedId);
+      // Fix: Check if the attendance timeIn is within the current class time range
+      const currentStartMinutes = this.timeToMinutes(currentSchedule.startTime);
+      const currentEndMinutes = this.timeToMinutes(currentSchedule.endTime);
+      
+      // Find attendance record where:
+      // 1. The schedId matches the current schedule
+      // 2. The timeIn is within the current class time range
+      const attendance = attendanceData.find(a => {
+        if (a.schedId !== currentSchedule.schedId) return false;
+        if (!a.timeIn) return false;
+        
+        const attendanceTime = new Date(a.timeIn);
+        const attendanceMinutes = attendanceTime.getHours() * 60 + attendanceTime.getMinutes();
+        
+        // Check if attendance time is within the current class time range
+        return attendanceMinutes >= currentStartMinutes && attendanceMinutes < currentEndMinutes;
+      });
+      
       if (attendance) {
         const teacherName = employeeMap[attendance.employeeId] || 'Teacher';
         teacherStatus = `<div style="font-size: 13px; color: #059669; margin-top: 4px; font-weight: 500;">👤 ${teacherName}</div>`;
