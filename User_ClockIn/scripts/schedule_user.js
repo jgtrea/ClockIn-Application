@@ -47,6 +47,17 @@ async function loadUserSchedule() {
     return;
   }
 
+  const { data: sectionsData } = await supabase
+    .from('sections')
+    .select('*');
+
+  const sectionsMap = {};
+  if (sectionsData) {
+    sectionsData.forEach(section => {
+      sectionsMap[section.sectId] = section.sectionName;
+    });
+  }
+
   const schedulesByDay = {};
   schedulesData.forEach(schedule => {
     const day = schedule.weekday || 'Monday';
@@ -70,16 +81,16 @@ async function loadUserSchedule() {
       scheduleHTML += `
         <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 20px; ${dayStyle}">
           <h3 style="margin: 0 0 16px 0; color: #111827; font-size: 18px; font-weight: 600;">${dayLabel}</h3>
-          <div style="display: grid; grid-template-columns: 100px 1fr 1fr 100px; gap: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 16px; color: #6b7280; font-size: 13px; font-weight: 600;">
+          <div style="display: grid; grid-template-columns: 160px 1fr 1fr 100px; gap: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 16px; color: #6b7280; font-size: 13px; font-weight: 600;">
             <span style="text-align: left;">Time</span>
             <span style="text-align: center;">Section</span>
             <span style="text-align: center;">Subject</span>
             <span style="text-align: right;">Status</span>
           </div>
           ${daySchedules.map(item => `
-            <div style="display: grid; grid-template-columns: 100px 1fr 1fr 100px; gap: 10px; padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151; align-items: center;">
-              <span style="text-align: left; font-weight: 600;">${formatTime(item.startTime)} - ${formatTime(item.endTime)}</span>
-              <span style="text-align: center;">${item.sectionName || '-'}</span>
+            <div style="display: grid; grid-template-columns: 160px 1fr 1fr 100px; gap: 10px; padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151; align-items: center;">
+              <span style="text-align: left; font-weight: 600; white-space: nowrap;">${formatTime(item.startTime)} - ${formatTime(item.endTime)}</span>
+              <span style="text-align: center;">${sectionsMap[item.sectId] || '-'}</span>
               <span style="text-align: center;">${item.subject || '-'}</span>
               <span style="text-align: right;">${getScheduleStatus(item)}</span>
             </div>
