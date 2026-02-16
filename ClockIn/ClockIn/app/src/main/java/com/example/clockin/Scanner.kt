@@ -18,32 +18,19 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -119,21 +106,18 @@ fun ScannerScreen(
                             lastScanTime = currentTime
 
                             if (!WifiChecker.isWifiEnabled(context)) {
-                                NotificationManager.show(
-                                    header = "WiFi Required",
-                                    message = "Please enable WiFi to clock in/out"
-                                )
+                                NotificationManager.show("WiFi Required", "Please enable WiFi.")
+                                isProcessing = false
+                                return@CameraPreview
+                            }
+                            if (!WifiChecker.isConnectedToAllowedWifi(context)) {
+                                NotificationManager.show("Wrong WiFi", "Connect to: ${WifiChecker.getAllowedWifiSsid()}")
                                 isProcessing = false
                                 return@CameraPreview
                             }
 
-                            if (!WifiChecker.isConnectedToAllowedWifi(context)) {
-                                val currentWifi = WifiChecker.getCurrentWifiSsid(context) ?: "Unknown"
-                                val requiredWifi = WifiChecker.getAllowedWifiSsid()
-                                NotificationManager.show(
-                                    header = "Wrong WiFi Network",
-                                    message = "Connected: $currentWifi\nRequired: $requiredWifi"
-                                )
+                            if (!isBeaconFound) {
+                                NotificationManager.show("Out of Range", "You are too far from the room beacon!")
                                 isProcessing = false
                                 return@CameraPreview
                             }
@@ -141,18 +125,10 @@ fun ScannerScreen(
                             scope.launch {
                                 val result = SupabaseManager.verifyQrCode(code, context, isBeaconFound)
                                 if (result.isSuccess) {
-                                    NotificationManager.show(
-                                        header = "Success ✓",
-                                        message = result.getOrNull() ?: "Clock In/Out Recorded!",
-                                        duration = 3000L
-                                    )
+                                    NotificationManager.show("Success ✓", result.getOrNull() ?: "Recorded!")
                                     navController.popBackStack()
                                 } else {
-                                    NotificationManager.show(
-                                        header = "Failed ✗",
-                                        message = result.exceptionOrNull()?.message ?: "Invalid QR or Not Allowed",
-                                        duration = 3000L
-                                    )
+                                    NotificationManager.show("Failed ✗", result.exceptionOrNull()?.message ?: "Error")
                                 }
                                 isProcessing = false
                             }
@@ -163,47 +139,57 @@ fun ScannerScreen(
                 ScannerOverlay(bracketSizeDp)
 
             } else {
-                Text(
-                    text = "Camera permission is required.",
-                    color = Color.White,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Camera permission is required.", color = Color.White, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { launcher.launch(Manifest.permission.CAMERA) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66))
+                    ) { Text("Grant Permission") }
+                }
             }
 
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 60.dp),
+                    .padding(top = 40.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isBeaconFound) Color(0xFF4CAF50) else Color(0xFFFF5252),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            if (isBeaconFound) Icons.Default.FlashlightOn else Icons.Default.FlashlightOff,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isBeaconFound) "Beacon: In Range" else "Beacon: Out of Range",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
                 Text(
                     text = if (isProcessing) "Verifying..." else "Align QR code within frame",
                     color = if (isProcessing) Color.Yellow else Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium
                 )
-
-                val isWifiConnected = WifiChecker.isWifiEnabled(context) &&
-                        WifiChecker.isConnectedToAllowedWifi(context)
-                val currentWifi = WifiChecker.getCurrentWifiSsid(context)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isWifiConnected) Color(0xFF4CAF50) else Color(0xFFFF5252)
-                ) {
-                    Text(
-                        text = if (isWifiConnected)
-                            "✓ Connected: ${WifiChecker.getAllowedWifiSsid()}"
-                        else
-                            "✗ Wrong WiFi: ${currentWifi ?: "Not Connected"}",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
 
             Box(
@@ -211,10 +197,10 @@ fun ScannerScreen(
                     .size(bracketSizeDp)
                     .align(Alignment.Center)
             ) {
-                ScannerBracket(Modifier.align(Alignment.TopStart), rotateX = false, rotateY = false)
-                ScannerBracket(Modifier.align(Alignment.TopEnd), rotateX = true, rotateY = false)
-                ScannerBracket(Modifier.align(Alignment.BottomStart), rotateX = false, rotateY = true)
-                ScannerBracket(Modifier.align(Alignment.BottomEnd), rotateX = true, rotateY = true)
+                ScannerBracket(Modifier.align(Alignment.TopStart), false, false)
+                ScannerBracket(Modifier.align(Alignment.TopEnd), true, false)
+                ScannerBracket(Modifier.align(Alignment.BottomStart), false, true)
+                ScannerBracket(Modifier.align(Alignment.BottomEnd), true, true)
             }
 
             Row(
@@ -222,7 +208,7 @@ fun ScannerScreen(
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 80.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.Center
             ) {
                 ScannerActionButton(
                     icon = if (isFlashlightOn) Icons.Default.FlashlightOff else Icons.Default.FlashlightOn,
@@ -239,15 +225,12 @@ fun ScannerOverlay(boxSizeDp: androidx.compose.ui.unit.Dp) {
         val canvasWidth = size.width
         val canvasHeight = size.height
         val boxSizePx = boxSizeDp.toPx()
-
         val left = (canvasWidth - boxSizePx) / 2
         val top = (canvasHeight - boxSizePx) / 2
 
         with(drawContext.canvas.nativeCanvas) {
             val checkPoint = saveLayer(null, null)
-
             drawRect(Color.Black.copy(alpha = 0.6f))
-
             drawRect(
                 topLeft = Offset(left, top),
                 size = Size(boxSizePx, boxSizePx),
@@ -271,6 +254,8 @@ fun CameraPreview(
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     var camera by remember { mutableStateOf<Camera?>(null) }
 
+    val currentOnQrCodeDetected by rememberUpdatedState(onQrCodeDetected)
+
     LaunchedEffect(torchOn) {
         camera?.cameraControl?.enableTorch(torchOn)
     }
@@ -291,7 +276,9 @@ fun CameraPreview(
                     .build()
                     .also {
                         it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
-                            processImageProxy(imageProxy, onQrCodeDetected)
+                            processImageProxy(imageProxy) { code ->
+                                currentOnQrCodeDetected(code)
+                            }
                         }
                     }
 
@@ -323,10 +310,8 @@ private fun processImageProxy(
     val mediaImage = imageProxy.image
     if (mediaImage != null) {
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
         val imgWidth = image.width
         val imgHeight = image.height
-
         val scanBoxSize = min(imgWidth, imgHeight) * 0.5f
         val centerRect = Rect(
             ((imgWidth - scanBoxSize) / 2).toInt(),
@@ -335,9 +320,7 @@ private fun processImageProxy(
             ((imgHeight + scanBoxSize) / 2).toInt()
         )
 
-        val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .build()
+        val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
         val scanner = BarcodeScanning.getClient(options)
 
         scanner.process(image)
@@ -347,7 +330,6 @@ private fun processImageProxy(
                     if (box != null) {
                         val centerX = box.centerX()
                         val centerY = box.centerY()
-
                         if (centerRect.contains(centerX, centerY)) {
                             barcode.rawValue?.let { onSuccess(it) }
                         }
@@ -379,23 +361,9 @@ fun ScannerBracket(modifier: Modifier, rotateX: Boolean, rotateY: Boolean) {
 }
 
 @Composable
-fun ScannerActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
-) {
+fun ScannerActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Box(
-        modifier = Modifier
-            .size(70.dp)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.2f))
-            .clickable { onClick() },
+        modifier = Modifier.size(70.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)).clickable { onClick() },
         contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(32.dp)
-        )
-    }
+    ) { Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp)) }
 }

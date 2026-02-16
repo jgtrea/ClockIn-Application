@@ -1,7 +1,5 @@
 package com.example.clockin
 
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
@@ -18,6 +16,7 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
@@ -25,12 +24,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 
 @Serializable
 data class UserProfile(
@@ -453,11 +453,10 @@ object SupabaseManager {
                     .select(columns = Columns.list("attendId", "schedId")) {
                         filter {
                             eq("employeeId", user.id)
-
                             filter("timeOut", FilterOperator.IS, "null")
                         }
                     }
-                    .decodeList<Map<String, String>>()
+                    .decodeList<Map<String, String?>>()
 
                 if (result.isNotEmpty()) {
                     val activeSession = result.first()
@@ -470,24 +469,6 @@ object SupabaseManager {
             } catch (e: Exception) {
                 Log.e("SupabaseManager", "Error checking active attendance: ${e.message}")
                 null
-            }
-        }
-    }
-
-    suspend fun forceMarkAbsent(attendanceId: String): Result<Boolean> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
-
-                client.from("attendance").update({
-                    set("timeOut", nowStr)
-                    set("status", "Incomplete")
-                }) {
-                    filter { eq("attendId", attendanceId) }
-                }
-                Result.success(true)
-            } catch (e: Exception) {
-                Result.failure(e)
             }
         }
     }
@@ -553,51 +534,6 @@ object SupabaseManager {
             } catch (e: Exception) {
                 Log.e(TAG, "Sign in with device check error", e)
                 Result.failure(e)
-            }
-        }
-    }
-
-    suspend fun sendHeartbeat() {
-        val user = getCurrentUser() ?: return
-        withContext(Dispatchers.IO) {
-            try {
-                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
-                client.from("user_devices").update({
-                    set("lastActive", nowStr)
-                }) {
-                    filter { eq("employeeId", user.id) }
-                }
-                Log.d("SupabaseManager", "Heartbeat successfully sent: $nowStr")
-            } catch (e: Exception) {
-                Log.e("SupabaseManager", "Heartbeat failed: ${e.message}")
-            }
-        }
-    }
-
-    suspend fun checkLastHeartbeat(): Boolean {
-        val user = getCurrentUser() ?: return true
-        return withContext(Dispatchers.IO) {
-            try {
-                val result = client.from("user_devices")
-                    .select(columns = Columns.list("lastActive")) {
-                        filter { eq("employeeId", user.id) }
-                    }
-                    .decodeSingleOrNull<Map<String, String>>()
-
-                val lastActiveStr = result?.get("lastActive") ?: return@withContext true
-
-                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-                val lastActive = format.parse(lastActiveStr)
-                val now = Date()
-
-                if (lastActive != null) {
-                    val diff = now.time - lastActive.time
-                    val minutesGone = diff / (1000 * 60)
-                    return@withContext minutesGone < 3
-                }
-                true
-            } catch (e: Exception) {
-                true
             }
         }
     }

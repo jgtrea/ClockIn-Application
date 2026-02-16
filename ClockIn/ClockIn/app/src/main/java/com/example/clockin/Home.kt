@@ -1,6 +1,5 @@
 package com.example.clockin
 
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,7 +32,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -48,9 +46,6 @@ fun DashboardScreen(
     deviceName: String,
     onTargetBleChanged: (String) -> Unit,
     isBeaconFound: Boolean,
-    timeOutOfRange: Long,
-    onTimerTick: () -> Unit,
-    onTimerReset: () -> Unit,
     onLogout: () -> Unit,
     onProfileClick: () -> Unit
 ) {
@@ -68,12 +63,6 @@ fun DashboardScreen(
     var currentSectionTitle by remember { mutableStateOf("Checking Schedule...") }
     var userName by remember { mutableStateOf("User") }
     var activeAttendanceId by remember { mutableStateOf<String?>(null) }
-
-    val maxTimeAllowed = 300L
-    val safeDistance = 8.0
-
-    val currentDistance by rememberUpdatedState(beaconDistance)
-    val currentBeaconFound by rememberUpdatedState(isBeaconFound)
 
     val refreshDashboard = {
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
@@ -110,11 +99,7 @@ fun DashboardScreen(
 
             if (classInfo != null) {
                 currentSectionTitle = classInfo.sectionDisplay
-                if (attId != null) {
-                    onTargetBleChanged(classInfo.targetBeaconName)
-                } else {
-                    onTargetBleChanged("")
-                }
+                onTargetBleChanged(classInfo.targetBeaconName)
             } else {
                 currentSectionTitle = "No Active Class"
                 onTargetBleChanged("")
@@ -131,53 +116,6 @@ fun DashboardScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    LaunchedEffect(Unit) {
-        val currentActiveId = SupabaseManager.getActiveAttendanceId()
-        if (currentActiveId != null) {
-            val isSafe = SupabaseManager.checkLastHeartbeat()
-            if (!isSafe) {
-                SupabaseManager.forceMarkAbsent(currentActiveId)
-                activeAttendanceId = null
-                onTargetBleChanged("")
-                NotificationManager.show("Session Terminated", "Marked absent due to inactivity (Force Close).")
-            } else {
-                activeAttendanceId = currentActiveId
-            }
-        }
-    }
-
-    LaunchedEffect(activeAttendanceId) {
-        var heartbeatCounter = 0
-        while (true) {
-            delay(1000L)
-
-            if (activeAttendanceId != null) {
-                heartbeatCounter++
-                if (heartbeatCounter >= 60) {
-                    SupabaseManager.sendHeartbeat()
-                    heartbeatCounter = 0
-                }
-
-                val isSafe = currentBeaconFound && currentDistance <= safeDistance && currentDistance > 0
-
-                if (!isSafe) {
-                    onTimerTick()
-                    if (timeOutOfRange >= maxTimeAllowed) {
-                        SupabaseManager.forceMarkAbsent(activeAttendanceId!!)
-                        activeAttendanceId = null
-                        onTargetBleChanged("")
-                        NotificationManager.show("Auto-Absent", "You were marked absent for leaving the area.")
-                        onTimerReset()
-                    }
-                } else {
-                    onTimerReset()
-                }
-            } else {
-                onTimerReset()
-            }
-        }
     }
 
     val filteredNotifications = remember(notifications, searchQuery) {
@@ -223,60 +161,57 @@ fun DashboardScreen(
 
                     InfoCard(
                         title = "Section: $currentSectionTitle",
-                        text = if (activeAttendanceId != null) "Status: CLOCKED IN (Monitoring Active)"
-                        else if (deviceName.isNotEmpty()) "Monitoring Beacon: $deviceName"
+                        text = if (activeAttendanceId != null) "Status: CLOCKED IN (Session Active)"
                         else if (currentSectionTitle.contains("No Active")) "Relax! No classes scheduled."
-                        else "Scanning for $currentSectionTitle..."
+                        else "Please scan QR to Clock In."
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    SectionHeader(title = "Attendance Proximity", icon = Icons.Default.Bluetooth)
+                    SectionHeader(title = "Beacon Status", icon = Icons.Default.Bluetooth)
 
-                    val isWarningMode = activeAttendanceId != null && timeOutOfRange > 0
-
-                    val cardBackgroundColor = if (isWarningMode) AlertRed else Color.White
-                    val textColor = if (isWarningMode) Color.White else if (isBeaconFound) Color(0xFF4CAF50) else Color.DarkGray
-                    val borderColor = if (isWarningMode) AlertRed else Color.LightGray
-
-                    val proximityStatusText = if (isWarningMode) {
-                        val secondsLeft = maxTimeAllowed - timeOutOfRange
-                        val minutes = secondsLeft / 60
-                        val secs = secondsLeft % 60
-                        "WARNING: Beacon Lost!\nReturn in %02d:%02d or be marked ABSENT.".format(minutes, secs)
-                    } else {
-                        when {
-                            deviceName.isEmpty() -> "Waiting for active schedule..."
-                            !isBeaconFound && beaconDistance > 0 -> "Beacon too far (%.2f m). Move closer!".format(beaconDistance)
-                            !isBeaconFound -> "Searching for $deviceName..."
-                            else -> "Beacon Detected! Distance: %.2f m".format(beaconDistance)
-                        }
+                    val statusText = when {
+                        deviceName.isEmpty() -> "No active schedule to monitor."
+                        !isBeaconFound -> "Searching for beacon ($deviceName)..."
+                        else -> "Beacon Detected! Distance: %.2f m".format(beaconDistance)
                     }
+
+                    val statusColor = if (isBeaconFound) Color(0xFF4CAF50) else Color(0xFFFFA726)
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
-                        border = BorderStroke(1.dp, borderColor)
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(1.dp, Color.LightGray)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (isWarningMode) {
-                                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                }
+                                Icon(
+                                    Icons.Default.Sensors,
+                                    contentDescription = null,
+                                    tint = statusColor
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = proximityStatusText,
-                                    fontSize = if (isWarningMode) 16.sp else 14.sp,
-                                    color = textColor,
-                                    fontWeight = if (isBeaconFound || isWarningMode) FontWeight.Bold else FontWeight.Normal,
-                                    lineHeight = 22.sp
+                                    text = statusText,
+                                    fontSize = 14.sp,
+                                    color = statusColor,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            if (deviceName.isNotEmpty() && !isBeaconFound) {
+                                Text(
+                                    text = "Move closer to the room to enable Clock In.",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(start = 36.dp, top = 4.dp)
                                 )
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+
                     SectionHeader(title = "Notifications", icon = Icons.Default.NotificationsNone)
 
                     if (isLoadingNotifs) {

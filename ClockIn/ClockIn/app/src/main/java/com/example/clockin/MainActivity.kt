@@ -48,7 +48,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -82,7 +81,6 @@ val BorderGray = Color(0xFFE0E0E0)
 
 class MainActivity : ComponentActivity() {
     var targetBleName by mutableStateOf("")
-    var watchdogTimer by mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -225,18 +223,16 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("home") {
+                            // CLEANED: Removed timer args (timeOutOfRange, onTimerTick, onTimerReset)
                             DashboardScreen(
                                 navController = navController,
                                 beaconDistance = beaconDistance,
-                                isBeaconFound = isBeaconFound,
                                 deviceName = targetBleName,
-                                timeOutOfRange = watchdogTimer,
-                                onTimerTick = { watchdogTimer++ },
-                                onTimerReset = { watchdogTimer = 0L },
                                 onTargetBleChanged = { newBleName ->
                                     targetBleName = newBleName
                                     isBeaconFound = false
                                 },
+                                isBeaconFound = isBeaconFound,
                                 onLogout = {
                                     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
                                     scope.launch {
@@ -275,6 +271,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// ... (Rest of LoginScreen and DeviceConflictDialog remains exactly the same)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(

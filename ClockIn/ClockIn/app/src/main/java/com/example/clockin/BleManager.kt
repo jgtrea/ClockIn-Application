@@ -19,7 +19,7 @@ object BleManager {
 
 
     // ETO UNG DISTANCE NG BLE
-    private const val BLE_DISTANCE_LIMIT = 2.0
+    private const val BLE_DISTANCE_LIMIT = 10.0
     private const val TX_POWER = -59
 
     @SuppressLint("MissingPermission")
