@@ -13,9 +13,15 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.altbeacon.beacon.Beacon
 import org.altbeacon.beacon.BeaconManager
 import org.altbeacon.beacon.Region
@@ -27,7 +33,6 @@ class BeaconService : Service() {
     private var serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var rawScanner: android.bluetooth.le.BluetoothLeScanner? = null
 
-    // --- STATE VARIABLES ---
     var currentDistance: Double = 0.0
         private set
     var isBeaconFound: Boolean = false
@@ -46,7 +51,7 @@ class BeaconService : Service() {
     private var isMarkedIncomplete: Boolean = false
     var onUpdate: ((Double, Boolean, Long, String) -> Unit)? = null
 
-    // Range in Beacon in meters
+    // Range ni Beacon in meters
     private val SAFE_DISTANCE = 8.0
     private val NOTIFICATION_ID = 123
     private val CHANNEL_ID = "AttendanceChannel"
@@ -108,8 +113,6 @@ class BeaconService : Service() {
 
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // LOGIC CHANGE: If we are NOT clocked in (e.g. just opening app), RESET the incomplete flags.
-        // This ensures the user starts fresh and sees "Searching..." instead of getting blocked.
         if (!isClockedIn) {
             prefs.edit()
                 .remove("deadline_$schedId")
@@ -117,7 +120,6 @@ class BeaconService : Service() {
                 .apply()
             isMarkedIncomplete = false
         } else {
-            // Restore state if we ARE clocked in
             val savedIncomplete = prefs.getBoolean("incomplete_$schedId", false)
             if (savedIncomplete) {
                 isMarkedIncomplete = true

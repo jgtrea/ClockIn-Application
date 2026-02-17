@@ -28,10 +28,10 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import java.util.Calendar
 
 @Serializable
 data class UserProfile(
@@ -527,8 +527,6 @@ object SupabaseManager {
                 val startOfDay = "${datePrefix}T00:00:00"
                 val endOfDay = "${datePrefix}T23:59:59"
 
-                // This query requires a timestamp to find the record.
-                // Since we now store the timestamp for Absent records too, this will work.
                 val existingRecord = client.from("attendance")
                     .select {
                         filter {
@@ -547,8 +545,6 @@ object SupabaseManager {
 
                 val absentId = UUID.randomUUID().toString()
 
-                // FIXED: Use the current timestamp instead of NULL
-                // This ensures the record can be found by the query above on next refresh.
                 val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
 
                 val absentRecord = Attendance(

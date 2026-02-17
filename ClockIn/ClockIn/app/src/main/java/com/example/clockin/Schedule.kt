@@ -68,7 +68,6 @@ fun ScheduleScreen(navController: NavController) {
 
     val daysOfWeek = listOf("All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
-    // Helper list to define the sort order
     val daySortOrder = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
     var selectedDay by remember {
@@ -78,7 +77,6 @@ fun ScheduleScreen(navController: NavController) {
 
     var isDayDropdownExpanded by remember { mutableStateOf(false) }
 
-    // Changed: Store a flat list instead of a map so we can regroup dynamically
     var allScheduleItems by remember { mutableStateOf<List<ScheduleItem>>(emptyList()) }
     var happeningNowItem by remember { mutableStateOf<ScheduleItem?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -125,29 +123,22 @@ fun ScheduleScreen(navController: NavController) {
         isLoading = false
     }
 
-    // Dynamic Grouping & Sorting Logic
     val groupedSchedule = remember(allScheduleItems, searchQuery, selectedDay, happeningNowItem) {
-        // 1. Filter the list first
         var list = allScheduleItems.filter {
             val matchesSearch = it.title.contains(searchQuery, true) || it.details.contains(searchQuery, true)
             val matchesDay = selectedDay == "All Days" || it.day.equals(selectedDay, ignoreCase = true)
-            val isNotDuplicate = it != happeningNowItem // Remove happening now item
+            val isNotDuplicate = it != happeningNowItem
             matchesSearch && matchesDay && isNotDuplicate
         }
 
-        // 2. Sort and Group based on selection
         if (selectedDay == "All Days") {
-            // Sort by Day (Mon-Sun) then by Time
             list = list.sortedWith(
                 compareBy<ScheduleItem> { daySortOrder.indexOf(it.day) }
                     .thenBy { it.rawStartTime }
             )
-            // Group by Day (Header will be "Monday", "Tuesday" etc.)
             list.groupBy { it.day }
         } else {
-            // Sort by Time only
             list = list.sortedBy { it.rawStartTime }
-            // Group by Section Name (Header will be "Adelfa", "Sampaguita" etc.)
             list.groupBy { it.sectionHeader }
         }
     }
@@ -251,7 +242,6 @@ fun ScheduleScreen(navController: NavController) {
                             Text(text = emptyMsg, color = Color.Gray)
                         }
                     } else {
-                        // Iterate through the map we built in the remember block
                         groupedSchedule.forEach { (headerTitle, items) ->
                             ScheduleDateGroup(headerTitle, items)
                         }
