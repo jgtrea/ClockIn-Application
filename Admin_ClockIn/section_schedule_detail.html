@@ -27,6 +27,10 @@
               <span class="material-symbols-outlined">arrow_back</span>
               Back to Sections
             </button>
+            <button id="selectModeBtn" class="btn-outline" onclick="toggleSelectMode()" style="margin-bottom: 12px; margin-left: 8px;">
+              <span class="material-symbols-outlined">checklist</span>
+              Select Mode
+            </button>
             <h1 id="sectionName">Section Schedule</h1>
             <p class="tagline" id="sectionInfo"></p>
           </div>
@@ -34,6 +38,24 @@
       </div>
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+
+      <div id="actionButtonsContainer" class="action-buttons-container" style="display: none;">
+        <span id="selectionCount" class="selection-count">0 selected</span>
+        <div class="action-buttons">
+          <button id="btnEdit" class="btn-action btn-edit" onclick="editSelectedSchedule()">
+            <span class="material-symbols-outlined">edit</span>
+            Edit
+          </button>
+          <button id="btnRemoveTeacher" class="btn-action btn-remove-teacher" onclick="removeTeacherFromSelected()">
+            <span class="material-symbols-outlined">person_remove</span>
+            Remove Teacher
+          </button>
+          <button id="btnDelete" class="btn-action btn-delete" onclick="deleteSelectedSchedules()">
+            <span class="material-symbols-outlined">delete</span>
+            Delete
+          </button>
+        </div>
+      </div>
 
       <div class="add-schedule-form">
         <div class="form-row">

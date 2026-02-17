@@ -39,6 +39,23 @@ class ScheduleOverview {
 
       if (schedulesError) throw schedulesError;
 
+      // Get employee (teacher) data for the schedule
+      const teacherIds = schedulesData ? [...new Set(schedulesData.map(s => s.employeeId).filter(Boolean))] : [];
+      let teacherMap = {};
+      
+      if (teacherIds.length > 0) {
+        const { data: teachersData } = await this.supabase
+          .from('user_employee_data')
+          .select('employeeId, name')
+          .in('employeeId', teacherIds);
+        
+        if (teachersData) {
+          teachersData.forEach(teacher => {
+            teacherMap[teacher.employeeId] = teacher.name;
+          });
+        }
+      }
+
       // Get today's attendance records
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -72,7 +89,7 @@ class ScheduleOverview {
       }
 
       const sectionCards = sectionsData.map(section => 
-        this.createSectionCard(section, schedulesData, attendanceData || [], employeeMap, today)
+        this.createSectionCard(section, schedulesData, attendanceData || [], employeeMap, teacherMap, today)
       );
       
       this.renderSections(sectionCards);
@@ -85,7 +102,7 @@ class ScheduleOverview {
     }
   }
 
-  createSectionCard(section, schedulesData, attendanceData, employeeMap, today) {
+  createSectionCard(section, schedulesData, attendanceData, employeeMap, teacherMap, today) {
     const sectionSchedules = this.filterAndSortSchedules(section.sectId, schedulesData);
     const { currentSubject, timeRange, currentSchedule } = this.getCurrentClassInfo(sectionSchedules);
     
@@ -131,7 +148,7 @@ class ScheduleOverview {
         <div style="flex: 1;">
           <div style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 8px;">${today}'s Schedule:</div>
           <div id="schedule-${section.sectId}" style="font-size: 13px; color: #6b7280;">
-            ${this.renderScheduleList(sectionSchedules)}
+            ${this.renderScheduleList(sectionSchedules, teacherMap)}
           </div>
         </div>
       </div>
@@ -185,17 +202,23 @@ class ScheduleOverview {
     return { currentSubject, timeRange, currentSchedule };
   }
 
-  renderScheduleList(sectionSchedules) {
+  renderScheduleList(sectionSchedules, teacherMap) {
     if (sectionSchedules.length === 0) {
       return '<div style="color: #9ca3af; font-style: italic;">No classes scheduled</div>';
     }
 
-    return sectionSchedules.map(s => `
-      <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between;">
-        <span style="font-weight: 500;">${s.subject || 'No Subject'}</span>
-        <span style="color: #9ca3af; font-size: 12px;">${s.startTime} - ${s.endTime}</span>
-      </div>
-    `).join('');
+    return sectionSchedules.map(s => {
+      const teacherName = s.employeeId ? (teacherMap[s.employeeId] || 'Unassigned') : 'Unassigned';
+      return `
+        <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 500;">${s.subject || 'No Subject'}</span>
+            <span style="color: #9ca3af; font-size: 12px;">${s.startTime} - ${s.endTime}</span>
+          </div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">👤 ${teacherName}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   renderSections(sectionCards) {
@@ -254,6 +277,23 @@ class ScheduleOverview {
 
       if (schedulesError) throw schedulesError;
 
+      // Get teacher data
+      const teacherIds = schedulesData ? [...new Set(schedulesData.map(s => s.employeeId).filter(Boolean))] : [];
+      let teacherMap = {};
+      
+      if (teacherIds.length > 0) {
+        const { data: teachersData } = await this.supabase
+          .from('user_employee_data')
+          .select('employeeId, name')
+          .in('employeeId', teacherIds);
+        
+        if (teachersData) {
+          teachersData.forEach(teacher => {
+            teacherMap[teacher.employeeId] = teacher.name;
+          });
+        }
+      }
+
       if (!schedulesData || schedulesData.length === 0) {
         contentEl.innerHTML = `<p style="text-align: center; color: #9ca3af;">No classes scheduled for ${day}</p>`;
       } else {
@@ -261,12 +301,16 @@ class ScheduleOverview {
         
         contentEl.innerHTML = `
           <h4 style="margin: 0 0 12px 0; color: #111827;">${day} Schedule</h4>
-          ${schedulesData.map(s => 
-            `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between;">
-              <span style="font-weight: 600; color: #111827;">${s.subject || 'No Subject'}</span>
-              <span style="color: #6b7280;">${s.startTime} - ${s.endTime}</span>
-            </div>`
-          ).join('')}
+          ${schedulesData.map(s => {
+            const teacherName = s.employeeId ? (teacherMap[s.employeeId] || 'Unassigned') : 'Unassigned';
+            return `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600; color: #111827;">${s.subject || 'No Subject'}</span>
+                <span style="color: #6b7280;">${s.startTime} - ${s.endTime}</span>
+              </div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">👤 ${teacherName}</div>
+            </div>`;
+          }).join('')}
         `;
       }
     } catch (e) {
