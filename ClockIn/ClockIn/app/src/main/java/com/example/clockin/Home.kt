@@ -38,14 +38,15 @@ import java.util.Locale
 import java.util.Date
 
 val PrimaryOrange = Color(0xFFFF7F66)
-val AlertRed = Color(0xFFFF5252)
 
 @Composable
 fun DashboardScreen(
     navController: NavController,
     beaconDistance: Double,
     deviceName: String,
-    onTargetBleChanged: (String) -> Unit,
+    statusMessage: String,
+    onActiveAttendanceIdChanged: (String?) -> Unit,
+    onTargetBleChanged: (String, Long, String) -> Unit,
     isBeaconFound: Boolean,
     onLogout: () -> Unit,
     onProfileClick: () -> Unit
@@ -97,6 +98,7 @@ fun DashboardScreen(
             val classInfo = SupabaseManager.getCurrentClassBeacon()
             val attId = SupabaseManager.getActiveAttendanceId()
             activeAttendanceId = attId
+            onActiveAttendanceIdChanged(attId)
 
             try {
                 if (user != null) {
@@ -135,11 +137,26 @@ fun DashboardScreen(
 
             if (classInfo != null) {
                 currentSectionTitle = classInfo.sectionDisplay
-                onTargetBleChanged(classInfo.targetBeaconName)
+
+                val status = SupabaseManager.getTodayAttendanceStatus(classInfo.schedId)
+
+                // LOGIC CHANGE: Only stop beacon if Absent or Present (Done).
+                // If "Incomplete", we KEEP running so the user sees the beacon status (Idle/Connected)
+                // instead of being blocked.
+                if (status != null && (status.equals("Absent", true) || (status.equals("Present", true) && activeAttendanceId == null))) {
+                    onTargetBleChanged("", 0L, "")
+                } else {
+                    onTargetBleChanged(
+                        classInfo.targetBeaconName,
+                        classInfo.startTime.time,
+                        classInfo.schedId
+                    )
+                }
             } else {
                 currentSectionTitle = "No Active Class"
-                onTargetBleChanged("")
+                onTargetBleChanged("", 0L, "")
                 activeAttendanceId = null
+                onActiveAttendanceIdChanged(null)
             }
         }
     }
@@ -206,13 +223,12 @@ fun DashboardScreen(
 
                     SectionHeader(title = "Beacon Status", icon = Icons.Default.Bluetooth)
 
-                    val statusText = when {
-                        deviceName.isEmpty() -> "No active schedule to monitor."
-                        !isBeaconFound -> "Searching for beacon ($deviceName)..."
-                        else -> "Beacon Detected! Distance: %.2f m".format(beaconDistance)
+                    val statusColor = when {
+                        statusMessage.contains("Connected") || statusMessage.contains("Beacon Found") -> Color(0xFF4CAF50)
+                        statusMessage.contains("Grace") -> Color(0xFF2196F3)
+                        statusMessage.contains("OUT OF RANGE") -> Color.Red
+                        else -> Color(0xFFFFA726)
                     }
-
-                    val statusColor = if (isBeaconFound) Color(0xFF4CAF50) else Color(0xFFFFA726)
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -229,18 +245,10 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = statusText,
+                                    text = statusMessage,
                                     fontSize = 14.sp,
                                     color = statusColor,
                                     fontWeight = FontWeight.Medium
-                                )
-                            }
-                            if (deviceName.isNotEmpty() && !isBeaconFound) {
-                                Text(
-                                    text = "Move closer to the room to enable Clock In.",
-                                    fontSize = 12.sp,
-                                    color = Color.Gray,
-                                    modifier = Modifier.padding(start = 36.dp, top = 4.dp)
                                 )
                             }
                         }

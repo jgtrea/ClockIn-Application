@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.Calendar
 
 @Serializable
 data class UserProfile(
@@ -82,7 +83,9 @@ data class NotificationItem(
 
 data class ClassSession(
     val sectionDisplay: String,
-    val targetBeaconName: String
+    val targetBeaconName: String,
+    val startTime: Date,
+    val schedId: String
 )
 
 object SupabaseManager {
@@ -204,7 +207,9 @@ object SupabaseManager {
         return withContext(Dispatchers.IO) {
             try {
                 val mySchedules = client.from("schedule")
-                    .select { filter { eq("employeeId", user.id) } }
+                    .select(columns = Columns.list("*, sections(*)")) {
+                        filter { eq("employeeId", user.id) }
+                    }
                     .decodeList<Schedule>()
 
                 if (mySchedules.isEmpty()) return@withContext emptyList()
@@ -284,12 +289,50 @@ object SupabaseManager {
 
                 val displaySectionName = currentSchedule.sectionDetails?.sectionName ?: "Unknown"
                 val sectionDisplay = "${currentSchedule.sectionDetails?.yearLevel ?: "?"} - $displaySectionName"
-
                 val targetBeaconName = displaySectionName.trim()
 
-                ClassSession(sectionDisplay, targetBeaconName)
+                val startOnlyTime = timeFormat.parse(currentSchedule.startTime)
+                val calendar = Calendar.getInstance()
+                calendar.time = Date()
+
+                if (startOnlyTime != null) {
+                    val timeCal = Calendar.getInstance()
+                    timeCal.time = startOnlyTime
+
+                    calendar.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY))
+                    calendar.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE))
+                    calendar.set(Calendar.SECOND, timeCal.get(Calendar.SECOND))
+                    calendar.set(Calendar.MILLISECOND, 0)
+                }
+                val preciseStartTime = calendar.time
+
+                ClassSession(sectionDisplay, targetBeaconName, preciseStartTime, currentSchedule.id)
             } catch (e: Exception) {
                 Log.e("SupabaseManager", "Error in getCurrentClassBeacon", e)
+                null
+            }
+        }
+    }
+
+    suspend fun getTodayAttendanceStatus(schedId: String): String? {
+        val user = getCurrentUser() ?: return null
+        return withContext(Dispatchers.IO) {
+            try {
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                val todayStr = dateFormat.format(Date())
+
+                val record = client.from("attendance")
+                    .select {
+                        filter {
+                            eq("schedId", schedId)
+                            eq("employeeId", user.id)
+                            like("timeIn", "$todayStr%")
+                        }
+                    }
+                    .decodeSingleOrNull<Attendance>()
+
+                record?.status
+            } catch (e: Exception) {
                 null
             }
         }
@@ -462,37 +505,12 @@ object SupabaseManager {
 
                 if (result.isNotEmpty()) {
                     val activeSession = result.first()
-                    Log.d("SupabaseManager", "Found Active Session: ${activeSession["attendId"]} for Schedule: ${activeSession["schedId"]}")
                     return@withContext activeSession["attendId"]
                 } else {
-                    Log.d("SupabaseManager", "User is not clocked in for ANY class.")
                     return@withContext null
                 }
             } catch (e: Exception) {
                 Log.e("SupabaseManager", "Error checking active attendance: ${e.message}")
-                null
-            }
-        }
-    }
-
-    suspend fun getAttendanceForSchedule(schedId: String, datePrefix: String): Attendance? {
-        val user = getCurrentUser() ?: return null
-        return withContext(Dispatchers.IO) {
-            try {
-                val startOfDay = "${datePrefix}T00:00:00"
-                val endOfDay = "${datePrefix}T23:59:59"
-
-                client.from("attendance")
-                    .select {
-                        filter {
-                            eq("schedId", schedId)
-                            eq("employeeId", user.id)
-                            gte("timeIn", startOfDay)
-                            lte("timeIn", endOfDay)
-                        }
-                    }
-                    .decodeSingleOrNull<Attendance>()
-            } catch (e: Exception) {
                 null
             }
         }
@@ -503,13 +521,14 @@ object SupabaseManager {
             try {
                 val cacheKey = "$schedId-$datePrefix"
                 if (processedAbsentCache.contains(cacheKey)) {
-                    Log.d(TAG, "Skipping absent check: Already processed in this session.")
                     return@withContext Result.success(false)
                 }
 
                 val startOfDay = "${datePrefix}T00:00:00"
                 val endOfDay = "${datePrefix}T23:59:59"
 
+                // This query requires a timestamp to find the record.
+                // Since we now store the timestamp for Absent records too, this will work.
                 val existingRecord = client.from("attendance")
                     .select {
                         filter {
@@ -527,13 +546,16 @@ object SupabaseManager {
                 }
 
                 val absentId = UUID.randomUUID().toString()
+
+                // FIXED: Use the current timestamp instead of NULL
+                // This ensures the record can be found by the query above on next refresh.
                 val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
 
                 val absentRecord = Attendance(
                     id = absentId,
                     status = "Absent",
                     timeIn = nowStr,
-                    timeOut = nowStr,
+                    timeOut = null,
                     schedId = schedId,
                     employeeId = employeeId
                 )
@@ -545,6 +567,40 @@ object SupabaseManager {
                 Result.success(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Error marking absent", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun markIncomplete(schedId: String, employeeId: String): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val timeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                val nowStr = timeFormat.format(Date())
+
+                val activeSession = client.from("attendance")
+                    .select {
+                        filter {
+                            eq("schedId", schedId)
+                            eq("employeeId", employeeId)
+                            filter("timeOut", FilterOperator.IS, "null")
+                        }
+                    }
+                    .decodeSingleOrNull<Attendance>()
+
+                if (activeSession != null) {
+                    client.from("attendance").update({
+                        set("status", "Incomplete")
+                        set("timeOut", nowStr)
+                    }) {
+                        filter { eq("attendId", activeSession.id) }
+                    }
+                    Result.success(true)
+                } else {
+                    Result.failure(Exception("No active session to mark incomplete"))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error marking incomplete", e)
                 Result.failure(e)
             }
         }

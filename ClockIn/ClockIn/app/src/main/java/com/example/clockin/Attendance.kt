@@ -38,6 +38,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.Date
 
 data class AttendanceItem(
     val title: String,
@@ -73,31 +74,36 @@ fun AttendanceScreen(navController: NavController) {
             val items = attendanceRecords.mapNotNull { record ->
                 val schedule = record.schedule
                 val subject = schedule?.subject ?: "Unknown"
-                val section = schedule?.sectionName ?: "Unknown"
+                val section = schedule?.sectionDetails?.sectionName
+                    ?: schedule?.sectionName
+                    ?: "Unknown"
 
                 val formattedTitle = "$subject - $section"
 
-                val displayTimeIn = formatTime(record.timeIn)
-                val displayTimeOut = formatTime(record.timeOut)
+                val isAbsent = record.status.equals("Absent", true)
+                val displayTimeIn = if (isAbsent) "--:--" else formatTime(record.timeIn)
+                val displayTimeOut = if (isAbsent) "--:--" else formatTime(record.timeOut)
 
-                if (record.timeIn != null) {
-                    val rawLabel = try {
+                val rawLabel = if (isAbsent) {
+                    displayDateFormat.format(Date())
+                } else if (record.timeIn != null) {
+                    try {
                         val dateObj = isoFormat.parse(record.timeIn)
                         if (dateObj != null) displayDateFormat.format(dateObj) else "Recent"
                     } catch (e: Exception) {
                         "Recent"
                     }
-
-                    AttendanceItem(
-                        title = formattedTitle,
-                        status = record.status,
-                        timeIn = displayTimeIn,
-                        timeOut = displayTimeOut,
-                        date = rawLabel
-                    )
                 } else {
-                    null
+                    "Recent"
                 }
+
+                AttendanceItem(
+                    title = formattedTitle,
+                    status = record.status,
+                    timeIn = displayTimeIn,
+                    timeOut = displayTimeOut,
+                    date = rawLabel
+                )
             }
 
             attendanceMap = items
@@ -177,7 +183,7 @@ fun AttendanceScreen(navController: NavController) {
 
                     if (isLoading) {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = ButtonOrange)
+                            CircularProgressIndicator(color = PrimaryOrange)
                         }
                     } else if (errorMessage != null) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
@@ -243,7 +249,7 @@ fun AttendanceCard(item: AttendanceItem) {
             Box(
                 modifier = Modifier
                     .size(45.dp)
-                    .background(ButtonOrange, RoundedCornerShape(8.dp)),
+                    .background(PrimaryOrange, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -287,7 +293,9 @@ fun StatusChip(status: String) {
     val color = when(status.lowercase()) {
         "late" -> Color.Red
         "present" -> Color(0xFF4CAF50)
-        else -> Color.Gray
+        "incomplete" -> Color.Gray
+        "absent" -> Color.Gray
+        else -> Color.DarkGray
     }
     Surface(
         color = color,

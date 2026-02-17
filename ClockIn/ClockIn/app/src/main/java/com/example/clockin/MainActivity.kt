@@ -2,11 +2,14 @@ package com.example.clockin
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -48,6 +51,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,11 +84,46 @@ val LightOrangeText = Color(0xFFE69A8D)
 val BorderGray = Color(0xFFE0E0E0)
 
 class MainActivity : ComponentActivity() {
-    var targetBleName by mutableStateOf("")
+
+    private var beaconService: BeaconService? = null
+    private var isBound = false
+
+    private var uiBeaconDistance by mutableDoubleStateOf(0.0)
+    private var uiIsBeaconFound by mutableStateOf(false)
+    private var uiTargetBleName by mutableStateOf("")
+    private var uiTargetStartTime by mutableLongStateOf(0L)
+    private var uiSchedId by mutableStateOf("")
+    private var uiEmpId by mutableStateOf("")
+    private var uiStatusMessage by mutableStateOf("Initializing...")
+    private var uiActiveAttendanceId by mutableStateOf<String?>(null)
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as BeaconService.LocalBinder
+            beaconService = binder.getService()
+            isBound = true
+
+            beaconService?.onUpdate = { distance, found, _, statusMsg ->
+                uiBeaconDistance = distance
+                uiIsBeaconFound = found
+                uiStatusMessage = statusMsg
+            }
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            isBound = false
+            beaconService = null
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        Intent(this, BeaconService::class.java).also { intent ->
+            startService(intent)
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
 
         NotificationTracker.init(this)
 
@@ -95,9 +134,6 @@ class MainActivity : ComponentActivity() {
 
             var isCheckingSession by remember { mutableStateOf(true) }
             var startDestination by remember { mutableStateOf("login") }
-
-            var beaconDistance by remember { mutableDoubleStateOf(0.0) }
-            var isBeaconFound by remember { mutableStateOf(false) }
 
             val permissionsLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
@@ -143,12 +179,17 @@ class MainActivity : ComponentActivity() {
 
                 val permissionsToRequest = mutableListOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.FOREGROUND_SERVICE
                 )
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
                     permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+                }
+
+                if (Build.VERSION.SDK_INT >= 34) {
+                    permissionsToRequest.add("android.permission.FOREGROUND_SERVICE_LOCATION")
                 }
 
                 if (permissionsToRequest.any {
@@ -162,17 +203,12 @@ class MainActivity : ComponentActivity() {
                 isCheckingSession = false
             }
 
-            LaunchedEffect(targetBleName) {
-                if (targetBleName.isNotEmpty()) {
-                    beaconDistance = 0.0
-                    isBeaconFound = false
-
-                    BleManager.startScanning(context, targetBleName) { _, distance, isWithinLimit ->
-                        beaconDistance = distance
-                        isBeaconFound = isWithinLimit
-                    }
-                } else {
-                    BleManager.stopScanning(context)
+            LaunchedEffect(uiTargetBleName, uiTargetStartTime, uiActiveAttendanceId) {
+                if (uiTargetBleName.isNotEmpty() && isBound) {
+                    val isClockedInNow = (uiActiveAttendanceId != null)
+                    beaconService?.startMonitoring(uiTargetBleName, uiTargetStartTime, uiSchedId, uiEmpId, isClockedInNow)
+                } else if (isBound) {
+                    beaconService?.stopMonitoring()
                 }
             }
 
@@ -223,20 +259,32 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("home") {
-                            // CLEANED: Removed timer args (timeOutOfRange, onTimerTick, onTimerReset)
                             DashboardScreen(
                                 navController = navController,
-                                beaconDistance = beaconDistance,
-                                deviceName = targetBleName,
-                                onTargetBleChanged = { newBleName ->
-                                    targetBleName = newBleName
-                                    isBeaconFound = false
+                                beaconDistance = uiBeaconDistance,
+                                deviceName = uiTargetBleName,
+                                statusMessage = uiStatusMessage,
+                                onActiveAttendanceIdChanged = { id -> uiActiveAttendanceId = id },
+                                onTargetBleChanged = { newBleName, newStartTime, schedId ->
+                                    uiTargetBleName = newBleName
+                                    uiTargetStartTime = newStartTime
+                                    uiSchedId = schedId
+
+                                    val user = kotlinx.coroutines.runBlocking { SupabaseManager.getCurrentUser() }
+                                    if (user != null) {
+                                        uiEmpId = user.id
+                                    }
+
+                                    if (isBound) {
+                                        val isClockedInNow = (uiActiveAttendanceId != null)
+                                        beaconService?.startMonitoring(newBleName, newStartTime, schedId, uiEmpId, isClockedInNow)
+                                    }
                                 },
-                                isBeaconFound = isBeaconFound,
+                                isBeaconFound = uiIsBeaconFound,
                                 onLogout = {
                                     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
                                     scope.launch {
-                                        BleManager.stopScanning(context)
+                                        if (isBound) beaconService?.stopMonitoring()
                                         SupabaseManager.signOut()
                                         navController.navigate("login") { popUpTo("home") { inclusive = true } }
                                     }
@@ -250,7 +298,7 @@ class MainActivity : ComponentActivity() {
                         composable("scan_qr") {
                             ScannerScreen(
                                 navController = navController,
-                                isBeaconFound = isBeaconFound
+                                isBeaconFound = uiIsBeaconFound
                             )
                         }
                         composable("schedule") {
@@ -267,11 +315,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        BleManager.stopScanning(this)
+        if (isBound) {
+            unbindService(connection)
+            isBound = false
+        }
     }
 }
 
-// ... (Rest of LoginScreen and DeviceConflictDialog remains exactly the same)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
