@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Section Schedules — ClockIn</title>
+  <title>Sections — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
@@ -10,6 +10,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
+  <script src="scripts/managers/paginate.js" defer></script>
+  <script src="scripts/managers/data-table.js" defer></script>
   <script src="scripts/section_schedules.js" defer></script>
 </head>
 
@@ -22,8 +24,26 @@
       <div class="dashboard-header">
         <div class="dashboard-title-wrapper">
           <div>
-            <h1>Section Schedules</h1>
+            <h1>Sections</h1>
             <p class="tagline">View schedules organized by section.</p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="dropdown-wrapper">
+              <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+                <span class="material-symbols-outlined">download</span>
+                Export
+              </button>
+              <div id="exportMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="exportToCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Export as CSV
+                </button>
+                <button class="action-dropdown-item" onclick="exportToJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Export as JSON
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -79,9 +99,29 @@
             <span id="filterStatus"></span>
           </div>
         </div>
+        <div id="selectionActionRow" class="selection-action-row" style="display: none;">
+          <div class="selection-info">
+            <span id="selectedCount">0</span> row(s) selected
+          </div>
+          <div class="selection-actions">
+            <button class="selection-action-btn export-btn" onclick="exportSelectedRows()">
+              <span class="material-symbols-outlined">download</span>
+              Export CSV
+            </button>
+            <button class="selection-action-btn export-btn" onclick="exportSelectedRowsJSON()">
+              <span class="material-symbols-outlined">code</span>
+              Export JSON
+            </button>
+            <button class="selection-action-btn" onclick="clearSelection()">
+              <span class="material-symbols-outlined">close</span>
+              Clear
+            </button>
+          </div>
+        </div>
         <table class="users-table">
           <thead>
             <tr>
+              <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllSections" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
               <th>Section Name</th>
               <th>Advisor</th>
               <th>Year Level</th>
@@ -92,6 +132,28 @@
           <tbody id="sectionsList">
           </tbody>
         </table>
+        <div class="pagination-container">
+          <div class="pagination-left">
+            <span>Show</span>
+            <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
+            <span>from <span id="totalSectionsCount">0</span> data</span>
+          </div>
+          <div class="pagination-right">
+            <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
+              <span class="material-symbols-outlined">first_page</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
+            <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
+              <span class="material-symbols-outlined">last_page</span>
+            </button>
+          </div>
+        </div>
       </div>
 
     </main>

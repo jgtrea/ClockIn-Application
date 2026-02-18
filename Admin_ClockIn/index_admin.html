@@ -98,7 +98,6 @@
 </div>
 
 <script>
-// Interface search functionality
 const interfaces = [
   { name: 'Home', url: 'home.html', icon: 'home' },
   { name: 'Dashboard', url: 'dashboard_db.html', icon: 'dashboard' },
@@ -130,6 +129,7 @@ searchInput.addEventListener('input', function() {
   } else {
     searchResults.innerHTML = matches.map(iface => `
       <div class="search-result-item" onclick="navigateTo('${iface.url}')">
+        <span class="material-symbols-outlined">${iface.icon}</span>
         ${iface.name}
       </div>
     `).join('');
@@ -189,8 +189,6 @@ function navigateToPage(url) {
     sidebar.classList.remove('expanded');
   }
 }
-
-// Profile menu toggle
 document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.getElementById('sidebar');
   const hamburger = document.getElementById('hamburger');

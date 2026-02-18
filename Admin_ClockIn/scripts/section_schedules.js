@@ -1,6 +1,24 @@
 let sections = [];
 let filteredSections = [];
 
+const SECTIONS_TABLE = 'sections';
+
+Paginate.init({
+  containerId: 'section_schedules',
+  itemsPerPage: 10,
+  onPageChange: () => renderSections()
+});
+
+DataTableManager.init({
+  tableName: SECTIONS_TABLE,
+  supabaseClient: window.supabaseClient,
+  primaryKey: 'sectId',
+  render: () => {
+    Paginate.setTotalItems(DataTableManager.getFilteredData().length);
+    renderSections();
+  }
+});
+
 async function loadSections() {
   const supabase = window.supabaseClient;
   if (!supabase) {
@@ -35,32 +53,222 @@ async function loadSections() {
   }));
 
   filteredSections = [...sections];
+  
+  DataTableManager.setFilteredData(filteredSections);
+  Paginate.setTotalItems(filteredSections.length);
   renderSections();
 }
 
 function renderSections() {
   const sectionsList = document.getElementById('sectionsList');
+  const pageData = Paginate.getPageData(DataTableManager.getFilteredData());
+  const totalItems = DataTableManager.getFilteredData().length;
   
-  if (!filteredSections || filteredSections.length === 0) {
-    sectionsList.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #6b7280;">No sections found</td></tr>';
+  const totalCountEl = document.getElementById('totalSectionsCount');
+  if (totalCountEl) {
+    totalCountEl.textContent = totalItems;
+  }
+  
+  if (!pageData || pageData.length === 0) {
+    sectionsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No sections found</td></tr>';
     return;
   }
 
-  sectionsList.innerHTML = filteredSections.map(section => `
-    <tr>
+  sectionsList.innerHTML = pageData.map(section => `
+    <tr id="row-${section.sectId}">
+      <td class="checkbox-col"><input type="checkbox" class="section-checkbox" value="${section.sectId}" onchange="toggleSectionSelection('${section.sectId}')"></td>
       <td>${section.sectionName || 'Unnamed Section'}</td>
       <td>${section.advisor || '-'}</td>
       <td>${section.yearLevel || '-'}</td>
       <td>${section.totalSchedules}</td>
       <td style="text-align: right;">
-        <button class="btn-outline" onclick="viewSectionSchedule('${section.sectId}', '${section.sectionName}')" style="padding: 8px 16px;">
-          <span class="material-symbols-outlined" style="font-size: 18px;">visibility</span>
-          View Schedule
-        </button>
+        <div class="action-buttons">
+          <button class="btn-icon edit-btn" onclick="viewSectionSchedule('${section.sectId}', '${section.sectionName}')" title="View">
+            <span class="material-symbols-outlined">visibility</span>
+          </button>
+        </div>
       </td>
     </tr>
   `).join('');
 }
+
+window.toggleSectionSelection = function(sectId) {
+  const checkbox = document.querySelector(`.section-checkbox[value="${sectId}"]`);
+  if (checkbox) {
+    checkbox.checked = checkbox.checked;
+  }
+  updateSelectAllState();
+};
+
+function updateSelectAllState() {
+  const selectAllBtn = document.getElementById('selectAllSections');
+  const checkedBoxes = document.querySelectorAll('.section-checkbox:checked');
+  const selectionActionRow = document.getElementById('selectionActionRow');
+  const selectedCount = document.getElementById('selectedCount');
+  
+  if (!selectAllBtn) return;
+  
+  const hasSelection = checkedBoxes.length > 0;
+  if (hasSelection) {
+    selectAllBtn.classList.add('has-selection');
+    if (selectionActionRow) {
+      selectionActionRow.style.display = 'flex';
+      if (selectedCount) {
+        selectedCount.textContent = checkedBoxes.length;
+      }
+    }
+  } else {
+    selectAllBtn.classList.remove('has-selection');
+    if (selectionActionRow) {
+      selectionActionRow.style.display = 'none';
+    }
+  }
+}
+
+window.toggleSelectAll = function() {
+  const selectAllBtn = document.getElementById('selectAllSections');
+  const checkboxes = document.querySelectorAll('.section-checkbox');
+  
+  if (selectAllBtn.classList.contains('has-selection')) {
+    checkboxes.forEach(cb => cb.checked = false);
+    DataTableManager.deselectAll();
+  } else {
+    checkboxes.forEach(cb => cb.checked = true);
+    DataTableManager.selectAll();
+  }
+  
+  updateSelectAllState();
+};
+
+window.clearSelection = function() {
+  const checkboxes = document.querySelectorAll('.section-checkbox');
+  checkboxes.forEach(cb => cb.checked = false);
+  DataTableManager.clearSelection();
+  updateSelectAllState();
+};
+
+window.exportToCSV = function() {
+  const dataToExport = DataTableManager.getFilteredData();
+  if (!dataToExport.length) return;
+  
+  const headers = ['Section Name', 'Advisor', 'Year Level', 'Total Schedules'];
+  const rows = [headers.join(',')];
+  
+  dataToExport.forEach(section => {
+    const sectionName = String(section.sectionName || '').includes(',') ? `"${section.sectionName}"` : section.sectionName || '';
+    const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
+    const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
+    const totalSchedules = section.totalSchedules || 0;
+    rows.push(`${sectionName},${advisor},${yearLevel},${totalSchedules}`);
+  });
+  
+  const csvContent = rows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sections_export.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+window.exportToJSON = function() {
+  const dataToExport = DataTableManager.getFilteredData();
+  if (!dataToExport.length) return;
+  
+  const exportData = dataToExport.map(section => ({
+    sectionName: section.sectionName || '',
+    advisor: section.advisor || '',
+    yearLevel: section.yearLevel || '',
+    totalSchedules: section.totalSchedules || 0
+  }));
+  
+  const jsonContent = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sections_export.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+window.exportSelectedRows = function() {
+  const selectedIds = DataTableManager.getSelectedItems();
+  if (selectedIds.length === 0) {
+    alert('No rows selected');
+    return;
+  }
+  
+  const selectedData = sections.filter(section => selectedIds.includes(section.sectId));
+  const headers = ['Section Name', 'Advisor', 'Year Level', 'Total Schedules'];
+  const rows = [headers.join(',')];
+  
+  selectedData.forEach(section => {
+    const sectionName = String(section.sectionName || '').includes(',') ? `"${section.sectionName}"` : section.sectionName || '';
+    const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
+    const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
+    const totalSchedules = section.totalSchedules || 0;
+    rows.push(`${sectionName},${advisor},${yearLevel},${totalSchedules}`);
+  });
+  
+  const csvContent = rows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sections_selected_export.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+window.exportSelectedRowsJSON = function() {
+  const selectedIds = DataTableManager.getSelectedItems();
+  if (selectedIds.length === 0) {
+    alert('No rows selected');
+    return;
+  }
+  
+  const selectedData = sections.filter(section => selectedIds.includes(section.sectId));
+  const exportData = selectedData.map(section => ({
+    sectionName: section.sectionName || '',
+    advisor: section.advisor || '',
+    yearLevel: section.yearLevel || '',
+    totalSchedules: section.totalSchedules || 0
+  }));
+  
+  const jsonContent = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sections_selected_export.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+window.toggleExportMenu = function() {
+  const exportMenu = document.getElementById('exportMenu');
+  if (exportMenu) {
+    exportMenu.style.display = exportMenu.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+document.addEventListener('click', function(e) {
+  const exportMenu = document.getElementById('exportMenu');
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportMenu && exportBtn && !exportMenu.contains(e.target) && !exportBtn.contains(e.target)) {
+    exportMenu.style.display = 'none';
+  }
+});
 
 window.searchSection = function(query) {
   const searchTerm = query.toLowerCase().trim();
@@ -73,6 +281,9 @@ window.searchSection = function(query) {
     );
   }
   
+  DataTableManager.setFilteredData(filteredSections);
+  Paginate.setTotalItems(filteredSections.length);
+  Paginate.setPage(1);
   renderSections();
 };
 
@@ -165,6 +376,9 @@ window.applyFilters = function() {
     document.getElementById('filterStatus').textContent = `Filtered (${filters.length})`;
   }
   
+  DataTableManager.setFilteredData(filteredSections);
+  Paginate.setTotalItems(filteredSections.length);
+  Paginate.setPage(1);
   toggleFilterMenu();
   renderSections();
 };
@@ -197,12 +411,44 @@ window.applySort = function() {
     });
   }
   
+  DataTableManager.setFilteredData(filteredSections);
+  Paginate.setTotalItems(filteredSections.length);
   toggleSortMenu();
   renderSections();
 };
 
 window.viewSectionSchedule = function(sectId, sectionName) {
   window.location.href = `section_schedule_detail.html?sectId=${sectId}&sectionName=${encodeURIComponent(sectionName)}`;
+};
+
+window.changeItemsPerPage = function(value) {
+  const itemsPerPage = parseInt(value) || 10;
+  Paginate.setItemsPerPage(itemsPerPage);
+  Paginate.setPage(1);
+  renderSections();
+};
+
+window.goToFirstPage = function() {
+  Paginate.setPage(1);
+  renderSections();
+};
+
+window.goToLastPage = function() {
+  const totalPages = Math.ceil(Paginate.getTotalItems() / Paginate.getItemsPerPage());
+  Paginate.setPage(totalPages);
+  renderSections();
+};
+
+window.goToPage = function(pageNum) {
+  const page = parseInt(pageNum) || 1;
+  Paginate.setPage(page);
+  renderSections();
+};
+
+window.changePage = function(delta) {
+  const newPage = Paginate.getCurrentPage() + delta;
+  Paginate.setPage(newPage);
+  renderSections();
 };
 
 loadSections();

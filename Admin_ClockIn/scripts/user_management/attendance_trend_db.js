@@ -1,4 +1,11 @@
 let currentTrend = 'weekly';
+let countType = 'total'; // 'total' = total attendance, 'each' = each attendance
+
+function toggleCountType() {
+  const select = document.getElementById('countTypeSelect');
+  countType = select.value;
+  updateChartForTrend(currentTrend);
+}
 
 function updateChart(attendanceData, trend = 'weekly') {
   const chart = document.getElementById('attendanceChart');
@@ -175,13 +182,23 @@ async function getWeeklyAttendanceData() {
     date.setDate(today.getDate() - (3 - i));
     const dateString = date.toISOString().split('T')[0];
     
-    const uniqueUsers = new Set();
-    for (const record of records) {
-      if (record.date === dateString) {
-        uniqueUsers.add(record.userName);
+    if (countType === 'total') {
+      let count = 0;
+      for (const record of records) {
+        if (record.date === dateString) {
+          count++;
+        }
       }
+      weeklyData[i] = count;
+    } else {
+      const uniqueUsers = new Set();
+      for (const record of records) {
+        if (record.date === dateString) {
+          uniqueUsers.add(record.userName);
+        }
+      }
+      weeklyData[i] = uniqueUsers.size;
     }
-    weeklyData[i] = uniqueUsers.size;
   }
   
   return weeklyData;
@@ -197,13 +214,23 @@ async function getMonthlyAttendanceData() {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     
-    const uniqueUsers = new Set();
-    for (const record of records) {
-      if (record.date && record.date.startsWith(`${year}-${month}`)) {
-        uniqueUsers.add(record.userName);
+    if (countType === 'total') {
+      let count = 0;
+      for (const record of records) {
+        if (record.date && record.date.startsWith(`${year}-${month}`)) {
+          count++;
+        }
       }
+      monthlyData.push(count);
+    } else {
+      const uniqueUsers = new Set();
+      for (const record of records) {
+        if (record.date && record.date.startsWith(`${year}-${month}`)) {
+          uniqueUsers.add(record.userName);
+        }
+      }
+      monthlyData.push(uniqueUsers.size);
     }
-    monthlyData.push(uniqueUsers.size);
   }
   
   return monthlyData;
@@ -217,13 +244,23 @@ async function getYearlyAttendanceData() {
   for (let i = 0; i < 7; i++) {
     const year = currentYear - (3 - i);
     
-    const uniqueUsers = new Set();
-    for (const record of records) {
-      if (record.date && record.date.startsWith(year.toString())) {
-        uniqueUsers.add(record.userName);
+    if (countType === 'total') {
+      let count = 0;
+      for (const record of records) {
+        if (record.date && record.date.startsWith(year.toString())) {
+          count++;
+        }
       }
+      yearlyData.push(count);
+    } else {
+      const uniqueUsers = new Set();
+      for (const record of records) {
+        if (record.date && record.date.startsWith(year.toString())) {
+          uniqueUsers.add(record.userName);
+        }
+      }
+      yearlyData.push(uniqueUsers.size);
     }
-    yearlyData.push(uniqueUsers.size);
   }
   
   return yearlyData;
