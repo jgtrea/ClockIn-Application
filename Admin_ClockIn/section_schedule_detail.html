@@ -11,6 +11,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
+  <script src="scripts/managers/paginate.js" defer></script>
   <script src="scripts/section_schedule_detail.js" defer></script>
 </head>
 
@@ -27,10 +28,6 @@
               <span class="material-symbols-outlined">arrow_back</span>
               Back to Sections
             </button>
-            <button id="selectModeBtn" class="btn-outline" onclick="toggleSelectMode()" style="margin-bottom: 12px; margin-left: 8px;">
-              <span class="material-symbols-outlined">checklist</span>
-              Select Mode
-            </button>
             <h1 id="sectionName">Section Schedule</h1>
             <p class="tagline" id="sectionInfo"></p>
           </div>
@@ -42,10 +39,6 @@
       <div id="actionButtonsContainer" class="action-buttons-container" style="display: none;">
         <span id="selectionCount" class="selection-count">0 selected</span>
         <div class="action-buttons">
-          <button id="btnEdit" class="btn-action btn-edit" onclick="editSelectedSchedule()">
-            <span class="material-symbols-outlined">edit</span>
-            Edit
-          </button>
           <button id="btnRemoveTeacher" class="btn-action btn-remove-teacher" onclick="removeTeacherFromSelected()">
             <span class="material-symbols-outlined">person_remove</span>
             Remove Teacher
@@ -96,7 +89,107 @@
         </div>
       </div>
 
-      <div id="scheduleDetailContainer" class="schedule-detail-container"></div>
+      <div class="day-selector-container">
+        <label for="daySelector">Select Day:</label>
+        <select id="daySelector" class="day-selector" onchange="filterByDay(this.value)">
+          <option value="All">All Days</option>
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+          <option value="Saturday">Saturday</option>
+          <option value="Sunday">Sunday</option>
+        </select>
+      </div>
+
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchScheduleInput" class="search-username-input" placeholder="Search Subject or Teacher" oninput="searchSchedule(this.value)" autocomplete="off">
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleFilterMenu()">
+                <span class="material-symbols-outlined">filter_list</span>
+                Filter
+              </button>
+              <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeFilters"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Filter
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applyFilters()">Apply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleSortMenu()">
+                <span class="material-symbols-outlined">sort</span>
+                Sort
+              </button>
+              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeSorts"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Sort
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applySort()">Sort</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
+        </div>
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="checkbox-col">
+                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+              </th>
+              <th>Time</th>
+              <th>Subject</th>
+              <th>Teacher</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="scheduleTableBody">
+          </tbody>
+        </table>
+        <div class="pagination-container">
+          <div class="pagination-left">
+            <span>Show</span>
+            <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
+            <span>from <span id="totalUsersCount">0</span> data</span>
+          </div>
+          <div class="pagination-right">
+            <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
+              <span class="material-symbols-outlined">first_page</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
+            <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
+              <span class="material-symbols-outlined">last_page</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
     </main>
   </div>

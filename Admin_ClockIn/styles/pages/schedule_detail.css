@@ -1,155 +1,186 @@
-.schedule-detail-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
-  padding: 0;
-}
-
-.add-schedule-form {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 20px;
+/* Day Selector Styles */
+.day-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 20px;
+  background: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
-  align-items: end;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field label {
-  font-size: 13px;
+.day-selector-container label {
+  font-size: 14px;
   font-weight: 600;
   color: #64748b;
 }
 
-.form-input {
-  padding: 10px 12px;
+.day-selector {
+  padding: 10px 16px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.2s;
+  font-weight: 500;
+  color: #1e293b;
+  background: white;
+  cursor: pointer;
 }
 
-.form-input:focus {
+.day-selector:focus {
   outline: none;
   border-color: #ff6b35;
 }
 
-.form-field-button {
-  display: flex;
-  align-items: flex-end;
-}
-
-.form-field-button button {
-  width: 100%;
-  height: 42px;
-}
-
-.day-schedule-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.day-header {
-  background: #ff6b35;
-  color: white;
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.day-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.schedule-count {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.schedule-items {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.schedule-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 6px;
-  border-left: 3px solid #ff6b35;
-}
-
-.time-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #ff6b35;
-  font-weight: 600;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.time-badge .material-symbols-outlined {
-  font-size: 18px;
-}
-
-.schedule-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.subject-name {
-  font-weight: 600;
-  font-size: 15px;
-  color: #1e293b;
-}
-
-.section-name {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.section-name .material-symbols-outlined {
-  font-size: 16px;
-}
-
-.no-records {
+/* Table Cell Styles */
+.checkbox-col {
+  width: 40px;
   text-align: center;
-  padding: 40px;
-  color: #94a3b8;
+}
+
+.checkbox-col input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #ff6b35;
+}
+
+/* Edit input styles */
+.edit-input,
+.edit-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  box-sizing: border-box;
+}
+
+.edit-input:focus,
+.edit-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Table cell alignment */
+.section-name-cell,
+.advisor-cell,
+.year-level-cell {
+  vertical-align: middle;
+}
+
+.time-cell {
+  font-family: monospace;
+  color: #111827;
   font-size: 14px;
 }
 
-/* Selection Mode Styles */
+.subject-cell {
+  font-weight: 500;
+  font-size: 14px;
+  color: #111827;
+}
+
+.teacher-cell {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Inline Edit Styles */
+.time-cell input,
+.subject-cell input,
+.teacher-cell select {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.time-cell input:focus,
+.subject-cell input:focus,
+.teacher-cell select:focus {
+  outline: none;
+  border-color: #ff6b35;
+}
+
+.time-cell input {
+  width: 100px;
+  margin-right: 4px;
+}
+
+.subject-cell input {
+  min-width: 150px;
+}
+
+.teacher-cell select {
+  min-width: 150px;
+}
+
+/* Action Buttons */
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.edit-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.edit-btn .material-symbols-outlined {
+  color: #374151;
+}
+
+.delete-btn:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.delete-btn .material-symbols-outlined {
+  color: #dc2626;
+}
+
+.save-btn {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.save-btn:hover {
+  background: #059669;
+}
+
+.save-btn .material-symbols-outlined {
+  color: white;
+}
+
+.cancel-btn {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.cancel-btn:hover {
+  background: #dc2626;
+}
+
+.cancel-btn .material-symbols-outlined {
+  color: white;
+}
+
+/* Action Buttons Container (for selected items) */
 .action-buttons-container {
   display: flex;
   justify-content: space-between;
@@ -183,20 +214,10 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
 .btn-action .material-symbols-outlined {
   font-size: 18px;
-}
-
-.btn-edit {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-edit:hover {
-  background: #2563eb;
 }
 
 .btn-remove-teacher {
@@ -217,35 +238,55 @@
   background: #dc2626;
 }
 
-/* Checkbox in schedule item */
-.schedule-item {
+/* Add Schedule Form */
+.add-schedule-form {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.form-field {
   display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: #f8fafc;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.form-input {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
-  border-left: 3px solid #ff6b35;
+  font-size: 14px;
 }
 
-.schedule-checkbox {
-  display: none;
-  align-items: center;
-  justify-content: center;
+.form-input:focus {
+  outline: none;
+  border-color: #ff6b35;
 }
 
-.schedule-checkbox.visible {
+.form-field-button {
   display: flex;
+  align-items: flex-end;
 }
 
-.schedule-checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: #ff6b35;
-}
-
-.schedule-item.select-mode {
-  padding-left: 16px;
+.form-field-button button {
+  width: 100%;
+  height: 42px;
 }
 
 .btn-outline {
@@ -260,7 +301,6 @@
   font-weight: 500;
   color: #64748b;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
 .btn-outline:hover {
@@ -269,8 +309,89 @@
   color: #334155;
 }
 
-@media (max-width: 768px) {
-  .schedule-detail-container {
-    grid-template-columns: 1fr;
-  }
+/* Pagination */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 0 0 12px 12px;
+}
+
+.pagination-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.pagination-btn:hover {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.pagination-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.page-number-input {
+  width: 50px;
+  height: 32px;
+  text-align: center;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  -moz-appearance: textfield;
+  -webkit-appearance: textfield;
+  appearance: textfield;
+}
+
+.page-number-input::-webkit-outer-spin-button,
+.page-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.page-number-input:focus {
+  outline: none;
+  border-color: #ff6b35;
+}
+
+.items-per-page-input {
+  width: 60px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+}
+
+.items-per-page-input:focus {
+  outline: none;
+  border-color: #ff6b35;
 }
