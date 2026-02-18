@@ -20,15 +20,21 @@
   <div class="main">
     <main class="content">
       <div style="display: flex; justify-content: space-between; align-items: baseline;">
-        <h1>Section Overview</h1>
+        <div>
+          <h1 style="margin: 0 0 4px 0;">Section Overview</h1>
+          <span style="font-size: 14px; color: #6b7280;">Check which teachers are in which classroom</span>
+        </div>
         <div style="text-align: right;">
-          <div id="currentTime" style="font-size: 24px; font-weight: 600; color: #111827;"></div>
-          <div id="currentDate" style="font-size: 14px; color: #6b7280; margin-top: 4px;"></div>
+          <div id="currentTime" style="font-size: 24px; font-weight: 600; color: #111827; margin-bottom: 4px;"></div>
+          <div id="currentDate" style="font-size: 14px; color: #6b7280;"></div>
         </div>
       </div>
-      <p class="tagline">Check which teachers are in which classroom</p>
       
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0 30px 0;">
+
+      <div style="margin-bottom: 20px; text-align: center;">
+        <input type="text" id="searchSection" placeholder="Search section..." oninput="filterSections(this.value)" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; width: 300px;">
+      </div>
 
       <div id="sectionsContainer" style="margin-top: 32px;">
         <p style="text-align: center; color: #9ca3af;">Loading sections...</p>
@@ -58,6 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
   clockManager.init();
   scheduleOverview.init();
 });
+
+function filterSections(searchTerm) {
+  const sections = document.querySelectorAll('.section-card');
+  const term = searchTerm.toLowerCase();
+  
+  sections.forEach(section => {
+    const sectionName = section.querySelector('h2').textContent.toLowerCase();
+    if (sectionName.includes(term)) {
+      section.style.display = 'flex';
+    } else {
+      section.style.display = 'none';
+    }
+  });
+}
 
 function showWeeklySchedule(sectionId, sectionName) {
   if (window.scheduleOverview) {
