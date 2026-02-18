@@ -102,6 +102,19 @@
             <button id="nextBtn" onclick="changePage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
           </div>
         </div>
+        <div class="recent-activity-container recent-activity-half">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 class="recent-activity-title">Section Clock-ins</h2>
+          </div>
+          <div id="sectionClockinsFeed">
+            <p class="loading-text">Loading section clock-ins...</p>
+          </div>
+          <div id="sectionPagination">
+            <button id="sectionPrevBtn" onclick="changeSectionPage(-1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>
+            <span id="sectionPageInfo" class="page-info"></span>
+            <button id="sectionNextBtn" onclick="changeSectionPage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
+          </div>
+        </div>
       </div>
 
     </main>

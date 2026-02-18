@@ -12,6 +12,10 @@ let currentEndDateFilter = '';
 let currentStartTimeFilter = '';
 let currentEndTimeFilter = '';
 
+let sectionClockinsData = [];
+let sectionCurrentPage = 1;
+const sectionRecordsPerPage = 5;
+
 function searchByName(term) {
   currentSearchTerm = term || '';
   applyRecentClockinsFilters();
@@ -393,6 +397,147 @@ window.changeItemsPerPage = function(value) {
 }
 
 loadRecentActivity();
+
+async function loadSectionClockins() {
+  const sectionClockinsFeed = document.getElementById('sectionClockinsFeed');
+  const supabase = window.supabaseClient;
+  
+  if (!sectionClockinsFeed || !supabase) return;
+
+  try {
+    const { data: sectionsData, error: sectionsError } = await supabase
+      .from('sections')
+      .select('*')
+      .order('sectionName', { ascending: true });
+
+    if (sectionsError) throw sectionsError;
+
+    const { data: schedulesData, error: schedulesError } = await supabase
+      .from('schedule')
+      .select('*');
+
+    if (schedulesError) throw schedulesError;
+
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*');
+
+    if (attendanceError) throw attendanceError;
+
+    const today = new Date().toISOString().split('T')[0];
+    const currentDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()];
+    const currentMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+
+    sectionClockinsData = sectionsData.map(section => {
+      const sectionSchedules = schedulesData.filter(s => s.sectId === section.sectId);
+      const todaySchedules = sectionSchedules.filter(s => s.weekday === currentDay);
+      
+      let currentClass = 'No class';
+      for (const schedule of todaySchedules) {
+        const startMinutes = parseInt(schedule.startTime.split(':')[0]) * 60 + parseInt(schedule.startTime.split(':')[1]);
+        const endMinutes = parseInt(schedule.endTime.split(':')[0]) * 60 + parseInt(schedule.endTime.split(':')[1]);
+        if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+          currentClass = schedule.subject || 'No Subject';
+          break;
+        }
+      }
+
+      const uniqueTodaySchedules = todaySchedules.filter(s => s.schedId && s.employeeId);
+      const totalInSection = uniqueTodaySchedules.length;
+      
+      let clockedIn = 0;
+      uniqueTodaySchedules.forEach(schedule => {
+        const schedAttendance = attendanceData.filter(a => 
+          a.schedId === schedule.schedId && 
+          a.timeIn && 
+          new Date(a.timeIn).toISOString().split('T')[0] === today
+        );
+        if (schedAttendance.length > 0) {
+          clockedIn++;
+        }
+      });
+
+      const percentage = totalInSection > 0 ? Math.round((clockedIn / totalInSection) * 100) : 0;
+
+      return {
+        sectionName: section.sectionName,
+        currentClass: currentClass,
+        percentage: percentage,
+        clockedIn: clockedIn,
+        total: totalInSection
+      };
+    });
+
+    renderSectionPage();
+
+  } catch (err) {
+    console.error('Error loading section clock-ins:', err);
+    sectionClockinsFeed.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading section clock-ins</p>';
+  }
+}
+
+function renderSectionPage() {
+  const sectionClockinsFeed = document.getElementById('sectionClockinsFeed');
+  const pagination = document.getElementById('sectionPagination');
+  const pageInfo = document.getElementById('sectionPageInfo');
+  const prevBtn = document.getElementById('sectionPrevBtn');
+  const nextBtn = document.getElementById('sectionNextBtn');
+  
+  if (!sectionClockinsFeed) return;
+  
+  if (sectionClockinsData.length === 0) {
+    sectionClockinsFeed.innerHTML = '<p style="text-align: center; color: #9ca3af;">No sections found</p>';
+    return;
+  }
+  
+  const totalPages = Math.ceil(sectionClockinsData.length / sectionRecordsPerPage);
+  const startIndex = (sectionCurrentPage - 1) * sectionRecordsPerPage;
+  const endIndex = startIndex + sectionRecordsPerPage;
+  const pageRecords = sectionClockinsData.slice(startIndex, endIndex);
+  
+  sectionClockinsFeed.innerHTML = pageRecords.map(record => `
+    <div class="user-table-row" style="background: #fff; border-bottom: 1px solid #e5e7eb; padding: 16px; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+      <div>
+        <div style="font-weight: 700; font-size: 16px; color: #111827;">${record.sectionName}</div>
+        <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.currentClass}</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-weight: 600; color: ${record.percentage >= 50 ? '#059669' : '#f59e0b'};">${record.percentage}%</div>
+        <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">${record.clockedIn}/${record.total}</div>
+      </div>
+    </div>
+  `).join('');
+  
+  if (pagination && pageInfo && prevBtn && nextBtn) {
+    if (totalPages > 1) {
+      pagination.style.display = 'flex';
+      pageInfo.textContent = sectionCurrentPage;
+      prevBtn.disabled = sectionCurrentPage === 1;
+      nextBtn.disabled = sectionCurrentPage === totalPages;
+      prevBtn.style.opacity = sectionCurrentPage === 1 ? '0.5' : '1';
+      nextBtn.style.opacity = sectionCurrentPage === totalPages ? '0.5' : '1';
+    } else {
+      pagination.style.display = 'flex';
+      pageInfo.textContent = sectionCurrentPage;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      prevBtn.style.opacity = '0.5';
+      nextBtn.style.opacity = '0.5';
+    }
+  }
+}
+
+function changeSectionPage(direction) {
+  const totalPages = Math.ceil(sectionClockinsData.length / sectionRecordsPerPage);
+  const newPage = sectionCurrentPage + direction;
+  
+  if (newPage >= 1 && newPage <= totalPages) {
+    sectionCurrentPage = newPage;
+    renderSectionPage();
+  }
+}
+
+loadSectionClockins();
 
 window.addEventListener('message', function(event) {
   if (event.data.type === 'search') {
