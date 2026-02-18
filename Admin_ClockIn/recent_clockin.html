@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Recent Clock-in — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/container_card/user_add_card.css">
+  <link rel="stylesheet" href="styles/user_ui/components/filters.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../Supabase/supabase_config.js" defer></script>
+  <script src="scripts/user_management/attendance_trend_db.js" defer></script>
+  <script src="scripts/user_management/dashboard_db.js" defer></script>
+  <script src="scripts/managers/paginate.js" defer></script>
+  <script src="scripts/managers/data-table.js" defer></script>
+  <script src="scripts/user_management/attendance_db.js" defer></script>
+  <script src="scripts/filter/filter_user.js" defer></script>
+</head>
+
+<body data-page="recent_clockin">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Recent Clock-in</h1>
+            <p class="tagline">View all recent clock-in records.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+         
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchRecentClockins" class="search-username-input" placeholder="Search by name" oninput="searchByName(this.value)" autocomplete="off">
+            </div>
+            <span style="color: #d1d5db; margin: 0 8px;">|</span>
+            <div class="table-filter-wrapper" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 13px; color: #6b7280;">From:</span>
+              <input type="date" id="startDateFilter" class="date-filter-input" onchange="filterByDateRange()">
+              <input type="time" id="startTimeFilter" class="date-filter-input" style="width: 100px;" onchange="filterByDateRange()">
+              <span style="color: #d1d5db; margin: 0 8px;">-</span>
+              <span style="font-size: 13px; color: #6b7280;">To:</span>
+              <input type="date" id="endDateFilter" class="date-filter-input" onchange="filterByDateRange()">
+              <input type="time" id="endTimeFilter" class="date-filter-input" style="width: 100px;" onchange="filterByDateRange()">
+            </div>
+          </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
+        </div>
+        <div id="activityFeed">
+          <p class="loading-text" style="text-align: center;">Loading...</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

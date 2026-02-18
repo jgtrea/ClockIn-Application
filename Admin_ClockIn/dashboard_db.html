@@ -33,32 +33,41 @@
         <button class="export-btn">Export Data</button>
       </div>
 
-      <div class="stats-toggle-container">
-        <button class="stats-toggle-btn" onclick="toggleStats()">
-          <span>Today's Attendance Stats & Trend</span>
-          <span class="arrow">▼</span>
-        </button>
-        <div class="stats-toggle-content" id="statsToggleContent">
-          <div class="stat-grid">
+      <div class="stats-container">
+        <div class="stat-grid">
             <div class="stat-card">
-              <div class="stat-value total-users" id="totalTeachers">-</div>
-              <div class="stat-label">Total Teachers</div>
+              <div class="stat-left">
+                <div class="stat-label">Total Teachers</div>
+                <div class="stat-value total-users" id="totalTeachers">-</div>
+              </div>
             </div>
             <div class="stat-card">
-              <div class="stat-value on-schedule" id="onSchedule">-</div>
-              <div class="stat-label">Arrived on Schedule</div>
+              <div class="stat-left">
+                <div class="stat-label">Arrived on Schedule</div>
+                <div class="stat-value on-schedule" id="onSchedule">-</div>
+              </div>
+              <div class="stat-percentage" id="onSchedulePct">-</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value late-today" id="lateToday">-</div>
-              <div class="stat-label">Arrived Late</div>
+              <div class="stat-left">
+                <div class="stat-label">Arrived Late</div>
+                <div class="stat-value late-today" id="lateToday">-</div>
+              </div>
+              <div class="stat-percentage" id="lateTodayPct">-</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value absent-today" id="absentToday">-</div>
-              <div class="stat-label">Absent</div>
+              <div class="stat-left">
+                <div class="stat-label">Absent</div>
+                <div class="stat-value absent-today" id="absentToday">-</div>
+              </div>
+              <div class="stat-percentage" id="absentTodayPct">-</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value excused-today" id="excusedToday">-</div>
-              <div class="stat-label">Excused</div>
+              <div class="stat-left">
+                <div class="stat-label">Excused</div>
+                <div class="stat-value excused-today" id="excusedToday">-</div>
+              </div>
+              <div class="stat-percentage" id="excusedTodayPct">-</div>
             </div>
           </div>
 
@@ -73,28 +82,25 @@
             </div>
             <div id="attendanceChart">
             </div>
-          </div>
         </div>
       </div>
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
 
-      <div class="recent-activity">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 class="recent-activity-title">Recent Clock-ins</h2>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <span id="dateFilterLabel" style="font-size: 12px; color: #6b7280; display: none;"></span>
-            <button id="clearDateFilter" class="btn-outline" onclick="clearDateFilter()" style="padding: 6px 12px; font-size: 12px; display: none;">Clear Filter</button>
-            <button class="btn-outline" onclick="openDatePicker()" style="padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 16px;">calendar_today</span> Select Date</button>
+      <div class="dashboard-bottom">
+        <div class="recent-activity-container recent-activity-half">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 class="recent-activity-title">Recent Clock-ins</h2>
+            <button class="view-all-btn" onclick="window.location.href='recent_clockin.html'">View All</button>
           </div>
-        </div>
-        <div id="activityFeed">
-          <p class="loading-text">Loading recent activity...</p>
-        </div>
-        <div id="pagination">
-          <button id="prevBtn" onclick="changePage(-1)" class="pagination-btn">Previous</button>
-          <span id="pageInfo" class="page-info"></span>
-          <button id="nextBtn" onclick="changePage(1)" class="pagination-btn">Next</button>
+          <div id="activityFeed">
+            <p class="loading-text">Loading recent activity...</p>
+          </div>
+          <div id="pagination">
+            <button id="prevBtn" onclick="changePage(-1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>
+            <span id="pageInfo" class="page-info"></span>
+            <button id="nextBtn" onclick="changePage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
+          </div>
         </div>
       </div>
 

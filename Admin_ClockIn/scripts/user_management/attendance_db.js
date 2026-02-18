@@ -41,6 +41,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAttendance();
   };
 
+  let dateFilter = '';
+  
+  window.filterByDate = function(date) {
+    dateFilter = date || '';
+    
+    let filtered = [...users];
+    
+    if (searchTerm) {
+      filtered = filtered.filter(user => {
+        const username = (user.name || '').toLowerCase();
+        return username.includes(searchTerm.toLowerCase());
+      });
+    }
+    
+    if (dateFilter) {
+      filtered = filtered.filter(user => {
+        const userAttendance = attendance.filter(a => 
+          a.userId === user.employeeId && 
+          a.date === dateFilter
+        );
+        return userAttendance.length > 0;
+      });
+    }
+    
+    filteredUsers = filtered;
+    Paginate.setTotalItems(filteredUsers.length);
+    Paginate.setPage(1);
+    renderAttendance();
+  };
+
   async function loadAttendance() {
     try {
       const { data: usersData, error: usersError } = await supabase
