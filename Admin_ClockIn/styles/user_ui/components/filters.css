@@ -235,3 +235,19 @@
   font-style: italic;
 }
 
+.date-filter-input {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #6b7280;
+  background: white;
+  cursor: pointer;
+  height: 30px;
+}
+
+.date-filter-input:focus {
+  outline: none;
+  border-color: #FF725E;
+}
+

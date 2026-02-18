@@ -5,8 +5,116 @@ function loadChart(callback) {
 let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
-const recordsPerPage = 10;
+let recordsPerPage = 10;
 let currentSearchTerm = '';
+let currentDateFilter = '';
+let currentEndDateFilter = '';
+let currentStartTimeFilter = '';
+let currentEndTimeFilter = '';
+
+let sectionClockinsData = [];
+let sectionCurrentPage = 1;
+const sectionRecordsPerPage = 5;
+
+function searchByName(term) {
+  currentSearchTerm = term || '';
+  applyRecentClockinsFilters();
+}
+
+function filterByDate(date) {
+  currentDateFilter = date || '';
+  applyRecentClockinsFilters();
+}
+
+function filterByDateRange() {
+  const startDate = document.getElementById('startDateFilter')?.value || '';
+  const endDate = document.getElementById('endDateFilter')?.value || '';
+  const startTime = document.getElementById('startTimeFilter')?.value || '';
+  const endTime = document.getElementById('endTimeFilter')?.value || '';
+  
+  currentDateFilter = startDate;
+  currentEndDateFilter = endDate;
+  currentStartTimeFilter = startTime;
+  currentEndTimeFilter = endTime;
+  
+  applyDateRangeFilters();
+}
+
+function applyDateRangeFilters() {
+  let filtered = [...allRecords];
+  
+  if (currentSearchTerm) {
+    filtered = filtered.filter(record => {
+      const name = (record.userName || '').toLowerCase();
+      return name.includes(currentSearchTerm.toLowerCase());
+    });
+  }
+  
+  if (currentDateFilter || currentEndDateFilter || currentStartTimeFilter || currentEndTimeFilter) {
+    filtered = filtered.filter(record => {
+      const recordDateTime = record.date + ' ' + (record.timeIn || '');
+      
+      let startDateTime = currentDateFilter;
+      let endDateTime = currentEndDateFilter;
+      
+      if (currentStartTimeFilter && currentDateFilter) {
+        startDateTime = currentDateFilter + ' ' + currentStartTimeFilter;
+      }
+      if (currentEndTimeFilter && currentEndDateFilter) {
+        endDateTime = currentEndDateFilter + ' ' + currentEndTimeFilter;
+      }
+      
+      if (currentDateFilter && !currentStartTimeFilter) {
+        startDateTime = currentDateFilter + ' 00:00';
+      }
+      if (currentEndDateFilter && !currentEndTimeFilter) {
+        endDateTime = currentEndDateFilter + ' 23:59';
+      }
+      
+      if (startDateTime && endDateTime) {
+        return recordDateTime >= startDateTime && recordDateTime <= endDateTime;
+      } else if (startDateTime) {
+        return recordDateTime >= startDateTime;
+      } else if (endDateTime) {
+        return recordDateTime <= endDateTime;
+      }
+      return true;
+    });
+  }
+  
+  filteredRecords = filtered;
+  currentPage = 1;
+  renderPage();
+}
+
+function applyRecentClockinsFilters() {
+  let filtered = [...allRecords];
+  
+  if (currentSearchTerm) {
+    filtered = filtered.filter(record => {
+      const name = (record.userName || '').toLowerCase();
+      return name.includes(currentSearchTerm.toLowerCase());
+    });
+  }
+  
+  if (currentDateFilter) {
+    filtered = filtered.filter(record => {
+      return record.date === currentDateFilter;
+    });
+  }
+  
+  filteredRecords = filtered;
+  currentPage = 1;
+  renderPage();
+}
+
+function toggleFilterMenu() {
+  const filterMenu = document.getElementById('filterMenu');
+  if (filterMenu) {
+    filterMenu.style.display = filterMenu.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
 window.dashboardStats = {
   totalTeachers: 0,
   onSchedule: 0,
@@ -22,11 +130,24 @@ function updateDashboardStats() {
   const absentTodayEl = document.getElementById('absentToday');
   const excusedTodayEl = document.getElementById('excusedToday');
   
+  const totalTeachersPct = document.getElementById('totalTeachersPct');
+  const onSchedulePct = document.getElementById('onSchedulePct');
+  const lateTodayPct = document.getElementById('lateTodayPct');
+  const absentTodayPct = document.getElementById('absentTodayPct');
+  const excusedTodayPct = document.getElementById('excusedTodayPct');
+  
   if (totalTeachersEl) totalTeachersEl.textContent = window.dashboardStats.totalTeachers;
   if (onScheduleEl) onScheduleEl.textContent = window.dashboardStats.onSchedule;
   if (lateTodayEl) lateTodayEl.textContent = window.dashboardStats.late;
   if (absentTodayEl) absentTodayEl.textContent = window.dashboardStats.absent;
   if (excusedTodayEl) excusedTodayEl.textContent = window.dashboardStats.excused;
+  
+  const total = window.dashboardStats.totalTeachers || 1;
+  if (totalTeachersPct) totalTeachersPct.textContent = '100%';
+  if (onSchedulePct) onSchedulePct.textContent = total > 0 ? Math.round((window.dashboardStats.onSchedule / total) * 100) + '%' : '0%';
+  if (lateTodayPct) lateTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.late / total) * 100) + '%' : '0%';
+  if (absentTodayPct) absentTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.absent / total) * 100) + '%' : '0%';
+  if (excusedTodayPct) excusedTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.excused / total) * 100) + '%' : '0%';
 }
 
 async function loadRecentActivity() {
@@ -133,19 +254,39 @@ async function loadRecentActivity() {
     
     updateDashboardStats();
     
-    const weeklyData = await getWeeklyAttendanceData();
-    
     window.allRecords = allRecords;
+    
+    const weeklyData = await getWeeklyAttendanceData();
     
     loadChart(() => {
       updateChart(weeklyData, 'weekly');
     });
     
-    filteredRecords = [...allRecords];
+    const isDashboard = document.getElementById('totalTeachers') !== null;
+    
+    recordsPerPage = isDashboard ? 5 : 10;
+    
+    if (isDashboard) {
+      filteredRecords = [...allRecords].sort((a, b) => {
+        const dateTimeA = a.date + ' ' + (a.timeIn || '');
+        const dateTimeB = b.date + ' ' + (b.timeIn || '');
+        return dateTimeB.localeCompare(dateTimeA);
+      });
+    } else {
+      filteredRecords = [...allRecords];
+      
+      const totalRecentClockinsEl = document.getElementById('totalRecentClockins');
+      if (totalRecentClockinsEl) {
+        totalRecentClockinsEl.textContent = filteredRecords.length;
+      }
+    }
     renderPage();
   } catch (err) {
     console.error('Error loading activity:', err);
-    activityFeed.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading activity</p>';
+    const activityFeed = document.getElementById('activityFeed');
+    if (activityFeed) {
+      activityFeed.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading activity: ' + err.message + '</p>';
+    }
   }
 }
 
@@ -156,9 +297,10 @@ function renderPage() {
   const prevBtn = document.getElementById('prevBtn');
   const nextBtn = document.getElementById('nextBtn');
   
+  if (!activityFeed) return;
+  
   if (filteredRecords.length === 0) {
     activityFeed.innerHTML = '<p style="text-align: center; color: #9ca3af;">No recent clock-ins</p>';
-    pagination.style.display = 'none';
     return;
   }
   
@@ -168,7 +310,7 @@ function renderPage() {
   const pageRecords = filteredRecords.slice(startIndex, endIndex);
   
   activityFeed.innerHTML = pageRecords.map(record => `
-    <div class="user-row" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="user-table-row" style="background: #fff; border-bottom: 1px solid #e5e7eb; padding: 16px; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
       <div>
         <div style="font-weight: 700; font-size: 16px; color: #111827;">${record.userName}</div>
         <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.date}</div>
@@ -180,15 +322,27 @@ function renderPage() {
     </div>
   `).join('');
   
-  if (totalPages > 1) {
-    pagination.style.display = 'block';
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled = currentPage === totalPages;
-    prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
-    nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
-  } else {
-    pagination.style.display = 'none';
+  if (pagination && pageInfo && prevBtn && nextBtn) {
+    if (totalPages > 1) {
+      pagination.style.display = 'flex';
+      pageInfo.textContent = currentPage;
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+      prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
+      nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
+    } else {
+      pagination.style.display = 'flex';
+      pageInfo.textContent = currentPage;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      prevBtn.style.opacity = '0.5';
+      nextBtn.style.opacity = '0.5';
+    }
+  }
+  
+  const pageNumberInput = document.getElementById('pageNumberInput');
+  if (pageNumberInput) {
+    pageNumberInput.value = currentPage;
   }
 }
 
@@ -202,7 +356,188 @@ function changePage(direction) {
   }
 }
 
+function goToFirstPage() {
+  currentPage = 1;
+  renderPage();
+}
+
+function goToLastPage() {
+  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+  currentPage = totalPages;
+  renderPage();
+}
+
+function goToPage(pageNum) {
+  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+  const page = parseInt(pageNum);
+  if (page >= 1 && page <= totalPages) {
+    currentPage = page;
+    renderPage();
+  }
+}
+
+window.changeItemsPerPage = function(value) {
+  try {
+    const newValue = parseInt(value);
+    if (newValue && newValue > 0) {
+      recordsPerPage = newValue;
+    } else if (value && value.length > 0) {
+      recordsPerPage = parseInt(value) || 10;
+    }
+    currentPage = 1;
+    renderPage();
+    
+    const itemsPerPageInput = document.getElementById('itemsPerPageInput');
+    if (itemsPerPageInput) {
+      itemsPerPageInput.value = recordsPerPage;
+    }
+  } catch (e) {
+    console.error('Error in changeItemsPerPage:', e);
+  }
+}
+
 loadRecentActivity();
+
+async function loadSectionClockins() {
+  const sectionClockinsFeed = document.getElementById('sectionClockinsFeed');
+  const supabase = window.supabaseClient;
+  
+  if (!sectionClockinsFeed || !supabase) return;
+
+  try {
+    const { data: sectionsData, error: sectionsError } = await supabase
+      .from('sections')
+      .select('*')
+      .order('sectionName', { ascending: true });
+
+    if (sectionsError) throw sectionsError;
+
+    const { data: schedulesData, error: schedulesError } = await supabase
+      .from('schedule')
+      .select('*');
+
+    if (schedulesError) throw schedulesError;
+
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*');
+
+    if (attendanceError) throw attendanceError;
+
+    const today = new Date().toISOString().split('T')[0];
+    const currentDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()];
+    const currentMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+
+    sectionClockinsData = sectionsData.map(section => {
+      const sectionSchedules = schedulesData.filter(s => s.sectId === section.sectId);
+      const todaySchedules = sectionSchedules.filter(s => s.weekday === currentDay);
+      
+      let currentClass = 'No class';
+      for (const schedule of todaySchedules) {
+        const startMinutes = parseInt(schedule.startTime.split(':')[0]) * 60 + parseInt(schedule.startTime.split(':')[1]);
+        const endMinutes = parseInt(schedule.endTime.split(':')[0]) * 60 + parseInt(schedule.endTime.split(':')[1]);
+        if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+          currentClass = schedule.subject || 'No Subject';
+          break;
+        }
+      }
+
+      const uniqueTodaySchedules = todaySchedules.filter(s => s.schedId && s.employeeId);
+      const totalInSection = uniqueTodaySchedules.length;
+      
+      let clockedIn = 0;
+      uniqueTodaySchedules.forEach(schedule => {
+        const schedAttendance = attendanceData.filter(a => 
+          a.schedId === schedule.schedId && 
+          a.timeIn && 
+          new Date(a.timeIn).toISOString().split('T')[0] === today
+        );
+        if (schedAttendance.length > 0) {
+          clockedIn++;
+        }
+      });
+
+      const percentage = totalInSection > 0 ? Math.round((clockedIn / totalInSection) * 100) : 0;
+
+      return {
+        sectionName: section.sectionName,
+        currentClass: currentClass,
+        percentage: percentage,
+        clockedIn: clockedIn,
+        total: totalInSection
+      };
+    });
+
+    renderSectionPage();
+
+  } catch (err) {
+    console.error('Error loading section clock-ins:', err);
+    sectionClockinsFeed.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading section clock-ins</p>';
+  }
+}
+
+function renderSectionPage() {
+  const sectionClockinsFeed = document.getElementById('sectionClockinsFeed');
+  const pagination = document.getElementById('sectionPagination');
+  const pageInfo = document.getElementById('sectionPageInfo');
+  const prevBtn = document.getElementById('sectionPrevBtn');
+  const nextBtn = document.getElementById('sectionNextBtn');
+  
+  if (!sectionClockinsFeed) return;
+  
+  if (sectionClockinsData.length === 0) {
+    sectionClockinsFeed.innerHTML = '<p style="text-align: center; color: #9ca3af;">No sections found</p>';
+    return;
+  }
+  
+  const totalPages = Math.ceil(sectionClockinsData.length / sectionRecordsPerPage);
+  const startIndex = (sectionCurrentPage - 1) * sectionRecordsPerPage;
+  const endIndex = startIndex + sectionRecordsPerPage;
+  const pageRecords = sectionClockinsData.slice(startIndex, endIndex);
+  
+  sectionClockinsFeed.innerHTML = pageRecords.map(record => `
+    <div class="user-table-row" style="background: #fff; border-bottom: 1px solid #e5e7eb; padding: 16px; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+      <div>
+        <div style="font-weight: 700; font-size: 16px; color: #111827;">${record.sectionName}</div>
+        <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.currentClass}</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-weight: 600; color: ${record.percentage >= 50 ? '#059669' : '#f59e0b'};">${record.percentage}%</div>
+        <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">${record.clockedIn}/${record.total}</div>
+      </div>
+    </div>
+  `).join('');
+  
+  if (pagination && pageInfo && prevBtn && nextBtn) {
+    if (totalPages > 1) {
+      pagination.style.display = 'flex';
+      pageInfo.textContent = sectionCurrentPage;
+      prevBtn.disabled = sectionCurrentPage === 1;
+      nextBtn.disabled = sectionCurrentPage === totalPages;
+      prevBtn.style.opacity = sectionCurrentPage === 1 ? '0.5' : '1';
+      nextBtn.style.opacity = sectionCurrentPage === totalPages ? '0.5' : '1';
+    } else {
+      pagination.style.display = 'flex';
+      pageInfo.textContent = sectionCurrentPage;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      prevBtn.style.opacity = '0.5';
+      nextBtn.style.opacity = '0.5';
+    }
+  }
+}
+
+function changeSectionPage(direction) {
+  const totalPages = Math.ceil(sectionClockinsData.length / sectionRecordsPerPage);
+  const newPage = sectionCurrentPage + direction;
+  
+  if (newPage >= 1 && newPage <= totalPages) {
+    sectionCurrentPage = newPage;
+    renderSectionPage();
+  }
+}
+
+loadSectionClockins();
 
 window.addEventListener('message', function(event) {
   if (event.data.type === 'search') {
@@ -238,8 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('keyup', performSearch);
   }
 });
-
-let currentDateFilter = null;
 
 function openDatePicker() {
   const modal = document.getElementById('datePickerModal');
