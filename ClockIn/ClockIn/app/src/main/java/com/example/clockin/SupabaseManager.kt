@@ -314,28 +314,41 @@ object SupabaseManager {
         }
     }
 
-    suspend fun getTodayAttendanceStatus(schedId: String): String? {
+    suspend fun getTodayAttendance(schedId: String): Attendance? {
         val user = getCurrentUser() ?: return null
         return withContext(Dispatchers.IO) {
             try {
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                val todayStr = dateFormat.format(Date())
+                val today = dateFormat.format(Date())
+                val startOfDay = "${today}T00:00:00"
+                val endOfDay = "${today}T23:59:59"
 
-                val record = client.from("attendance")
+                val list = client.from("attendance")
                     .select {
                         filter {
                             eq("schedId", schedId)
                             eq("employeeId", user.id)
-                            like("timeIn", "$todayStr%")
+                            gte("timeIn", startOfDay)
+                            lte("timeIn", endOfDay)
                         }
+                        order("timeIn", Order.DESCENDING)
                     }
-                    .decodeSingleOrNull<Attendance>()
+                    .decodeList<Attendance>()
 
-                record?.status
+                Log.d("DEBUG_CLOCKIN", "Fetched ${list.size} records for sched $schedId")
+                list.forEach { Log.d("DEBUG_CLOCKIN", "Found record: ${it.id}, Status: ${it.status}, TimeOut: ${it.timeOut}") }
+
+                list.firstOrNull()
             } catch (e: Exception) {
+                Log.e(TAG, "Error fetching today attendance", e)
                 null
             }
         }
+    }
+
+    suspend fun getTodayAttendanceStatus(schedId: String): String? {
+        val record = getTodayAttendance(schedId)
+        return record?.status
     }
 
     suspend fun verifyQrCode(qrId: String, context: Context, isBeaconFound: Boolean): Result<String> {
@@ -494,11 +507,18 @@ object SupabaseManager {
         val user = getCurrentUser() ?: return null
         return withContext(Dispatchers.IO) {
             try {
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                val today = dateFormat.format(Date())
+                val startOfDay = "${today}T00:00:00"
+                val endOfDay = "${today}T23:59:59"
+
                 val result = client.from("attendance")
                     .select(columns = Columns.list("attendId", "schedId")) {
                         filter {
                             eq("employeeId", user.id)
                             filter("timeOut", FilterOperator.IS, "null")
+                            gte("timeIn", startOfDay)
+                            lte("timeIn", endOfDay)
                         }
                     }
                     .decodeList<Map<String, String?>>()
@@ -544,14 +564,13 @@ object SupabaseManager {
                 }
 
                 val absentId = UUID.randomUUID().toString()
-
                 val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
 
                 val absentRecord = Attendance(
                     id = absentId,
                     status = "Absent",
                     timeIn = nowStr,
-                    timeOut = null,
+                    timeOut = nowStr,
                     schedId = schedId,
                     employeeId = employeeId
                 )

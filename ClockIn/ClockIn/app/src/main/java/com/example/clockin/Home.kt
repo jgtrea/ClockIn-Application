@@ -1,61 +1,22 @@
 package com.example.clockin
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Assignment
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.CropFree
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sensors
-import androidx.compose.material.icons.outlined.Inventory
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.outlined.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -106,6 +67,8 @@ fun DashboardScreen(
     var userName by remember { mutableStateOf("User") }
     var activeAttendanceId by remember { mutableStateOf<String?>(null) }
 
+    var currentAttendanceStatus by remember { mutableStateOf<String?>(null) }
+
     val refreshDashboard = {
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             val user = SupabaseManager.getCurrentUser()
@@ -139,6 +102,10 @@ fun DashboardScreen(
             val attId = SupabaseManager.getActiveAttendanceId()
             activeAttendanceId = attId
             onActiveAttendanceIdChanged(attId)
+
+            Log.d("DEBUG_CLOCKIN", "--- REFRESH ---")
+            Log.d("DEBUG_CLOCKIN", "Current Class: ${classInfo?.sectionDisplay ?: "None"}")
+            Log.d("DEBUG_CLOCKIN", "Active Attendance ID: $attId")
 
             try {
                 if (user != null) {
@@ -178,11 +145,29 @@ fun DashboardScreen(
             if (classInfo != null) {
                 currentSectionTitle = classInfo.sectionDisplay
 
-                val status = SupabaseManager.getTodayAttendanceStatus(classInfo.schedId)
+                val attendanceRecord = SupabaseManager.getTodayAttendance(classInfo.schedId)
+                currentAttendanceStatus = attendanceRecord?.status
 
-                if (status != null && (status.equals("Absent", true) || (status.equals("Present", true) && activeAttendanceId == null))) {
+                Log.d("DEBUG_CLOCKIN", "Record Status: ${attendanceRecord?.status}")
+                Log.d("DEBUG_CLOCKIN", "Record TimeOut: ${attendanceRecord?.timeOut}")
+
+                val isAbsent = attendanceRecord?.status.equals("Absent", true)
+                val isIncomplete = attendanceRecord?.status.equals("Incomplete", true)
+
+                val isFinished = attendanceRecord != null && attendanceRecord.timeOut != null
+
+                Log.d("DEBUG_CLOCKIN", "Flags -> isAbsent: $isAbsent, isFinished: $isFinished")
+
+                if (isAbsent || isIncomplete || isFinished) {
+                    Log.d("DEBUG_CLOCKIN", "DECISION: STOP Monitoring (Class Done/Absent)")
                     onTargetBleChanged("", 0L, "")
+
+                    if (isFinished) {
+                        activeAttendanceId = null
+                        onActiveAttendanceIdChanged(null)
+                    }
                 } else {
+                    Log.d("DEBUG_CLOCKIN", "DECISION: START/CONTINUE Monitoring")
                     onTargetBleChanged(
                         classInfo.targetBeaconName,
                         classInfo.startTime.time,
@@ -190,7 +175,9 @@ fun DashboardScreen(
                     )
                 }
             } else {
+                Log.d("DEBUG_CLOCKIN", "DECISION: NO CLASS (Idle)")
                 currentSectionTitle = "No Active Class"
+                currentAttendanceStatus = null
                 onTargetBleChanged("", 0L, "")
                 activeAttendanceId = null
                 onActiveAttendanceIdChanged(null)
@@ -249,11 +236,18 @@ fun DashboardScreen(
                 ) {
                     SectionHeader(title = "Current Class", icon = Icons.Default.Schedule)
 
+                    val displayText = when {
+                        activeAttendanceId != null -> "Status: CLOCKED IN (Session Active)"
+                        currentAttendanceStatus?.equals("Absent", true) == true -> "Status: ABSENT"
+                        currentAttendanceStatus?.equals("Incomplete", true) == true -> "Status: INCOMPLETE"
+                        currentAttendanceStatus != null && activeAttendanceId == null -> "Status: CLOCKED OUT"
+                        currentSectionTitle.contains("No Active") -> "Relax! No classes scheduled."
+                        else -> "Please scan QR to Clock In."
+                    }
+
                     InfoCard(
                         title = "Section: $currentSectionTitle",
-                        text = if (activeAttendanceId != null) "Status: CLOCKED IN (Session Active)"
-                        else if (currentSectionTitle.contains("No Active")) "Relax! No classes scheduled."
-                        else "Please scan QR to Clock In."
+                        text = displayText
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))

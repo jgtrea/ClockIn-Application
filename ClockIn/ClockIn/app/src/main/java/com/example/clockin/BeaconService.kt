@@ -13,15 +13,9 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.altbeacon.beacon.Beacon
 import org.altbeacon.beacon.BeaconManager
 import org.altbeacon.beacon.Region
@@ -51,7 +45,6 @@ class BeaconService : Service() {
     private var isMarkedIncomplete: Boolean = false
     var onUpdate: ((Double, Boolean, Long, String) -> Unit)? = null
 
-    // Range ni Beacon in meters
     private val SAFE_DISTANCE = 8.0
     private val NOTIFICATION_ID = 123
     private val CHANNEL_ID = "AttendanceChannel"
@@ -100,6 +93,8 @@ class BeaconService : Service() {
     }
 
     fun startMonitoring(beaconName: String, startTimeMillis: Long, schedId: String, empId: String, clockedIn: Boolean) {
+        Log.d("DEBUG_CLOCKIN", "Service START: Name=$beaconName, ClockedIn=$clockedIn")
+
         if (beaconName.isBlank()) {
             stopMonitoring()
             return
@@ -145,6 +140,8 @@ class BeaconService : Service() {
     }
 
     fun stopMonitoring() {
+        Log.d("DEBUG_CLOCKIN", "Service STOP Called")
+
         targetBeaconName = ""
         classStartTime = 0L
         isBeaconFound = false
@@ -196,6 +193,10 @@ class BeaconService : Service() {
                     val gracePeriodEnd = classStartTime + GRACE_PERIOD_MS
                     val isPastGracePeriod = now > gracePeriodEnd
 
+                    val distStr = "%.2f m".format(currentDistance)
+                    val graceMillisLeft = if (gracePeriodEnd > now) gracePeriodEnd - now else 0L
+                    val graceTimeStr = formatTime(graceMillisLeft / 1000)
+
                     if (isPastGracePeriod && isClockedIn) {
                         if (!isBeaconFound) {
                             var deadline = prefs.getLong("deadline_$scheduleId", 0L)
@@ -206,8 +207,9 @@ class BeaconService : Service() {
 
                             val millisLeft = deadline - now
                             remainingTime = millisLeft / 1000
-                            statusMessage = "⚠ OUT OF RANGE! ${formatTime(remainingTime)}"
-                            updateNotification("WARNING: Beacon Lost!", "Time remaining: ${formatTime(remainingTime)}")
+
+                            statusMessage = "OUT OF RANGE! ${formatTime(remainingTime)} (Dist: $distStr)"
+                            updateNotification("WARNING: Beacon Lost!", "Time: ${formatTime(remainingTime)} - Dist: $distStr")
 
                             if (remainingTime <= 0) {
                                 isMarkedIncomplete = true
@@ -218,15 +220,18 @@ class BeaconService : Service() {
                         } else {
                             prefs.edit().remove("deadline_$scheduleId").apply()
                             remainingTime = 300L
-                            statusMessage = "Connected (Distance: %.2f m)".format(currentDistance)
-                            updateNotification("Connected: $targetBeaconName", "Distance: %.2f m".format(currentDistance))
+
+                            statusMessage = "Connected (Dist: $distStr)"
+                            updateNotification("Connected: $targetBeaconName", "Dist: $distStr")
                         }
-                    } else if (isBeaconFound) {
-                        statusMessage = "Beacon Found. Please Clock In."
-                        updateNotification("Beacon Found", "Ready for Clock In")
                     } else {
-                        statusMessage = if (isPastGracePeriod) "Searching for Beacon..." else "Grace Period Active"
-                        updateNotification("Searching...", "Looking for $targetBeaconName")
+                        if (isBeaconFound) {
+                            statusMessage = "Beacon Found (Dist: $distStr). Grace Period: $graceTimeStr"
+                            updateNotification("Beacon Found", "Ready for Clock In")
+                        } else {
+                            statusMessage = "Searching (Dist: $distStr)... Grace Period: $graceTimeStr"
+                            updateNotification("Searching...", "Looking for $targetBeaconName")
+                        }
                     }
 
                     withContext(Dispatchers.Main) {
