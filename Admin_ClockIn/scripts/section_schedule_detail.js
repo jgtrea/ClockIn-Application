@@ -4,104 +4,15 @@ const sectionName = urlParams.get('sectionName');
 
 const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 let allEmployees = [];
-let selectMode = false;
 let selectedSchedules = new Set();
+let editingScheduleId = null;
 
-function toggleSelectMode() {
-  selectMode = !selectMode;
-  const btn = document.getElementById('selectModeBtn');
-  const actionContainer = document.getElementById('actionButtonsContainer');
-  
-  if (selectMode) {
-    btn.innerHTML = '<span class="material-symbols-outlined">close</span> Cancel';
-    btn.style.background = '#fee2e2';
-    btn.style.borderColor = '#fecaca';
-    btn.style.color = '#dc2626';
-    actionContainer.style.display = 'flex';
-  } else {
-    btn.innerHTML = '<span class="material-symbols-outlined">checklist</span> Select Mode';
-    btn.style.background = 'white';
-    btn.style.borderColor = '#e2e8f0';
-    btn.style.color = '#64748b';
-    actionContainer.style.display = 'none';
-    selectedSchedules.clear();
-    
-    // Reset the Add form button to original state
-    const saveBtn = document.querySelector('.export-btn');
-    if (saveBtn) {
-      saveBtn.innerHTML = '<span class="material-symbols-outlined">add</span> Add';
-      saveBtn.onclick = window.saveSchedule;
-    }
-    
-    // Clear the form fields
-    document.getElementById('addStartTime').value = '';
-    document.getElementById('addEndTime').value = '';
-    document.getElementById('addSubject').value = '';
-  }
-  
-  renderSchedule(window.currentSchedules || []);
+// Get current day of the week
+function getCurrentDay() {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const today = new Date();
+  return days[today.getDay()];
 }
-
-function handleScheduleSelect(schedId, checked) {
-  if (checked) {
-    selectedSchedules.add(schedId);
-  } else {
-    selectedSchedules.delete(schedId);
-  }
-  updateActionButtons();
-}
-
-function updateActionButtons() {
-  const count = selectedSchedules.size;
-  const selectionCount = document.getElementById('selectionCount');
-  const btnEdit = document.getElementById('btnEdit');
-  const btnRemoveTeacher = document.getElementById('btnRemoveTeacher');
-  const btnDelete = document.getElementById('btnDelete');
-  
-  selectionCount.textContent = `${count} selected`;
-  
-  if (count === 1) {
-    btnEdit.style.display = 'flex';
-    btnRemoveTeacher.style.display = 'flex';
-    btnDelete.style.display = 'flex';
-  } else if (count > 1) {
-    btnEdit.style.display = 'none';
-    btnRemoveTeacher.style.display = 'flex';
-    btnDelete.style.display = 'flex';
-  } else {
-    btnEdit.style.display = 'none';
-    btnRemoveTeacher.style.display = 'none';
-    btnDelete.style.display = 'none';
-  }
-}
-
-function getSelectedScheduleIds() {
-  return Array.from(selectedSchedules);
-}
-
-window.editSelectedSchedule = function() {
-  const selectedIds = getSelectedScheduleIds();
-  if (selectedIds.length !== 1) return;
-  
-  const scheduleId = selectedIds[0];
-  const schedule = window.currentSchedules.find(s => s.schedId === scheduleId);
-  if (!schedule) return;
-  
-  // Populate the form with schedule data
-  document.getElementById('addEmployee').value = schedule.employeeId || '';
-  document.getElementById('addWeekday').value = schedule.weekday;
-  document.getElementById('addStartTime').value = schedule.startTime;
-  document.getElementById('addEndTime').value = schedule.endTime;
-  document.getElementById('addSubject').value = schedule.subject || '';
-  
-  // Change the save button to update
-  const saveBtn = document.querySelector('.export-btn');
-  saveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Update';
-  saveBtn.onclick = function() { updateSchedule(scheduleId); };
-  
-  // Scroll to form
-  document.querySelector('.add-schedule-form').scrollIntoView({ behavior: 'smooth' });
-};
 
 async function updateSchedule(scheduleId) {
   const employeeId = document.getElementById('addEmployee').value;
@@ -142,66 +53,8 @@ async function updateSchedule(scheduleId) {
   saveBtn.innerHTML = '<span class="material-symbols-outlined">add</span> Add';
   saveBtn.onclick = window.saveSchedule;
   
-  // Exit select mode
-  toggleSelectMode();
   loadSectionSchedule();
 }
-
-window.removeTeacherFromSelected = async function() {
-  const selectedIds = getSelectedScheduleIds();
-  if (selectedIds.length === 0) return;
-  
-  const confirmMsg = selectedIds.length === 1 
-    ? 'Are you sure you want to remove the teacher from this schedule?'
-    : `Are you sure you want to remove the teacher from ${selectedIds.length} schedules?`;
-  
-  if (!confirm(confirmMsg)) return;
-
-  const supabase = window.supabaseClient;
-  
-  for (const scheduleId of selectedIds) {
-    const { error } = await supabase
-      .from('schedule')
-      .update({ employeeId: null })
-      .eq('schedId', scheduleId);
-    
-    if (error) {
-      console.error('Error removing teacher:', error);
-    }
-  }
-  
-  // Exit select mode
-  toggleSelectMode();
-  loadSectionSchedule();
-};
-
-window.deleteSelectedSchedules = async function() {
-  const selectedIds = getSelectedScheduleIds();
-  if (selectedIds.length === 0) return;
-  
-  const confirmMsg = selectedIds.length === 1
-    ? 'Are you sure you want to delete this schedule?'
-    : `Are you sure you want to delete ${selectedIds.length} schedules? This action cannot be undone.`;
-  
-  if (!confirm(confirmMsg)) return;
-
-  const supabase = window.supabaseClient;
-  
-  for (const scheduleId of selectedIds) {
-    const { error } = await supabase
-      .from('schedule')
-      .delete()
-      .eq('schedId', scheduleId);
-    
-    if (error) {
-      console.error('Error deleting schedule:', error);
-    }
-  }
-  
-  // Exit select mode
-  toggleSelectMode();
-  loadSectionSchedule();
-};
 
 async function loadSectionSchedule() {
   if (!sectId) {
@@ -246,15 +99,18 @@ async function loadSectionSchedule() {
 }
 
 function renderSchedule(schedules) {
-  const container = document.getElementById('scheduleDetailContainer');
+  const container = document.getElementById('schedulesByDayContainer');
+  if (!container) return;
+  
   container.innerHTML = '';
   window.currentSchedules = schedules;
 
   if (!schedules || schedules.length === 0) {
-    container.innerHTML = '<div class="no-records">No schedules found for this section.</div>';
+    container.innerHTML = '<div class="no-records">No schedule records found.</div>';
     return;
   }
 
+  // Group by weekday
   const groupedByDay = {};
   dayOrder.forEach(day => groupedByDay[day] = []);
 
@@ -264,46 +120,381 @@ function renderSchedule(schedules) {
     }
   });
 
+  // Create a table for each day
   dayOrder.forEach(day => {
     const daySchedules = groupedByDay[day];
     if (daySchedules.length === 0) return;
 
-    const dayCard = document.createElement('div');
-    dayCard.className = 'day-schedule-card';
-    
-    dayCard.innerHTML = `
-      <div class="day-header">
-        <h3>${day}</h3>
-        <span class="schedule-count">${daySchedules.length} class${daySchedules.length > 1 ? 'es' : ''}</span>
-      </div>
-      <div class="schedule-items">
-        ${daySchedules.map(schedule => `
-          <div class="schedule-item ${selectMode ? 'select-mode' : ''}" data-sched-id="${schedule.schedId}">
-            <div class="schedule-checkbox ${selectMode ? 'visible' : ''}">
-              <input type="checkbox" 
-                id="checkbox-${schedule.schedId}" 
-                ${selectedSchedules.has(schedule.schedId) ? 'checked' : ''}
-                onchange="handleScheduleSelect('${schedule.schedId}', this.checked)">
-            </div>
-            <div class="time-badge">
-              <span class="material-symbols-outlined">schedule</span>
-              ${schedule.startTime} - ${schedule.endTime}
-            </div>
-            <div class="schedule-details">
-              <div class="subject-name">${schedule.subject || 'No Subject'}</div>
-              <div class="section-name">
-                <span class="material-symbols-outlined">person</span>
-                ${schedule.user_employee_data?.name || 'No Teacher Assigned'}
-              </div>
-            </div>
-          </div>
-        `).join('')}
+    // Sort by start time
+    daySchedules.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const daySection = document.createElement('div');
+    daySection.className = 'day-section';
+    daySection.innerHTML = `
+      <h3 class="day-header">${day}</h3>
+      <div class="users-table-container">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="checkbox-col"></th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Subject</th>
+              <th>Teacher</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="schedules-${day}">
+          </tbody>
+        </table>
       </div>
     `;
     
-    container.appendChild(dayCard);
+    const tbody = daySection.querySelector(`#schedules-${day}`);
+    
+    daySchedules.forEach(schedule => {
+      const row = document.createElement('tr');
+      row.className = 'user-table-row';
+      row.id = `row-${schedule.schedId}`;
+      
+      row.innerHTML = `
+        <td class="checkbox-col"><input type="checkbox" class="user-checkbox" value="${schedule.schedId}" onchange="toggleUserSelection('${schedule.schedId}')"></td>
+        <td class="time-cell" id="startTime-${schedule.schedId}">${schedule.startTime || '-'}</td>
+        <td class="time-cell" id="endTime-${schedule.schedId}">${schedule.endTime || '-'}</td>
+        <td class="subject-cell" id="subject-${schedule.schedId}">${schedule.subject || '-'}</td>
+        <td class="teacher-cell" id="teacher-${schedule.schedId}">${schedule.user_employee_data?.name || '-'}</td>
+        <td class="actions-col">
+          <div class="action-buttons" id="actions-${schedule.schedId}">
+            <button class="btn-icon edit-btn" onclick="editSchedule('${schedule.schedId}')" title="Edit Schedule">
+              <span class="material-symbols-outlined">edit</span>
+            </button>
+            <button class="btn-icon delete-btn" onclick="deleteSchedule('${schedule.schedId}')" title="Delete Schedule">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </div>
+          <div class="action-buttons" id="edit-actions-${schedule.schedId}" style="display: none;">
+            <button class="btn-icon save-btn" onclick="saveEditSchedule('${schedule.schedId}')" title="Save">
+              <span class="material-symbols-outlined">check</span>
+            </button>
+            <button class="btn-icon cancel-btn" onclick="cancelEditSchedule('${schedule.schedId}')" title="Cancel">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+    
+    container.appendChild(daySection);
   });
+
+  // Update total count
+  const totalCount = document.getElementById('totalUsersCount');
+  if (totalCount) {
+    totalCount.textContent = schedules.length;
+  }
 }
+
+// Toggle selection for a single schedule
+window.toggleUserSelection = function(schedId) {
+  updateSelectAllState();
+};
+
+function updateSelectAllState() {
+  const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+  const selectionActionRow = document.getElementById('selectionActionRow');
+  const selectedCount = document.getElementById('selectedCount');
+  
+  const hasSelection = checkedBoxes.length > 0;
+  if (hasSelection) {
+    if (selectionActionRow) {
+      selectionActionRow.style.display = 'flex';
+      if (selectedCount) {
+        selectedCount.textContent = checkedBoxes.length;
+      }
+    }
+    
+    // Get selected IDs
+    const selectedIds = [];
+    checkedBoxes.forEach(cb => selectedIds.push(cb.value));
+    
+    // Change Add button to Update
+    const saveBtn = document.querySelector('.add-user-btn');
+    if (saveBtn && !saveBtn.classList.contains('update-mode')) {
+      saveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Update';
+      saveBtn.onclick = function() { window.updateSelectedSchedules(); };
+      saveBtn.classList.add('update-mode');
+    }
+    
+    // Populate form with first selected schedule if single selection
+    if (selectedIds.length === 1) {
+      const schedule = window.currentSchedules.find(s => s.schedId === selectedIds[0]);
+      if (schedule) {
+        document.getElementById('addWeekday').value = schedule.weekday;
+        document.getElementById('addStartTime').value = schedule.startTime;
+        document.getElementById('addEndTime').value = schedule.endTime;
+        document.getElementById('addSubject').value = schedule.subject || '';
+        document.getElementById('addEmployee').value = schedule.employeeId;
+      }
+    }
+  } else {
+    if (selectionActionRow) {
+      selectionActionRow.style.display = 'none';
+    }
+    
+    // Reset Add button
+    const saveBtn = document.querySelector('.add-user-btn');
+    if (saveBtn && saveBtn.classList.contains('update-mode')) {
+      saveBtn.innerHTML = '<span class="material-symbols-outlined">add</span> Add';
+      saveBtn.onclick = window.saveSchedule;
+      saveBtn.classList.remove('update-mode');
+      
+      // Reset form
+      document.getElementById('addWeekday').value = 'Monday';
+      document.getElementById('addStartTime').value = '';
+      document.getElementById('addEndTime').value = '';
+      document.getElementById('addSubject').value = '';
+      document.getElementById('addEmployee').selectedIndex = 0;
+    }
+  }
+}
+
+// Toggle select all
+window.toggleSelectAll = function() {
+  const selectAllBtn = document.getElementById('selectAllSchedules');
+  const checkboxes = document.querySelectorAll('.user-checkbox');
+  
+  if (selectAllBtn.classList.contains('has-selection')) {
+    checkboxes.forEach(cb => cb.checked = false);
+  } else {
+    checkboxes.forEach(cb => cb.checked = true);
+  }
+  
+  updateSelectAllState();
+};
+
+// Clear selection
+window.clearSelection = function() {
+  const checkboxes = document.querySelectorAll('.user-checkbox');
+  checkboxes.forEach(cb => cb.checked = false);
+  updateSelectAllState();
+};
+
+// Update selected schedules
+window.updateSelectedSchedules = async function() {
+  const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    alert('No schedules selected');
+    return;
+  }
+  
+  const employeeId = document.getElementById('addEmployee').value;
+  const weekday = document.getElementById('addWeekday').value;
+  const startTime = document.getElementById('addStartTime').value;
+  const endTime = document.getElementById('addEndTime').value;
+  const subject = document.getElementById('addSubject').value;
+  
+  if (!employeeId || !startTime || !endTime || !subject) {
+    alert('Please fill in all fields');
+    return;
+  }
+  
+  const supabase = window.supabaseClient;
+  const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+  
+  try {
+    const { error } = await supabase
+      .from('schedule')
+      .update({
+        employeeId: employeeId,
+        weekday: weekday,
+        startTime: startTime,
+        endTime: endTime,
+        subject: subject
+      })
+      .in('schedId', selectedIds);
+    
+    if (error) throw error;
+    
+    alert(`Updated ${selectedIds.length} schedule(s)`);
+    clearSelection();
+    loadSectionSchedule();
+  } catch (err) {
+    console.error('Error updating schedules:', err);
+    alert('Failed to update schedules');
+  }
+};
+
+// Delete selected schedules
+window.deleteSelectedSchedules = async function() {
+  const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    alert('No schedules selected');
+    return;
+  }
+  
+  const confirmMsg = checkedBoxes.length === 1
+    ? 'Are you sure you want to delete this schedule?'
+    : `Are you sure you want to delete ${checkedBoxes.length} schedules? This action cannot be undone.`;
+  
+  if (!confirm(confirmMsg)) return;
+
+  const supabase = window.supabaseClient;
+  const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+  
+  try {
+    const { error } = await supabase
+      .from('schedule')
+      .delete()
+      .in('schedId', selectedIds);
+    
+    if (error) throw error;
+    
+    alert(`Deleted ${selectedIds.length} schedule(s)`);
+    clearSelection();
+    loadSectionSchedule();
+  } catch (err) {
+    console.error('Error deleting schedules:', err);
+    alert('Failed to delete schedules');
+  }
+};
+
+// Start inline editing in the table
+window.editSchedule = function(schedId) {
+  const schedule = window.currentSchedules.find(s => s.schedId === schedId);
+  if (!schedule) return;
+  
+  const row = document.getElementById(`row-${schedId}`);
+  if (!row) return;
+  
+  // Store original values
+  row.dataset.originalSubject = schedule.subject || '';
+  row.dataset.originalStartTime = schedule.startTime || '';
+  row.dataset.originalEndTime = schedule.endTime || '';
+  row.dataset.originalEmployeeId = schedule.employeeId || '';
+  
+  // Create text input for subject
+  const subjectCell = document.getElementById(`subject-${schedId}`);
+  const currentSubject = schedule.subject || '';
+  
+  subjectCell.innerHTML = `
+    <input type="text" class="edit-input" id="edit-subject-${schedId}" value="${currentSubject}" placeholder="Subject">
+  `;
+  
+  // Create time inputs
+  const startTimeCell = document.getElementById(`startTime-${schedId}`);
+  const endTimeCell = document.getElementById(`endTime-${schedId}`);
+  
+  startTimeCell.innerHTML = `
+    <input type="time" class="edit-input" id="edit-startTime-${schedId}" value="${schedule.startTime || ''}">
+  `;
+  
+  endTimeCell.innerHTML = `
+    <input type="time" class="edit-input" id="edit-endTime-${schedId}" value="${schedule.endTime || ''}">
+  `;
+  
+  // Create employee dropdown
+  const teacherCell = document.getElementById(`teacher-${schedId}`);
+  const currentEmployeeId = schedule.employeeId || '';
+  const employeeOptions = allEmployees.map(e => 
+    `<option value="${e.employeeId}" ${e.employeeId === currentEmployeeId ? 'selected' : ''}>${e.name}</option>`
+  ).join('');
+  
+  teacherCell.innerHTML = `
+    <select class="edit-select" id="edit-employee-${schedId}">
+      <option value="">No Teacher</option>
+      ${employeeOptions}
+    </select>
+  `;
+  
+  // Hide edit buttons, show save/cancel
+  document.getElementById(`actions-${schedId}`).style.display = 'none';
+  document.getElementById(`edit-actions-${schedId}`).style.display = 'flex';
+};
+
+window.cancelEditSchedule = function(schedId) {
+  const row = document.getElementById(`row-${schedId}`);
+  if (!row) return;
+  
+  const originalSubject = row.dataset.originalSubject;
+  const originalStartTime = row.dataset.originalStartTime;
+  const originalEndTime = row.dataset.originalEndTime;
+  const originalEmployeeId = row.dataset.originalEmployeeId;
+  
+  // Restore subject
+  const subjectCell = document.getElementById(`subject-${schedId}`);
+  subjectCell.textContent = originalSubject || 'No Subject';
+  
+  // Restore time
+  const startTimeCell = document.getElementById(`startTime-${schedId}`);
+  const endTimeCell = document.getElementById(`endTime-${schedId}`);
+  startTimeCell.textContent = originalStartTime || '-';
+  endTimeCell.textContent = originalEndTime || '-';
+  
+  // Restore teacher - need to find the employee name
+  const teacherCell = document.getElementById(`teacher-${schedId}`);
+  const employee = allEmployees.find(e => e.employeeId === originalEmployeeId);
+  teacherCell.textContent = employee ? employee.name : 'No Teacher Assigned';
+  
+  // Show edit buttons, hide save/cancel
+  document.getElementById(`actions-${schedId}`).style.display = 'flex';
+  document.getElementById(`edit-actions-${schedId}`).style.display = 'none';
+};
+
+window.saveEditSchedule = async function(schedId) {
+  const row = document.getElementById(`row-${schedId}`);
+  if (!row) return;
+  
+  const subject = document.getElementById(`edit-subject-${schedId}`).value;
+  const startTime = document.getElementById(`edit-startTime-${schedId}`).value;
+  const endTime = document.getElementById(`edit-endTime-${schedId}`).value;
+  const employeeId = document.getElementById(`edit-employee-${schedId}`).value;
+  
+  if (!subject || !startTime || !endTime) {
+    alert('Please fill in all fields');
+    return;
+  }
+  
+  const supabase = window.supabaseClient;
+  const { error } = await supabase
+    .from('schedule')
+    .update({
+      subject: subject,
+      startTime: startTime,
+      endTime: endTime,
+      employeeId: employeeId || null
+    })
+    .eq('schedId', schedId);
+  
+  if (error) {
+    console.error('Error updating schedule:', error);
+    alert('Failed to update schedule');
+    return;
+  }
+  
+  // Reload the schedule data
+  loadSectionSchedule();
+};
+
+// Delete single schedule
+window.deleteSchedule = async function(schedId) {
+  if (!confirm('Are you sure you want to delete this schedule?')) return;
+
+  const supabase = window.supabaseClient;
+  const { error } = await supabase
+    .from('schedule')
+    .delete()
+    .eq('schedId', schedId);
+  
+  if (error) {
+    console.error('Error deleting schedule:', error);
+    alert('Failed to delete schedule');
+    return;
+  }
+  
+  loadSectionSchedule();
+};
 
 window.saveSchedule = async function() {
   const employeeId = document.getElementById('addEmployee').value;
@@ -340,5 +531,295 @@ window.saveSchedule = async function() {
   document.getElementById('addSubject').value = '';
   loadSectionSchedule();
 };
+
+// Toggle Export Menu
+window.toggleExportMenu = function() {
+  const exportMenu = document.getElementById('exportMenu');
+  if (exportMenu) {
+    exportMenu.style.display = exportMenu.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+// Toggle Import Menu
+window.toggleImportScheduleMenu = function() {
+  const importMenu = document.getElementById('importScheduleMenu');
+  if (importMenu) {
+    importMenu.style.display = importMenu.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+// Export all schedules to CSV
+window.exportAllSchedulesCSV = function() {
+  if (!window.currentSchedules || window.currentSchedules.length === 0) {
+    alert('No schedules to export');
+    return;
+  }
+  
+  const headers = ['Weekday', 'Start Time', 'End Time', 'Subject', 'Teacher'];
+  const rows = [headers.join(',')];
+  
+  window.currentSchedules.forEach(schedule => {
+    const weekday = schedule.weekday || '';
+    const startTime = schedule.startTime || '';
+    const endTime = schedule.endTime || '';
+    const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
+    const teacher = schedule.employeeName || '';
+    rows.push(`${weekday},${startTime},${endTime},${subject},${teacher}`);
+  });
+  
+  const csvContent = rows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'section_schedules_export.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toggleExportMenu();
+};
+
+// Export all schedules to JSON
+window.exportAllSchedulesJSON = function() {
+  if (!window.currentSchedules || window.currentSchedules.length === 0) {
+    alert('No schedules to export');
+    return;
+  }
+  
+  const exportData = window.currentSchedules.map(schedule => ({
+    weekday: schedule.weekday || '',
+    startTime: schedule.startTime || '',
+    endTime: schedule.endTime || '',
+    subject: schedule.subject || '',
+    teacher: schedule.employeeName || ''
+  }));
+  
+  const jsonContent = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'section_schedules_export.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toggleExportMenu();
+};
+
+// Export selected schedules to CSV
+window.exportSelectedSchedulesCSV = function() {
+  if (selectedSchedules.size === 0) {
+    alert('No rows selected');
+    return;
+  }
+  
+  const selectedData = window.currentSchedules.filter(s => selectedSchedules.has(s.schedId));
+  const headers = ['Weekday', 'Start Time', 'End Time', 'Subject', 'Teacher'];
+  const rows = [headers.join(',')];
+  
+  selectedData.forEach(schedule => {
+    const weekday = schedule.weekday || '';
+    const startTime = schedule.startTime || '';
+    const endTime = schedule.endTime || '';
+    const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
+    const teacher = schedule.employeeName || '';
+    rows.push(`${weekday},${startTime},${endTime},${subject},${teacher}`);
+  });
+  
+  const csvContent = rows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'selected_schedules_export.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Export selected schedules to JSON
+window.exportSelectedSchedulesJSON = function() {
+  if (selectedSchedules.size === 0) {
+    alert('No rows selected');
+    return;
+  }
+  
+  const selectedData = window.currentSchedules.filter(s => selectedSchedules.has(s.schedId));
+  const exportData = selectedData.map(schedule => ({
+    weekday: schedule.weekday || '',
+    startTime: schedule.startTime || '',
+    endTime: schedule.endTime || '',
+    subject: schedule.subject || '',
+    teacher: schedule.employeeName || ''
+  }));
+  
+  const jsonContent = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'selected_schedules_export.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Import schedules from CSV
+window.importSchedulesFromCSV = function() {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.csv';
+  fileInput.style.display = 'none';
+  document.body.appendChild(fileInput);
+  
+  fileInput.onchange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    try {
+      const csvContent = await file.text();
+      const rows = parseCSV(csvContent);
+      await importSchedulesFromData(rows, 'CSV');
+    } catch (err) {
+      console.error('CSV import error', err);
+      alert('Failed to import CSV');
+    }
+    fileInput.value = '';
+  };
+  
+  fileInput.click();
+};
+
+// Import schedules from JSON
+window.importSchedulesFromJSON = function() {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.json';
+  fileInput.style.display = 'none';
+  document.body.appendChild(fileInput);
+  
+  fileInput.onchange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    try {
+      const jsonContent = await file.text();
+      const data = JSON.parse(jsonContent);
+      const rows = Array.isArray(data) ? data : [data];
+      await importSchedulesFromData(rows, 'JSON');
+    } catch (err) {
+      console.error('JSON import error', err);
+      alert('Failed to import JSON');
+    }
+    fileInput.value = '';
+  };
+  
+  fileInput.click();
+};
+
+function parseCSV(content) {
+  const lines = content.trim().split('\n');
+  return lines.map(line => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let char of line) {
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  });
+}
+
+async function importSchedulesFromData(rows, sourceType) {
+  if (!rows || rows.length === 0) {
+    alert('No data found in file');
+    return;
+  }
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const sectId = urlParams.get('sectId');
+  
+  if (!sectId) {
+    alert('No section ID found');
+    return;
+  }
+  
+  const firstRowLower = rows[0].map(h => String(h).toLowerCase().trim());
+  const headerKeywords = ['weekday', 'start', 'end', 'time', 'subject', 'teacher', 'employee'];
+  const hasHeaders = firstRowLower.some(cell => headerKeywords.some(keyword => cell.includes(keyword)));
+  
+  let dataRows = rows;
+  
+  if (hasHeaders) {
+    dataRows = rows.slice(1);
+  }
+  
+  const schedulesToInsert = [];
+  
+  for (let i = 0; i < dataRows.length; i++) {
+    const row = dataRows[i];
+    if (row.length < 3) continue;
+    
+    const schedule = {
+      sectId: sectId,
+      weekday: row[0] || 'Monday',
+      startTime: row[1] || '',
+      endTime: row[2] || '',
+      subject: row[3] || ''
+    };
+    
+    if (schedule.startTime && schedule.endTime && schedule.subject) {
+      schedulesToInsert.push(schedule);
+    }
+  }
+  
+  if (schedulesToInsert.length === 0) {
+    alert('No valid schedules to import');
+    return;
+  }
+  
+  try {
+    const supabase = window.supabaseClient;
+    const { error } = await supabase
+      .from('schedule')
+      .insert(schedulesToInsert);
+    
+    if (error) throw error;
+    
+    alert(`Successfully imported ${schedulesToInsert.length} schedule(s)`);
+    loadSectionSchedule();
+  } catch (err) {
+    console.error('Error importing schedules:', err);
+    alert('Failed to import schedules');
+  }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+  const importBtn = document.getElementById('importScheduleBtn');
+  const importMenu = document.getElementById('importScheduleMenu');
+  const exportBtn = document.getElementById('exportBtn');
+  const exportMenu = document.getElementById('exportMenu');
+  
+  if (importBtn && importMenu && !importBtn.contains(event.target) && !importMenu.contains(event.target)) {
+    importMenu.style.display = 'none';
+  }
+  if (exportBtn && exportMenu && !exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
+    exportMenu.style.display = 'none';
+  }
+});
 
 loadSectionSchedule();

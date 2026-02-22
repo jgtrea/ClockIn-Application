@@ -6,7 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/pages/schedule_detail.css">
   <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/user_ui/components/users_table.css">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
@@ -49,7 +51,30 @@
       </div>
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
-        
+
+      <div class="add-schedule-form">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Section Name</label>
+            <input type="text" id="addSectionName" class="form-input" placeholder="Enter section name">
+          </div>
+          <div class="form-field">
+            <label>Advisor</label>
+            <select id="addAdvisor" class="form-input"></select>
+          </div>
+          <div class="form-field">
+            <label>Year Level</label>
+            <input type="number" id="addYearLevel" class="form-input" placeholder="Enter year level">
+          </div>
+          <div class="form-field-button">
+            <button class="add-user-btn" onclick="saveSection()">
+              <span class="material-symbols-outlined">add</span>
+              Add Section
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="users-table-container">
         <div class="table-header">
           <div class="table-actions-left">
@@ -104,6 +129,10 @@
             <span id="selectedCount">0</span> row(s) selected
           </div>
           <div class="selection-actions">
+            <button class="selection-action-btn" onclick="removeAdvisorFromSelected()">
+              <span class="material-symbols-outlined">person_remove</span>
+              Remove Advisor
+            </button>
             <button class="selection-action-btn export-btn" onclick="exportSelectedRows()">
               <span class="material-symbols-outlined">download</span>
               Export CSV
@@ -116,12 +145,16 @@
               <span class="material-symbols-outlined">close</span>
               Clear
             </button>
+            <button class="selection-action-btn" onclick="deleteSelectedSections()">
+              <span class="material-symbols-outlined">delete</span>
+              Delete
+            </button>
           </div>
         </div>
         <table class="users-table">
           <thead>
             <tr>
-              <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllSections" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
+              <th class="checkbox-col"><div id="selectAllSections" class="select-all-checkbox" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
               <th>Section Name</th>
               <th>Advisor</th>
               <th>Year Level</th>

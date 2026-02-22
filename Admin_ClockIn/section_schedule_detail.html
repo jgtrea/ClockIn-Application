@@ -11,6 +11,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
+  <script src="scripts/managers/paginate.js" defer></script>
   <script src="scripts/section_schedule_detail.js" defer></script>
 </head>
 
@@ -27,35 +28,47 @@
               <span class="material-symbols-outlined">arrow_back</span>
               Back to Sections
             </button>
-            <button id="selectModeBtn" class="btn-outline" onclick="toggleSelectMode()" style="margin-bottom: 12px; margin-left: 8px;">
-              <span class="material-symbols-outlined">checklist</span>
-              Select Mode
-            </button>
-            <h1 id="sectionName">Sections</h1>
+            <h1 id="sectionName">Section Schedule</h1>
             <p class="tagline" id="sectionInfo"></p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="dropdown-wrapper">
+              <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+                <span class="material-symbols-outlined">download</span>
+                Export
+              </button>
+              <div id="exportMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="exportAllSchedulesCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Export as CSV
+                </button>
+                <button class="action-dropdown-item" onclick="exportAllSchedulesJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Export as JSON
+                </button>
+              </div>
+            </div>
+            <div class="dropdown-wrapper">
+              <button class="add-user-btn" id="importScheduleBtn" onclick="toggleImportScheduleMenu()">
+                <span class="material-symbols-outlined">upload</span>
+                Import
+              </button>
+              <div id="importScheduleMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Import from CSV
+                </button>
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Import from JSON
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
-
-      <div id="actionButtonsContainer" class="action-buttons-container" style="display: none;">
-        <span id="selectionCount" class="selection-count">0 selected</span>
-        <div class="action-buttons">
-          <button id="btnEdit" class="btn-action btn-edit" onclick="editSelectedSchedule()">
-            <span class="material-symbols-outlined">edit</span>
-            Edit
-          </button>
-          <button id="btnRemoveTeacher" class="btn-action btn-remove-teacher" onclick="removeTeacherFromSelected()">
-            <span class="material-symbols-outlined">person_remove</span>
-            Remove Teacher
-          </button>
-          <button id="btnDelete" class="btn-action btn-delete" onclick="deleteSelectedSchedules()">
-            <span class="material-symbols-outlined">delete</span>
-            Delete
-          </button>
-        </div>
-      </div>
 
       <div class="add-schedule-form">
         <div class="form-row">
@@ -88,15 +101,40 @@
             <input type="text" id="addSubject" class="form-input" placeholder="Enter subject">
           </div>
           <div class="form-field-button">
-            <button class="export-btn" onclick="saveSchedule()">
+            <button class="add-user-btn" onclick="saveSchedule()">
               <span class="material-symbols-outlined">add</span>
               Add
             </button>
           </div>
         </div>
       </div>
-
-      <div id="scheduleDetailContainer" class="schedule-detail-container"></div>
+      
+      <div id="selectionActionRow" class="selection-action-bar" style="display: none; margin-bottom: 16px;">
+        <div class="selection-info">
+          <span id="selectedCount">0</span> row(s) selected
+        </div>
+        <div class="selection-actions">
+          <button class="selection-action-btn" onclick="exportSelectedSchedulesCSV()">
+            <span class="material-symbols-outlined">download</span>
+            Export CSV
+          </button>
+          <button class="selection-action-btn" onclick="exportSelectedSchedulesJSON()">
+            <span class="material-symbols-outlined">code</span>
+            Export JSON
+          </button>
+          <button class="selection-action-btn" onclick="clearSelection()">
+            <span class="material-symbols-outlined">close</span>
+            Clear
+          </button>
+          <button class="selection-action-btn delete-btn" onclick="deleteSelectedSchedules()">
+            <span class="material-symbols-outlined">delete</span>
+            Delete
+          </button>
+        </div>
+      </div>
+      
+      <div id="schedulesByDayContainer">
+      </div>
 
     </main>
   </div>

@@ -1,5 +1,7 @@
 let sections = [];
 let filteredSections = [];
+let selectedSections = new Set();
+let employees = [];
 
 const SECTIONS_TABLE = 'sections';
 
@@ -74,30 +76,45 @@ function renderSections() {
     return;
   }
 
-  sectionsList.innerHTML = pageData.map(section => `
+  sectionsList.innerHTML = pageData.map(section => {
+    const numericYearLevel = typeof section.yearLevel === 'number' ? section.yearLevel : parseInt(section.yearLevel);
+    const yearLevelDisplay = numericYearLevel ? `Grade ${numericYearLevel}` : '-';
+    return `
     <tr id="row-${section.sectId}">
-      <td class="checkbox-col"><input type="checkbox" class="section-checkbox" value="${section.sectId}" onchange="toggleSectionSelection('${section.sectId}')"></td>
-      <td>${section.sectionName || 'Unnamed Section'}</td>
-      <td>${section.advisor || '-'}</td>
-      <td>${section.yearLevel || '-'}</td>
+      <td class="checkbox-col">
+        <input type="checkbox" class="section-checkbox" value="${section.sectId}" ${selectedSections.has(section.sectId) ? 'checked' : ''} onchange="toggleSectionSelection('${section.sectId}')">
+      </td>
+      <td class="section-name-cell" id="sectionName-${section.sectId}">${section.sectionName || 'Unnamed Section'}</td>
+      <td class="advisor-cell" id="advisor-${section.sectId}">${section.advisor || '-'}</td>
+      <td class="year-level-cell" id="yearLevel-${section.sectId}">${yearLevelDisplay}</td>
       <td>${section.totalSchedules}</td>
-      <td style="text-align: right;">
-        <div class="action-buttons">
-          <button class="btn-icon edit-btn" onclick="viewSectionSchedule('${section.sectId}', '${section.sectionName}')" title="View">
+      <td class="actions-col">
+        <div class="action-buttons" id="actions-${section.sectId}">
+          <button class="btn-icon edit-btn" onclick="editSection('${section.sectId}')" title="Edit">
+            <span class="material-symbols-outlined">edit</span>
+          </button>
+          <button class="btn-icon" onclick="viewSectionSchedule('${section.sectId}', '${section.sectionName}')" title="View">
             <span class="material-symbols-outlined">visibility</span>
+          </button>
+        </div>
+        <div class="action-buttons" id="edit-actions-${section.sectId}" style="display: none;">
+          <button class="btn-icon save-btn" onclick="saveEditSection('${section.sectId}')" title="Save">
+            <span class="material-symbols-outlined">check</span>
+          </button>
+          <button class="btn-icon cancel-btn" onclick="cancelEditSection('${section.sectId}')" title="Cancel">
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
       </td>
     </tr>
-  `).join('');
+  `}).join('');
+  
+  updateActionButtons();
 }
 
 window.toggleSectionSelection = function(sectId) {
-  const checkbox = document.querySelector(`.section-checkbox[value="${sectId}"]`);
-  if (checkbox) {
-    checkbox.checked = checkbox.checked;
-  }
   updateSelectAllState();
+  updateActionButtons();
 };
 
 function updateSelectAllState() {
@@ -107,6 +124,10 @@ function updateSelectAllState() {
   const selectedCount = document.getElementById('selectedCount');
   
   if (!selectAllBtn) return;
+  
+  // Sync selectedSections Set with checked checkboxes
+  selectedSections.clear();
+  checkedBoxes.forEach(cb => selectedSections.add(cb.value));
   
   const hasSelection = checkedBoxes.length > 0;
   if (hasSelection) {
@@ -130,21 +151,27 @@ window.toggleSelectAll = function() {
   const checkboxes = document.querySelectorAll('.section-checkbox');
   
   if (selectAllBtn.classList.contains('has-selection')) {
+    // Deselect all
     checkboxes.forEach(cb => cb.checked = false);
-    DataTableManager.deselectAll();
+    selectedSections.clear();
   } else {
-    checkboxes.forEach(cb => cb.checked = true);
-    DataTableManager.selectAll();
+    // Select all
+    checkboxes.forEach(cb => {
+      cb.checked = true;
+      selectedSections.add(cb.value);
+    });
   }
   
   updateSelectAllState();
+  updateActionButtons();
 };
 
 window.clearSelection = function() {
   const checkboxes = document.querySelectorAll('.section-checkbox');
   checkboxes.forEach(cb => cb.checked = false);
-  DataTableManager.clearSelection();
+  selectedSections.clear();
   updateSelectAllState();
+  updateActionButtons();
 };
 
 window.exportToCSV = function() {
@@ -198,13 +225,17 @@ window.exportToJSON = function() {
 };
 
 window.exportSelectedRows = function() {
-  const selectedIds = DataTableManager.getSelectedItems();
+  const selectedIds = [];
+  document.querySelectorAll('.section-checkbox:checked').forEach(cb => {
+    selectedIds.push(cb.value);
+  });
+  
   if (selectedIds.length === 0) {
     alert('No rows selected');
     return;
   }
   
-  const selectedData = sections.filter(section => selectedIds.includes(section.sectId));
+  const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
   const headers = ['Section Name', 'Advisor', 'Year Level', 'Total Schedules'];
   const rows = [headers.join(',')];
   
@@ -229,13 +260,17 @@ window.exportSelectedRows = function() {
 };
 
 window.exportSelectedRowsJSON = function() {
-  const selectedIds = DataTableManager.getSelectedItems();
+  const selectedIds = [];
+  document.querySelectorAll('.section-checkbox:checked').forEach(cb => {
+    selectedIds.push(cb.value);
+  });
+  
   if (selectedIds.length === 0) {
     alert('No rows selected');
     return;
   }
   
-  const selectedData = sections.filter(section => selectedIds.includes(section.sectId));
+  const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
   const exportData = selectedData.map(section => ({
     sectionName: section.sectionName || '',
     advisor: section.advisor || '',
@@ -259,6 +294,36 @@ window.toggleExportMenu = function() {
   const exportMenu = document.getElementById('exportMenu');
   if (exportMenu) {
     exportMenu.style.display = exportMenu.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+window.toggleAddSectionMenu = function() {
+  const addSectionMenu = document.getElementById('addSectionMenu');
+  const addSectionForm = document.getElementById('addSectionForm');
+  if (addSectionMenu) {
+    addSectionMenu.style.display = addSectionMenu.style.display === 'none' ? 'block' : 'none';
+  }
+  // Hide form when closing menu
+  if (addSectionForm && addSectionMenu.style.display === 'none') {
+    addSectionForm.style.display = 'none';
+  }
+};
+
+window.showAddSectionForm = function() {
+  const addSectionMenu = document.getElementById('addSectionMenu');
+  const addSectionForm = document.getElementById('addSectionForm');
+  if (addSectionMenu) {
+    addSectionMenu.style.display = 'none';
+  }
+  if (addSectionForm) {
+    addSectionForm.style.display = 'block';
+  }
+};
+
+window.hideAddSectionForm = function() {
+  const addSectionForm = document.getElementById('addSectionForm');
+  if (addSectionForm) {
+    addSectionForm.style.display = 'none';
   }
 };
 
@@ -421,34 +486,261 @@ window.viewSectionSchedule = function(sectId, sectionName) {
   window.location.href = `section_schedule_detail.html?sectId=${sectId}&sectionName=${encodeURIComponent(sectionName)}`;
 };
 
-window.changeItemsPerPage = function(value) {
-  const itemsPerPage = parseInt(value) || 10;
-  Paginate.setItemsPerPage(itemsPerPage);
-  Paginate.setPage(1);
-  renderSections();
+// Selection functions
+window.toggleSectionSelection = function(sectId) {
+  // The updateSelectAllState function will sync the selectedSections Set
+  // and update the selection action row
+  updateSelectAllState();
+  
+  // Also update the action buttons container
+  const actionContainer = document.getElementById('actionButtonsContainer');
+  const selectionCount = document.getElementById('selectionCount');
+  
+  if (selectedSections.size > 0) {
+    actionContainer.style.display = 'flex';
+    selectionCount.textContent = `${selectedSections.size} selected`;
+  } else {
+    actionContainer.style.display = 'none';
+  }
 };
 
-window.goToFirstPage = function() {
-  Paginate.setPage(1);
-  renderSections();
+function updateActionButtons() {
+  const count = selectedSections.size;
+  const actionContainer = document.getElementById('actionButtonsContainer');
+  const selectionCount = document.getElementById('selectionCount');
+  
+  if (count > 0) {
+    actionContainer.style.display = 'flex';
+    selectionCount.textContent = `${count} selected`;
+  } else {
+    actionContainer.style.display = 'none';
+  }
+}
+
+// Delete selected sections
+window.deleteSelectedSections = async function() {
+  if (selectedSections.size === 0) return;
+  
+  const confirmMsg = selectedSections.size === 1
+    ? 'Are you sure you want to delete this section?'
+    : `Are you sure you want to delete ${selectedSections.size} sections? This will also delete all their schedules.`;
+  
+  if (!confirm(confirmMsg)) return;
+
+  const supabase = window.supabaseClient;
+  
+  for (const sectId of selectedSections) {
+    // First delete all schedules for this section
+    await supabase.from('schedule').delete().eq('sectId', sectId);
+    // Then delete the section
+    const { error } = await supabase.from('sections').delete().eq('sectId', sectId);
+    if (error) {
+      console.error('Error deleting section:', error);
+    }
+  }
+  
+  selectedSections.clear();
+  loadSections();
 };
 
-window.goToLastPage = function() {
-  const totalPages = Math.ceil(Paginate.getTotalItems() / Paginate.getItemsPerPage());
-  Paginate.setPage(totalPages);
-  renderSections();
+// Remove advisor from selected sections
+window.removeAdvisorFromSelected = async function() {
+  if (selectedSections.size === 0) return;
+  
+  const confirmMsg = selectedSections.size === 1
+    ? 'Are you sure you want to remove the advisor from this section?'
+    : `Are you sure you want to remove the advisor from ${selectedSections.size} sections?`;
+  
+  if (!confirm(confirmMsg)) return;
+
+  const supabase = window.supabaseClient;
+  
+  for (const sectId of selectedSections) {
+    const { error } = await supabase
+      .from('sections')
+      .update({ advisor: null })
+      .eq('sectId', sectId);
+    
+    if (error) {
+      console.error('Error removing advisor:', error);
+    }
+  }
+  
+  selectedSections.clear();
+  loadSections();
 };
 
-window.goToPage = function(pageNum) {
-  const page = parseInt(pageNum) || 1;
-  Paginate.setPage(page);
-  renderSections();
+// Load employees for the advisor dropdown
+async function loadEmployees() {
+  const supabase = window.supabaseClient;
+  if (!supabase) {
+    setTimeout(loadEmployees, 500);
+    return;
+  }
+  
+  const { data: employeesData, error } = await supabase
+    .from('user_employee_data')
+    .select('*')
+    .order('name');
+  
+  console.log('Loaded employees:', employeesData, error);
+  
+  if (employeesData) {
+    employees = employeesData;
+    const advisorSelect = document.getElementById('addAdvisor');
+    if (advisorSelect) {
+      advisorSelect.innerHTML = '<option value="">-- Select Advisor --</option>' + 
+        employeesData.map(e => `<option value="${e.name || e.email || 'Unknown'}">${e.name || e.email || 'Unknown'}</option>`).join('');
+    }
+  }
+}
+
+// Save new section
+window.saveSection = async function() {
+  const sectionName = document.getElementById('addSectionName').value;
+  const advisor = document.getElementById('addAdvisor').value;
+  const yearLevel = document.getElementById('addYearLevel').value;
+
+  if (!sectionName || !yearLevel) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  const supabase = window.supabaseClient;
+  const { error } = await supabase
+    .from('sections')
+    .insert([{
+      sectionName: sectionName,
+      advisor: advisor,
+      yearLevel: parseInt(yearLevel)
+    }]);
+
+  if (error) {
+    console.error('Error saving section:', error);
+    alert('Failed to save section');
+    return;
+  }
+
+  document.getElementById('addSectionName').value = '';
+  document.getElementById('addYearLevel').value = '';
+  loadSections();
 };
 
-window.changePage = function(delta) {
-  const newPage = Paginate.getCurrentPage() + delta;
-  Paginate.setPage(newPage);
-  renderSections();
+// Inline editing functions
+window.editSection = function(sectionId) {
+  const section = filteredSections.find(s => s.sectId === sectionId);
+  if (!section) return;
+  
+  // Store original values
+  const row = document.getElementById(`row-${sectionId}`);
+  if (!row) return;
+  
+  row.dataset.originalSectionName = section.sectionName || '';
+  row.dataset.originalAdvisor = section.advisor || '';
+  row.dataset.originalYearLevel = section.yearLevel || '';
+  
+  // Build advisor options - show all from user_employee_data
+  const currentAdvisor = section.advisor || '';
+  const advisorOptions = employees
+    .map(emp => `<option value="${emp.name || emp.email || 'Unknown'}" ${currentAdvisor === (emp.name || emp.email) ? 'selected' : ''}>${emp.name || emp.email || 'Unknown'}</option>`)
+    .join('');
+  
+  // Build year level options (Grade 1 to Grade 12)
+  const yearLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+  const numericYearLevel = typeof section.yearLevel === 'number' ? section.yearLevel : parseInt(section.yearLevel);
+  const yearOptions = yearLevels.map((yl, index) => {
+    const value = index + 1;
+    return `<option value="${value}" ${numericYearLevel === value ? 'selected' : ''}>${yl}</option>`;
+  }).join('');
+  
+  // Replace cell contents with input fields
+  document.getElementById(`sectionName-${sectionId}`).innerHTML = `
+    <input type="text" class="edit-input" id="edit-sectionName-${sectionId}" value="${section.sectionName || ''}" placeholder="Section Name">
+  `;
+  
+  document.getElementById(`advisor-${sectionId}`).innerHTML = `
+    <select class="edit-select" id="edit-advisor-${sectionId}">
+      <option value="">-- No Advisor --</option>
+      ${advisorOptions}
+    </select>
+  `;
+  
+  document.getElementById(`yearLevel-${sectionId}`).innerHTML = `
+    <select class="edit-select" id="edit-yearLevel-${sectionId}">
+      ${yearOptions}
+    </select>
+  `;
+  
+  // Hide edit buttons, show save/cancel
+  document.getElementById(`actions-${sectionId}`).style.display = 'none';
+  document.getElementById(`edit-actions-${sectionId}`).style.display = 'flex';
 };
+
+window.saveEditSection = async function(sectionId) {
+  const newSectionName = document.getElementById(`edit-sectionName-${sectionId}`).value.trim();
+  const newAdvisor = document.getElementById(`edit-advisor-${sectionId}`).value;
+  const newYearLevel = parseInt(document.getElementById(`edit-yearLevel-${sectionId}`).value);
+  
+  if (!newSectionName) {
+    alert('Section name is required');
+    return;
+  }
+  
+  const supabase = window.supabaseClient;
+  
+  try {
+    const { error } = await supabase
+      .from('sections')
+      .update({
+        sectionName: newSectionName,
+        advisor: newAdvisor,
+        yearLevel: newYearLevel
+      })
+      .eq('sectId', sectionId);
+    
+    if (error) throw error;
+    
+    alert('Section updated successfully');
+    await loadSections();
+  } catch (error) {
+    console.error('Error updating section:', error);
+    alert('Error updating section: ' + error.message);
+  }
+};
+
+window.cancelEditSection = function(sectionId) {
+  const row = document.getElementById(`row-${sectionId}`);
+  if (!row) return;
+  
+  // Restore original values
+  const originalSectionName = row.dataset.originalSectionName || '';
+  const originalAdvisor = row.dataset.originalAdvisor || '';
+  const originalYearLevel = row.dataset.originalYearLevel || '';
+  
+  const currentAdvisor = originalAdvisor || '-';
+  const numericYearLevel = originalYearLevel ? parseInt(originalYearLevel) : null;
+  const yearLevelDisplay = numericYearLevel ? `Grade ${numericYearLevel}` : '-';
+  
+  // Restore cell contents
+  document.getElementById(`sectionName-${sectionId}`).textContent = originalSectionName || 'Unnamed Section';
+  document.getElementById(`advisor-${sectionId}`).textContent = currentAdvisor;
+  document.getElementById(`yearLevel-${sectionId}`).textContent = yearLevelDisplay;
+  
+  // Show edit buttons, hide save/cancel
+  document.getElementById(`actions-${sectionId}`).style.display = 'flex';
+  document.getElementById(`edit-actions-${sectionId}`).style.display = 'none';
+};
+
+// Helper function to get ordinal suffix (st, nd, rd, th)
+function getOrdinalSuffix(number) {
+  if (number >= 11 && number <= 13) return 'th';
+  switch (number % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
 
 loadSections();
+loadEmployees();

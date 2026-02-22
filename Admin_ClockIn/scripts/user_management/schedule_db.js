@@ -520,5 +520,173 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // Toggle Import Menu
+  window.toggleImportScheduleMenu = function() {
+    const importMenu = document.getElementById('importScheduleMenu');
+    if (importMenu) {
+      importMenu.style.display = importMenu.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+
+  // Import schedules from CSV
+  window.importSchedulesFromCSV = function() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+    
+    fileInput.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      try {
+        const csvContent = await file.text();
+        const rows = parseCSV(csvContent);
+        await importSchedulesFromData(rows, 'CSV');
+      } catch (err) {
+        console.error('CSV import error', err);
+        alert('Failed to import CSV');
+      }
+      fileInput.value = '';
+    };
+    
+    fileInput.click();
+  };
+
+  // Import schedules from JSON
+  window.importSchedulesFromJSON = function() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+    
+    fileInput.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      try {
+        const jsonContent = await file.text();
+        const data = JSON.parse(jsonContent);
+        const rows = Array.isArray(data) ? data : [data];
+        await importSchedulesFromData(rows, 'JSON');
+      } catch (err) {
+        console.error('JSON import error', err);
+        alert('Failed to import JSON');
+      }
+      fileInput.value = '';
+    };
+    
+    fileInput.click();
+  };
+
+  function parseCSV(content) {
+    const lines = content.trim().split('\n');
+    return lines.map(line => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let char of line) {
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    });
+  }
+
+  async function importSchedulesFromData(rows, sourceType) {
+    if (!rows || rows.length === 0) {
+      alert('No data found in file');
+      return;
+    }
+    
+    const supabase = window.supabaseClient;
+    
+    const firstRowLower = rows[0].map(h => String(h).toLowerCase().trim());
+    const headerKeywords = ['weekday', 'start', 'end', 'time', 'subject', 'employee', 'teacher', 'section', 'sect'];
+    const hasHeaders = firstRowLower.some(cell => headerKeywords.some(keyword => cell.includes(keyword)));
+    
+    let dataRows = rows;
+    
+    if (hasHeaders) {
+      dataRows = rows.slice(1);
+    }
+    
+    const schedulesToInsert = [];
+    
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      if (row.length < 3) continue;
+      
+      // Try to find employee by name
+      let employeeId = null;
+      const employeeName = row[4] || row[3] || '';
+      
+      if (employeeName && employees) {
+        const matchedEmployee = employees.find(e => 
+          e.name && e.name.toLowerCase() === employeeName.toLowerCase()
+        );
+        if (matchedEmployee) {
+          employeeId = matchedEmployee.employeeId;
+        }
+      }
+      
+      const schedule = {
+        weekday: row[0] || 'Monday',
+        startTime: row[1] || '',
+        endTime: row[2] || '',
+        subject: row[3] || '',
+        employeeId: employeeId
+      };
+      
+      if (schedule.startTime && schedule.endTime && schedule.subject) {
+        schedulesToInsert.push(schedule);
+      }
+    }
+    
+    if (schedulesToInsert.length === 0) {
+      alert('No valid schedules to import');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('schedule')
+        .insert(schedulesToInsert);
+      
+      if (error) throw error;
+      
+      alert(`Successfully imported ${schedulesToInsert.length} schedule(s)`);
+      loadSchedules();
+    } catch (err) {
+      console.error('Error importing schedules:', err);
+      alert('Failed to import schedules');
+    }
+  }
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function(event) {
+    const importBtn = document.getElementById('importScheduleBtn');
+    const importMenu = document.getElementById('importScheduleMenu');
+    const exportBtn = document.getElementById('exportBtn');
+    const exportMenu = document.getElementById('exportMenu');
+    
+    if (importBtn && importMenu && !importBtn.contains(event.target) && !importMenu.contains(event.target)) {
+      importMenu.style.display = 'none';
+    }
+    if (exportBtn && exportMenu && !exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
+      exportMenu.style.display = 'none';
+    }
+  });
+
   loadSchedules();
 });

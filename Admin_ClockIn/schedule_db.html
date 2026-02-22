@@ -49,6 +49,22 @@
                   </button>
                 </div>
               </div>
+              <div class="dropdown-wrapper">
+                <button class="add-user-btn" id="importScheduleBtn" onclick="toggleImportScheduleMenu()">
+                  <span class="material-symbols-outlined">upload</span>
+                  Import
+                </button>
+                <div id="importScheduleMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
+                  <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromCSV()">
+                    <span class="material-symbols-outlined">table_chart</span>
+                    Import from CSV
+                  </button>
+                  <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromJSON()">
+                    <span class="material-symbols-outlined">code</span>
+                    Import from JSON
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
       </div>
