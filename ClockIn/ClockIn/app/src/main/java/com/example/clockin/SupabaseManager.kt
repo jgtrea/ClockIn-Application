@@ -82,6 +82,7 @@ data class NotificationItem(
 )
 
 data class ClassSession(
+    val subject: String,
     val sectionDisplay: String,
     val targetBeaconName: String,
     val startTime: Date,
@@ -306,7 +307,7 @@ object SupabaseManager {
                 }
                 val preciseStartTime = calendar.time
 
-                ClassSession(sectionDisplay, targetBeaconName, preciseStartTime, currentSchedule.id)
+                ClassSession(currentSchedule.subject, sectionDisplay, targetBeaconName, preciseStartTime, currentSchedule.id)
             } catch (e: Exception) {
                 Log.e("SupabaseManager", "Error in getCurrentClassBeacon", e)
                 null
@@ -335,20 +336,12 @@ object SupabaseManager {
                     }
                     .decodeList<Attendance>()
 
-                Log.d("DEBUG_CLOCKIN", "Fetched ${list.size} records for sched $schedId")
-                list.forEach { Log.d("DEBUG_CLOCKIN", "Found record: ${it.id}, Status: ${it.status}, TimeOut: ${it.timeOut}") }
-
                 list.firstOrNull()
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching today attendance", e)
                 null
             }
         }
-    }
-
-    suspend fun getTodayAttendanceStatus(schedId: String): String? {
-        val record = getTodayAttendance(schedId)
-        return record?.status
     }
 
     suspend fun verifyQrCode(qrId: String, context: Context, isBeaconFound: Boolean): Result<String> {
