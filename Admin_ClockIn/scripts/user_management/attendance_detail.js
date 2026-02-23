@@ -18,6 +18,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allAttendance = [];
   let scheduleMap = {};
   let sectionsMap = {};
+  
+  // Storage key for original statuses
+  const STORAGE_KEY = `attendance_original_status_${employeeId}`;
+
+  // Load original statuses from localStorage
+  function getOriginalStatuses() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch (e) {
+      console.error('Error loading original statuses:', e);
+      return {};
+    }
+  }
+
+  // Save original statuses to localStorage
+  function saveOriginalStatuses(statuses) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(statuses));
+    } catch (e) {
+      console.error('Error saving original statuses:', e);
+    }
+  }
 
   async function loadData() {
     try {
@@ -39,6 +62,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (attendanceError) throw attendanceError;
       allAttendance = attendanceData || [];
+      
+      // Get original statuses from localStorage
+      const originalStatuses = getOriginalStatuses();
+      
+      // For each record, ensure originalStatus is set
+      // This could come from localStorage or from the current status
+      let hasChanges = false;
+      allAttendance.forEach(record => {
+        const storedOriginal = originalStatuses[record.attendId];
+        if (storedOriginal) {
+          // Use the stored original status
+          record.originalStatus = storedOriginal;
+        } else {
+          // If no stored original, use current status as original and save it
+          record.originalStatus = record.status;
+          originalStatuses[record.attendId] = record.status;
+          hasChanges = true;
+        }
+      });
+      
+      // Save updated original statuses to localStorage if needed
+      if (hasChanges) {
+        saveOriginalStatuses(originalStatuses);
+      }
 
       const { data: scheduleData, error: scheduleError } = await supabase
         .from(SCHEDULE_TABLE)
@@ -109,12 +156,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formattedRecords = monthRecords.map(record => {
       const schedule = scheduleMap[record.schedId] || {};
       return {
+        attendId: record.attendId,
         date: new Date(record.timeIn),
         timeIn: new Date(record.timeIn),
         timeOut: record.timeOut ? new Date(record.timeOut) : null,
         subject: schedule.subject,
         section: sectionsMap[schedule.sectId],
-        status: record.status
+        status: record.status,
+        originalStatus: record.originalStatus
       };
     });
 
@@ -150,21 +199,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       if (attendance) {
         combinedRecords.push({
+          attendId: attendance.attendId,
           date: new Date(attendance.timeIn),
           timeIn: new Date(attendance.timeIn),
           timeOut: attendance.timeOut ? new Date(attendance.timeOut) : null,
           subject: schedule.subject,
           section: sectionsMap[schedule.sectId],
-          status: attendance.status
+          status: attendance.status,
+          originalStatus: attendance.originalStatus
         });
       } else {
         combinedRecords.push({
+          attendId: null,
           date: date,
           timeIn: null,
           timeOut: null,
           subject: schedule.subject,
           section: sectionsMap[schedule.sectId],
-          status: 'Unattended'
+          status: 'Unattended',
+          originalStatus: 'Unattended'
         });
       }
     });
@@ -173,12 +226,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!processedScheduleIds.has(att.schedId)) {
         const schedule = scheduleMap[att.schedId];
         combinedRecords.push({
+          attendId: att.attendId,
           date: new Date(att.timeIn),
           timeIn: new Date(att.timeIn),
           timeOut: att.timeOut ? new Date(att.timeOut) : null,
           subject: schedule ? schedule.subject : '-',
           section: schedule ? sectionsMap[schedule.sectId] : '-',
-          status: att.status
+          status: att.status,
+          originalStatus: att.originalStatus
         });
       }
     });
@@ -204,19 +259,117 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    records.forEach(record => {
+    records.forEach((record, index) => {
       const row = document.createElement('tr');
+      const originalStatus = record.originalStatus || record.status || 'Present';
+      const currentStatus = record.status || originalStatus;
+      const statusClass = currentStatus.toLowerCase();
+      const attendId = record.attendId || '';
+      
       row.innerHTML = `
         <td>${record.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
         <td>${record.timeIn ? record.timeIn.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
         <td>${record.timeOut ? record.timeOut.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
         <td>${record.subject || '-'}</td>
         <td>${record.section || '-'}</td>
-        <td><span class="status-badge status-${record.status.toLowerCase()}">${record.status}</span></td>
+        <td>
+          <div class="status-cell-wrapper">
+            <span class="status-badge status-${statusClass} ${attendId ? 'clickable' : ''}" data-attend-id="${attendId}" data-original-status="${originalStatus}">${currentStatus}</span>
+            <div class="status-dropdown" id="status-dropdown-${attendId}" style="display: none;">
+              <button class="status-dropdown-item" data-attend-id="${attendId}" data-new-status="${originalStatus}">${originalStatus}</button>
+              <button class="status-dropdown-item" data-attend-id="${attendId}" data-new-status="Excused">Excused</button>
+            </div>
+          </div>
+        </td>
       `;
       recordsList.appendChild(row);
     });
+
+    // Add event listeners for status badges
+    document.querySelectorAll('.status-badge.clickable').forEach(badge => {
+      badge.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const attendId = this.getAttribute('data-attend-id');
+        const originalStatus = this.getAttribute('data-original-status');
+        toggleStatusDropdown(attendId, originalStatus, this, e);
+      });
+    });
+
+    // Add event listeners for dropdown items
+    document.querySelectorAll('.status-dropdown-item').forEach(item => {
+      item.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const attendId = this.getAttribute('data-attend-id');
+        const newStatus = this.getAttribute('data-new-status');
+        updateStatus(attendId, newStatus, this, e);
+      });
+    });
   }
+
+  window.toggleStatusDropdown = function(attendId, originalStatus, element, evt) {
+    if (!attendId) return;
+    if (evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+    
+    // Close all other dropdowns first
+    document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+      dropdown.style.display = 'none';
+    });
+    
+    const dropdown = document.getElementById(`status-dropdown-${attendId}`);
+    if (dropdown) {
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+
+  window.updateStatus = async function(attendId, newStatus, element, evt) {
+    if (!attendId) return;
+    if (evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+    
+    // Close the dropdown
+    const dropdown = document.getElementById(`status-dropdown-${attendId}`);
+    if (dropdown) {
+      dropdown.style.display = 'none';
+    }
+
+    // Find the record
+    const record = allAttendance.find(r => r.attendId === attendId);
+    if (!record) {
+      console.error('Record not found:', attendId);
+      return;
+    }
+
+    try {
+      // Update the status in the database
+      const { error } = await supabase
+        .from(ATTENDANCE_TABLE)
+        .update({ status: newStatus })
+        .eq('attendId', attendId);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      // Update the local data
+      const recordIndex = allAttendance.findIndex(r => r.attendId === attendId);
+      if (recordIndex !== -1) {
+        allAttendance[recordIndex].status = newStatus;
+        // originalStatus remains unchanged!
+      }
+
+      // Re-render to show updated status
+      showMonthRecords();
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Failed to update status. Please try again.');
+    }
+  };
 
   window.previousMonth = function() {
     currentDate.setMonth(currentDate.getMonth() - 1);
@@ -337,6 +490,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Close dropdown when clicking outside
   document.addEventListener('click', function(event) {
+    // Close status dropdowns (only if not clicking on status-cell-wrapper or its children)
+    document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+      const wrapper = dropdown.parentElement;
+      if (wrapper && !wrapper.contains(event.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+    
+    // Close export menu
     const exportBtn = document.getElementById('exportBtn');
     const exportMenu = document.getElementById('exportMenu');
     if (exportBtn && exportMenu && !exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
