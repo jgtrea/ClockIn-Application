@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  const { Paginate, DataTableManager } = window;
+  
   const usersList = document.getElementById('usersList');
   const addUserBtn = document.getElementById('addUserBtn');
   
@@ -279,11 +281,59 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.exportToCSV = function() {
-    DataTableManager.exportToCSV('users_data_full.csv');
+    const dataToExport = DataTableManager.getFilteredData();
+    if (!dataToExport || dataToExport.length === 0) {
+      showAlertPrompt('No data to export');
+      return;
+    }
+    
+    const headers = ['Name', 'Email', 'Employment', 'Date Created'];
+    const rows = [headers.join(',')];
+    
+    dataToExport.forEach(user => {
+      const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name || '';
+      const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email || '';
+      const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment || '';
+      const createdAt = DataTableManager.formatDate(user.createdAt);
+      rows.push(`${name},${email},${employment},${createdAt}`);
+    });
+    
+    const csvContent = rows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'users_data_full.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   window.exportToJSON = function() {
-    DataTableManager.exportToJSON('users_data_full.json');
+    const dataToExport = DataTableManager.getFilteredData();
+    if (!dataToExport || dataToExport.length === 0) {
+      showAlertPrompt('No data to export');
+      return;
+    }
+    
+    const exportData = dataToExport.map(user => ({
+      name: user.name || '',
+      email: user.email || '',
+      employment: user.employment || '',
+      createdAt: user.createdAt || ''
+    }));
+    
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'users_data_full.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   window.exportSelectedRows = function() {

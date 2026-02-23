@@ -5,6 +5,8 @@ let employees = [];
 
 const SECTIONS_TABLE = 'sections';
 
+const { Paginate, DataTableManager } = window;
+
 Paginate.init({
   containerId: 'section_schedules',
   itemsPerPage: 10,
@@ -184,7 +186,7 @@ window.clearSelection = function() {
 
 window.exportToCSV = function() {
   const dataToExport = DataTableManager.getFilteredData();
-  if (!dataToExport.length) return;
+  if (!dataToExport || !dataToExport.length) return;
   
   const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
   const rows = [headers.join(',')];
@@ -226,7 +228,7 @@ window.exportToCSV = function() {
 
 window.exportToJSON = function() {
   const dataToExport = DataTableManager.getFilteredData();
-  if (!dataToExport.length) return;
+  if (!dataToExport || !dataToExport.length) return;
   
   const exportData = dataToExport.map(section => {
     const sectionSchedules = section.schedules || [];

@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  const { Paginate, DataTableManager } = window;
+  
   const schedulesList = document.getElementById('schedulesList');
   const supabase = window.supabaseClient;
   const USERS_TABLE = 'user_employee_data';
@@ -168,6 +170,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.exportToCSV = function() {
+    if (!filteredUsers || filteredUsers.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    
     const headers = ['Name', 'Email', 'Employment', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
     const rows = [headers.join(',')];
     
@@ -207,6 +214,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.exportToJSON = function() {
+    if (!filteredUsers || filteredUsers.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    
     const exportData = filteredUsers.map(user => {
       const userSchedules = user.schedules || [];
       const schedulesData = userSchedules.map(schedule => ({
