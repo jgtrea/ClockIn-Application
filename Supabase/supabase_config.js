@@ -1,8 +1,16 @@
 const supabaseUrl = 'https://ckgvtzsslrxklmbkztxe.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo';
 
-const { createClient } = supabase;
-const supabaseClient = createClient(supabaseUrl, supabaseKey);
+// Use existing client from parent if available (to avoid duplicate instances in iframe)
+let supabaseClient;
+if (window.parent && window.parent.window.supabaseClient) {
+  supabaseClient = window.parent.window.supabaseClient;
+} else if (window.supabaseClient) {
+  supabaseClient = window.supabaseClient;
+} else {
+  const { createClient } = supabase;
+  supabaseClient = createClient(supabaseUrl, supabaseKey);
+}
 
 window.supabaseClient = supabaseClient;
 
