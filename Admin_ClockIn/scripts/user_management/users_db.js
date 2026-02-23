@@ -98,6 +98,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   window.toggleUserSelection = function(employeeId) {
+    // Update DataTableManager's selection state
+    DataTableManager.toggleSelection(employeeId);
     const checkbox = document.querySelector(`.user-checkbox[value="${employeeId}"]`);
     if (checkbox) {
       checkbox.checked = checkbox.checked;
@@ -272,11 +274,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.deleteUser = async (uid) => {
     if (!confirm('Delete this user?')) return;
     
-    const result = await DataTableManager.remove(uid);
-    if (result.error) {
-      console.error('users_db: delete error', result.error);
-    } else {
+    const supabase = window.supabaseClient;
+    
+    try {
+      const { data: userData } = await supabase
+        .from('user_employee_data')
+        .select('email')
+        .eq('employeeId', uid)
+        .single();
+      
+      if (userData && userData.email) {
+        const authResult = await window.deleteUserFromAuth(userData.email);
+        if (!authResult.success) {
+          console.log('Auth deletion warning:', authResult.error);
+        }
+      }
+      
+      await supabase
+        .from('user_devices')
+        .delete()
+        .eq('employeeId', uid);
+      
+      await supabase
+        .from('schedule')
+        .update({ employeeId: null })
+        .eq('employeeId', uid);
+      
+      const { error: deleteError } = await supabase
+        .from('user_employee_data')
+        .delete()
+        .eq('employeeId', uid);
+      
+      if (deleteError) {
+        throw deleteError;
+      }
+      
+      showAlertPrompt('User deleted successfully', 'success');
       loadUsers();
+    } catch (err) {
+      console.error('users_db: delete error', err);
+      showAlertPrompt('Failed to delete user: ' + (err.message || err), 'error');
     }
   };
 
@@ -344,6 +381,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
+    
+    let filename = 'users_selected_data.csv';
+    if (selectedData.length === 1 && selectedData[0].name) {
+      const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      filename = `user_${safeName}.csv`;
+    }
+    
     const headers = ['Name', 'Email', 'Employment', 'Date Created'];
     const rows = [headers.join(',')];
     
@@ -360,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'users_selected_data.csv';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -375,6 +419,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
+    
+    let filename = 'users_selected_data.json';
+    if (selectedData.length === 1 && selectedData[0].name) {
+      const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      filename = `user_${safeName}.json`;
+    }
+    
     const exportData = selectedData.map(user => ({
       name: user.name || '',
       email: user.email || '',
@@ -387,7 +438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'users_selected_data.json';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -401,10 +452,45 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} row(s)?`)) {
+    let confirmMessage = '';
+    if (selectedIds.length === 1) {
+      const { data: userData } = await supabase
+        .from(USERS_TABLE)
+        .select('name')
+        .eq('employeeId', selectedIds[0])
+        .single();
+      confirmMessage = `Are you sure you want to delete ${userData?.name || 'this user'}?`;
+    } else {
+      confirmMessage = `Are you sure you want to delete ${selectedIds.length} user(s)?`;
+    }
+    
+    if (confirm(confirmMessage)) {
       console.log('Delete selected rows:', selectedIds);
       
       try {
+        const { data: usersData } = await supabase
+          .from(USERS_TABLE)
+          .select('email, employeeId')
+          .in('employeeId', selectedIds);
+        
+        if (usersData) {
+          for (const user of usersData) {
+            if (user.email) {
+              await window.deleteUserFromAuth(user.email);
+            }
+          }
+        }
+        
+        await supabase
+          .from('user_devices')
+          .delete()
+          .in('employeeId', selectedIds);
+        
+        await supabase
+          .from('schedule')
+          .update({ employeeId: null })
+          .in('employeeId', selectedIds);
+        
         const { error } = await supabase
           .from(USERS_TABLE)
           .delete()
@@ -413,11 +499,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (error) throw error;
         console.log('users_db: Deleted ' + selectedIds.length + ' users');
         loadUsers();
+        DataTableManager.clearSelection();
+        const selectAllBtn = document.getElementById('selectAllUsers');
+        if (selectAllBtn) {
+          selectAllBtn.classList.remove('has-selection');
+        }
+        const selectionActionRow = document.getElementById('selectionActionRow');
+        if (selectionActionRow) {
+          selectionActionRow.style.display = 'none';
+        }
       } catch (err) {
         console.error('users_db: Delete error', err);
         showAlertPrompt('Failed to delete user');
       }
-      DataTableManager.clearSelection();
     }
   };
 
@@ -470,15 +564,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (modal) {
       modal.style.display = 'none';
     }
+    // Clear form fields
+    document.getElementById('addUserName').value = '';
+    document.getElementById('addUserEmail').value = '';
+    document.getElementById('addUserPassword').value = '';
+    document.getElementById('addUserEmployment').value = 'Full-time';
   };
 
   window.confirmAddUser = async function() {
     const name = document.getElementById('addUserName').value.trim();
     const email = document.getElementById('addUserEmail').value.trim();
     const employment = document.getElementById('addUserEmployment').value;
+    const password = document.getElementById('addUserPassword').value;
     
     if (!name) {
       showAlertPrompt('Please enter a username');
+      return;
+    }
+    
+    if (!password) {
+      showAlertPrompt('Please enter a password');
       return;
     }
     
@@ -502,6 +607,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     closeAddUserModal();
     
+    console.log('Creating user in auth with email:', email);
+    const authResult = await window.createUserInAuth(email, password);
+    console.log('Auth result:', authResult);
+    if (!authResult.success) {
+      console.error('Failed to create user in auth:', authResult.error);
+      showAlertPrompt('Failed to create user in authentication: ' + JSON.stringify(authResult.error));
+      return;
+    }
+    
+    console.log('Auth creation successful, adding to table...');
     const result = await DataTableManager.create({
       name: name || 'New User',
       email: email,
@@ -510,7 +625,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (result.error) {
       console.error('users_db: add user error', result.error);
-      showAlertPrompt('Failed to add user');
+      showAlertPrompt('Failed to add user to database');
     } else {
       console.log('users_db: New user added successfully');
       loadUsers();
@@ -914,6 +1029,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!confirm(confirmMsg)) return;
     
     try {
+      // First, create users in authentication with default password
+      for (const user of newUsers) {
+        const authResult = await window.createUserInAuth(user.email, 'password123');
+        if (!authResult.success) {
+          console.warn('Failed to create auth for:', user.email, authResult.error);
+        }
+      }
+      
+      // Then, insert into database
       const { error } = await supabase
         .from(USERS_TABLE)
         .insert(newUsers)
@@ -924,6 +1048,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('users_db: Successfully imported ' + newUsers.length + ' users');
       loadUsers();
       showAlertPrompt('Successfully imported ' + newUsers.length + ' user(s)', 'success');
+      showAlertPrompt('Default password: password123', 'success', true);
     } catch (err) {
       console.error('users_db: Import error', err);
       showAlertPrompt('Failed to import users');
@@ -982,34 +1107,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    const userEmail = session?.user?.email || sessionStorage.getItem('userEmail') || localStorage.getItem('userEmail');
-    
-    if (userEmail) {
-      const { data: adminData, error } = await supabase
-        .from('user_admin_data')
-        .select('*')
-        .eq('email', userEmail);
-
-      const isAdmin = !error && adminData && adminData.length > 0;
-      addUserBtn.style.display = isAdmin ? '' : 'none';
-      console.log('users_db: signed in as', userEmail, 'admin?', isAdmin);
-    }
-    
     await loadUsers();
   }
 
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT') {
-      users = [];
-      filteredUsers = [];
-      DataTableManager.clearSelection();
-      renderUsers();
-      addUserBtn.style.display = 'none';
-    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      checkAdminAndLoad();
-    }
-  });
-
+  // Initial load
   checkAdminAndLoad();
 });

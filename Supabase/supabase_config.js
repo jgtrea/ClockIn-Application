@@ -1,6 +1,26 @@
 const supabaseUrl = 'https://ckgvtzsslrxklmbkztxe.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo';
 
+// Service role key for admin operations
+const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDEwNzU3NCwiZXhwIjoyMDg1NjgzNTc0fQ.DNlCv_it_Kn938Zzl3wQJ6kaE9I5WJsL5R8rmqaRSS0';
+
+// Create admin client with service role key for privileged operations
+let supabaseAdmin = null;
+
+function initAdminClient() {
+  if (supabaseAdmin) return supabaseAdmin;
+  
+  if (typeof supabase !== 'undefined') {
+    const { createClient } = supabase;
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+    window.supabaseAdmin = supabaseAdmin;
+    console.log('Admin client initialized');
+  } else {
+    console.error('Supabase library not available yet');
+  }
+  return supabaseAdmin;
+}
+
 // Use existing client from parent if available (to avoid duplicate instances in iframe)
 let supabaseClient;
 if (window.parent && window.parent.window.supabaseClient) {
@@ -94,3 +114,76 @@ async function rpc(functionName, params = {}) {
   if (error) throw error;
   return data;
 }
+
+// Delete user from auth
+async function deleteUserFromAuth(email) {
+  try {
+    const adminClient = initAdminClient();
+    if (!adminClient) {
+      console.error('Admin client not available');
+      return { success: false, error: 'Admin client not available' };
+    }
+    
+    // Get user by email
+    const { data: authData, error: listError } = await adminClient.auth.admin.listUsers();
+    if (listError) {
+      console.error('Error listing users:', listError);
+      return { success: false, error: listError };
+    }
+    
+    const authUser = authData.users.find(u => u.email === email);
+    if (!authUser) {
+      console.log('User not found in auth, skipping');
+      return { success: true, message: 'User not in auth' };
+    }
+    
+    // Delete user from auth
+    const { error: deleteError } = await adminClient.auth.admin.deleteUser(authUser.id);
+    if (deleteError) {
+      console.error('Error deleting user from auth:', deleteError);
+      return { success: false, error: deleteError };
+    }
+    
+    return { success: true };
+  } catch (err) {
+    console.error('Auth deletion error:', err);
+    return { success: false, error: err };
+  }
+}
+
+window.deleteUserFromAuth = deleteUserFromAuth;
+
+// Create user in authentication
+async function createUserInAuth(email, password) {
+  console.log('createUserInAuth called with:', email);
+  try {
+    const adminClient = initAdminClient();
+    console.log('Admin client:', adminClient);
+    if (!adminClient) {
+      console.error('Admin client not available');
+      return { success: false, error: 'Admin client not available' };
+    }
+    
+    // Create user in auth
+    console.log('Calling createUser with password length:', password ? password.length : 0);
+    const { data, error } = await adminClient.auth.admin.createUser({
+      email: email,
+      password: password,
+      email_confirm: true
+    });
+    
+    console.log('Create user response - data:', data, 'error:', error);
+    if (error) {
+      console.error('Error creating user in auth:', error);
+      return { success: false, error: error };
+    }
+    
+    console.log('User created in auth:', data);
+    return { success: true, data: data };
+  } catch (err) {
+    console.error('Auth creation error:', err);
+    return { success: false, error: err };
+  }
+}
+
+window.createUserInAuth = createUserInAuth;

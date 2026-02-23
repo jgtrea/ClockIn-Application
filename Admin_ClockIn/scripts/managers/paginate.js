@@ -1,4 +1,9 @@
-const Paginate = (function() {
+// Prevent multiple declarations in same context
+if (window.Paginate) {
+  // Already defined, just return the existing instance
+  module.exports = window.Paginate;
+} else {
+  const Paginate = (function() {
   let currentPage = 1;
   let itemsPerPage = 10;
   let totalItems = 0;
@@ -179,3 +184,4 @@ const Paginate = (function() {
 })();
 
 window.Paginate = Paginate;
+}

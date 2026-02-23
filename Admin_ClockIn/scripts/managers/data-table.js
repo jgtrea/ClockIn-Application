@@ -1,4 +1,8 @@
-const DataTableManager = (function() {
+// Prevent multiple declarations in same context
+if (window.DataTableManager) {
+  // Already defined, skip re-initialization
+} else {
+  const DataTableManager = (function() {
   let tableName = '';
   let data = [];
   let filteredData = [];
@@ -323,3 +327,4 @@ const DataTableManager = (function() {
 })();
 
 window.DataTableManager = DataTableManager;
+}

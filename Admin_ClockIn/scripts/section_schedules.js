@@ -572,10 +572,10 @@ function updateActionButtons() {
   const selectionCount = document.getElementById('selectionCount');
   
   if (count > 0) {
-    actionContainer.style.display = 'flex';
-    selectionCount.textContent = `${count} selected`;
+    if (actionContainer) actionContainer.style.display = 'flex';
+    if (selectionCount) selectionCount.textContent = `${count} selected`;
   } else {
-    actionContainer.style.display = 'none';
+    if (actionContainer) actionContainer.style.display = 'none';
   }
 }
 

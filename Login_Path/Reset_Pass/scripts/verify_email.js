@@ -17,12 +17,9 @@ if (resetPassForm) {
     const btn = resetPassForm.querySelector('button');
     const emailValue = sessionStorage.getItem('resetEmail') || '';
     
-    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(newPass.value);
-    const hasNumber = /\d/.test(newPass.value);
-    const isLongEnough = newPass.value.length >= 8;
-    
-    if (!hasSymbol || !hasNumber || !isLongEnough) {
-      showAlertPrompt('Password must contain: a symbol, a number, at least 8 text long');
+    // Check that password is not empty
+    if (!newPass.value || newPass.value.trim() === '') {
+      showAlertPrompt('Password cannot be empty');
       return;
     }
     

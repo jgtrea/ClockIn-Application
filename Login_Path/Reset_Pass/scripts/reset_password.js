@@ -61,15 +61,12 @@ if (resetPassForm) {
     const confirmPass = document.getElementById('confirmPassword');
     const email = document.getElementById('email').value.trim();
     
-    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(newPass.value);
-    const hasNumber = /\d/.test(newPass.value);
-    const isLongEnough = newPass.value.length >= 8;
-    
-    if (!hasSymbol || !hasNumber || !isLongEnough) {
+    // Check that password is not empty
+    if (!newPass.value || newPass.value.trim() === '') {
       newPass.style.borderColor = '#dc3545';
       const msg = document.createElement('p');
       msg.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin: 4px 0 0 0;';
-      msg.textContent = 'Password must contain: a symbol, a number, at least 8 text long';
+      msg.textContent = 'Password cannot be empty';
       newPass.parentNode.insertBefore(msg, newPass.nextSibling);
       return;
     }
