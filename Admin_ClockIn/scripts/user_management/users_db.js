@@ -279,11 +279,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.exportToCSV = function() {
-    DataTableManager.exportToCSV('users_export.csv');
+    DataTableManager.exportToCSV('users_data_full.csv');
   };
 
   window.exportToJSON = function() {
-    DataTableManager.exportToJSON('users_export.json');
+    DataTableManager.exportToJSON('users_data_full.json');
   };
 
   window.exportSelectedRows = function() {
@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'users_selected_export.csv';
+    a.download = 'users_selected_data.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'users_selected_export.json';
+    a.download = 'users_selected_data.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

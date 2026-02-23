@@ -260,5 +260,89 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeDatePicker();
   };
 
+  window.toggleExportMenu = function() {
+    const exportMenu = document.getElementById('exportMenu');
+    if (exportMenu) {
+      exportMenu.style.display = exportMenu.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+
+  window.exportAttendanceDetailCSV = function() {
+    toggleExportMenu();
+    
+    if (!allAttendance || allAttendance.length === 0) {
+      alert('No attendance records to export');
+      return;
+    }
+    
+    const userName = document.getElementById('userName').textContent.replace("'s Attendance Records", '') || 'User';
+    const headers = ['Date', 'Time In', 'Time Out', 'Status', 'Section'];
+    const rows = [headers.join(',')];
+    
+    allAttendance.forEach(record => {
+      const date = record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : '';
+      const timeIn = record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '';
+      const timeOut = record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '';
+      const status = String(record.status || '').includes(',') ? `"${record.status}"` : record.status || '';
+      const section = scheduleMap[record.schedId] ? sectionsMap[scheduleMap[record.schedId].sectId] || '' : '';
+      const sectionStr = String(section).includes(',') ? `"${section}"` : section;
+      rows.push(`${date},${timeIn},${timeOut},${status},${sectionStr}`);
+    });
+    
+    const csvContent = rows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${userName}_data.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  window.exportAttendanceDetailJSON = function() {
+    toggleExportMenu();
+    
+    if (!allAttendance || allAttendance.length === 0) {
+      alert('No attendance records to export');
+      return;
+    }
+    
+    const userName = document.getElementById('userName').textContent.replace("'s Attendance Records", '') || 'User';
+    
+    const exportData = {
+      user: userName,
+      email: document.getElementById('userEmail').textContent || '',
+      records: allAttendance.map(record => ({
+        date: record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : null,
+        timeIn: record.timeIn ? new Date(record.timeIn).toISOString() : null,
+        timeOut: record.timeOut ? new Date(record.timeOut).toISOString() : null,
+        status: record.status || '',
+        section: scheduleMap[record.schedId] ? sectionsMap[scheduleMap[record.schedId].sectId] || null : null
+      }))
+    };
+    
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${userName}_data.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(event) {
+    const exportBtn = document.getElementById('exportBtn');
+    const exportMenu = document.getElementById('exportMenu');
+    if (exportBtn && exportMenu && !exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
+      exportMenu.style.display = 'none';
+    }
+  });
+
   loadData();
 });

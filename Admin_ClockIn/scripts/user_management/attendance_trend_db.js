@@ -11,9 +11,11 @@ function updateChart(attendanceData, trend = 'weekly') {
   const chart = document.getElementById('attendanceChart');
   
   if (!chart) return;
-  
   const maxValue = Math.max(...attendanceData);
-  const [step, topValue, lineCount] = ((m)=>{let r=m/5,p=10**Math.floor(Math.log10(r)),s=[1,2,5,10].find(x=>r<=x*p)*p,t=Math.ceil(m/s)*s;return[s,t,t/s]})(maxValue || 1);
+  let step = Math.ceil(maxValue / 5);
+  if (step === 0) step = 1;
+  const topValue = step * 5;
+  const lineCount = 5;
   chart.innerHTML = '';
   
   if (chart.offsetWidth === 0) {
@@ -76,12 +78,36 @@ function updateChart(attendanceData, trend = 'weekly') {
     const bar = document.createElement('div');
     bar.className = 'chart-bar';
     const hasData = value > 0;
-    const barColor = isToday ? '#3b82f6' : (hasData ? '#d1d5db' : '#f3f4f6');
-    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${barColor}; border-radius: 4px 4px 0 0; ${!hasData ? 'opacity: 0.5;' : ''} display: flex; align-items: center; justify-content: center; color: ${isToday ? '#fff' : '#6b7280'}; font-size: 11px; font-weight: 600;`;
+    const barColor = '#3b82f6'; 
+    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${barColor}; border-radius: 4px 4px 0 0; ${!hasData ? 'opacity: 0.5;' : ''} display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer;`;
+    
+    const tooltip = document.createElement('div');
+    tooltip.className = 'bar-tooltip';
+    tooltip.style.cssText = `position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 10; margin-bottom: 8px;`;
+    tooltip.textContent = `${value} attendance${value !== 1 ? 's' : ''}`;
+    
+    const tooltipArrow = document.createElement('div');
+    tooltipArrow.style.cssText = `position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1f2937;`;
+    tooltip.appendChild(tooltipArrow);
+    
+    bar.appendChild(tooltip);
+    
+    // Add hover event listeners
+    bar.addEventListener('mouseenter', function() {
+      tooltip.style.opacity = '1';
+      tooltip.style.visibility = 'visible';
+    });
+    
+    bar.addEventListener('mouseleave', function() {
+      tooltip.style.opacity = '0';
+      tooltip.style.visibility = 'hidden';
+    });
     
     if (hasData && value > 0) {
       const percentage = totalUsers > 0 ? Math.round((value / totalUsers) * 100) : 0;
-      bar.textContent = percentage + '%';
+      const percentageSpan = document.createElement('span');
+      percentageSpan.textContent = percentage + '%';
+      bar.appendChild(percentageSpan);
     }
     
     chart.appendChild(bar);

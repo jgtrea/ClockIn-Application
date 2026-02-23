@@ -871,7 +871,7 @@ if (!startTime || !endTime || !subject) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_export.csv';
+    a.download = 'schedules_data_full.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -903,7 +903,7 @@ if (!startTime || !endTime || !subject) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_export.json';
+    a.download = 'schedules_data_full.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

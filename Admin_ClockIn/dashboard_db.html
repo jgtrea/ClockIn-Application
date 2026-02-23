@@ -11,6 +11,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
+  <script src="../Authentification/auth-guard.js"></script>
   <script src="scripts/managers/clock_index.js" defer></script>
   <script src="scripts/managers/schedule_overview.js" defer></script>
   <script src="scripts/user_management/attendance_trend_db.js" defer></script>
@@ -30,7 +31,22 @@
             A smart and efficient way to monitor attendance in real time.
           </p>
         </div>
-        <button class="export-btn">Export Data</button>
+        <div class="dropdown-wrapper">
+          <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+            <span class="material-symbols-outlined">download</span>
+            <span>Export</span>
+          </button>
+          <div id="exportMenu" class="action-dropdown" style="display: none;">
+            <button class="action-dropdown-item" onclick="exportDashboardCSV()">
+              <span class="material-symbols-outlined">table_chart</span>
+              <span>Export as CSV</span>
+            </button>
+            <button class="action-dropdown-item" onclick="exportDashboardJSON()">
+              <span class="material-symbols-outlined">code</span>
+              <span>Export as JSON</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="stats-container">
