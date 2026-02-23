@@ -469,22 +469,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  window.deleteSchedule = async function(schedId) {
-    if (!confirm('Are you sure you want to delete this schedule?')) return;
-    
+  // Variables to track pending delete operation
+  let pendingDeleteSchedId = null;
+
+  window.showDeleteDialog = function(schedId) {
+    pendingDeleteSchedId = schedId;
+    const dialog = document.getElementById('deleteConfirmDialog');
+    if (dialog) {
+      dialog.style.display = 'flex';
+    }
+  };
+
+  window.closeDeleteDialog = function() {
+    pendingDeleteSchedId = null;
+    const dialog = document.getElementById('deleteConfirmDialog');
+    if (dialog) {
+      dialog.style.display = 'none';
+    }
+  };
+
+  window.confirmDeleteSchedule = async function(deleteType) {
+    const schedId = pendingDeleteSchedId;
+    if (!schedId) {
+      closeDeleteDialog();
+      return;
+    }
+
     try {
-      const { error } = await supabase
-        .from(SCHEDULE_TABLE)
-        .delete()
-        .eq('schedId', schedId);
+      if (deleteType === 'full') {
+        // Delete entire schedule record
+        const { error } = await supabase
+          .from(SCHEDULE_TABLE)
+          .delete()
+          .eq('schedId', schedId);
+        
+        if (error) throw error;
+      } else if (deleteType === 'teacher') {
+        // Remove teacher only - keep the schedule but set employeeId to null
+        const { error } = await supabase
+          .from(SCHEDULE_TABLE)
+          .update({ employeeId: null })
+          .eq('schedId', schedId);
+        
+        if (error) throw error;
+      }
       
-      if (error) throw error;
-      
+      closeDeleteDialog();
       loadScheduleDetails();
     } catch (err) {
       console.error('Error deleting schedule:', err);
       alert('Failed to delete schedule');
+      closeDeleteDialog();
     }
+  };
+
+  // Override the original deleteSchedule to show dialog
+  window.deleteSchedule = function(schedId) {
+    showDeleteDialog(schedId);
   };
 
   window.deleteSelectedSchedules = async function() {
