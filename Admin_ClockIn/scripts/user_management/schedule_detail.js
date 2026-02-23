@@ -744,22 +744,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const subject = document.getElementById('addSubject').value;
     const sectId = document.getElementById('addSection').value;
 
-    if (!startTime || !endTime || !subject) {
+if (!startTime || !endTime || !subject) {
       alert('Please fill in all fields');
       return;
     }
 
+    // Handle "All Weekdays" option
+    const weekdays = weekday === 'AllWeekdays' 
+      ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] 
+      : [weekday];
+
     try {
+      const schedulesToInsert = weekdays.map(day => ({
+        employeeId: employeeId,
+        weekday: day,
+        startTime: startTime,
+        endTime: endTime,
+        subject: subject,
+        sectId: sectId
+      }));
+
       const { error } = await supabase
         .from(SCHEDULE_TABLE)
-        .insert([{
-          employeeId: employeeId,
-          weekday: weekday,
-          startTime: startTime,
-          endTime: endTime,
-          subject: subject,
-          sectId: sectId
-        }]);
+        .insert(schedulesToInsert);
 
       if (error) throw error;
 

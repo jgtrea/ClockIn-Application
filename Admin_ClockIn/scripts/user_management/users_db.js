@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       empVal !== (userInArray.employment || '');
 
     if (hasChanged) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org)$/i;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org|gov|net|io|ph|co)$/i;
       if (!emailRegex.test(emailVal)) {
         showAlertPrompt('Invalid email format');
         return;
@@ -482,7 +482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org)$/i;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org|gov|net|io|ph|co)$/i;
     if (!emailRegex.test(email)) {
       showAlertPrompt('Invalid email format');
       return;
@@ -871,7 +871,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       let email = emailIndex >= 0 ? (row[emailIndex] || '') : '';
       const employment = employmentIndex >= 0 ? (row[employmentIndex] || 'Full-time') : 'Full-time';
       
-      const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org)$/i;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.(com|edu|org|gov|net|io|ph|co)$/i;
       if (!emailRegex.test(email)) {
         continue;
       }
