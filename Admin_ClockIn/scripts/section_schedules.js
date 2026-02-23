@@ -40,18 +40,26 @@ async function loadSections() {
 
   const { data: schedules } = await supabase
     .from('schedule')
-    .select('sectId');
+    .select('*');
 
+  window.allSchedules = schedules || [];
+  
   const scheduleCounts = {};
+  const sectionSchedules = {};
   if (schedules) {
     schedules.forEach(s => {
       scheduleCounts[s.sectId] = (scheduleCounts[s.sectId] || 0) + 1;
+      if (!sectionSchedules[s.sectId]) {
+        sectionSchedules[s.sectId] = [];
+      }
+      sectionSchedules[s.sectId].push(s);
     });
   }
 
   sections = sectionsData.map(section => ({
     ...section,
-    totalSchedules: scheduleCounts[section.sectId] || 0
+    totalSchedules: scheduleCounts[section.sectId] || 0,
+    schedules: sectionSchedules[section.sectId] || []
   }));
 
   filteredSections = [...sections];
@@ -178,15 +186,30 @@ window.exportToCSV = function() {
   const dataToExport = DataTableManager.getFilteredData();
   if (!dataToExport.length) return;
   
-  const headers = ['Section Name', 'Advisor', 'Year Level', 'Total Schedules'];
+  const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
   const rows = [headers.join(',')];
   
   dataToExport.forEach(section => {
-    const sectionName = String(section.sectionName || '').includes(',') ? `"${section.sectionName}"` : section.sectionName || '';
-    const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
-    const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
-    const totalSchedules = section.totalSchedules || 0;
-    rows.push(`${sectionName},${advisor},${yearLevel},${totalSchedules}`);
+    const sectionSchedules = section.schedules || [];
+    
+    if (sectionSchedules.length === 0) {
+      const sectionName = String(section.sectionName || '').includes(',') ? `"${section.sectionName}"` : section.sectionName || '';
+      const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
+      const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
+      rows.push(`${sectionName},${advisor},${yearLevel},,,,`);
+    } else {
+      sectionSchedules.forEach(schedule => {
+        const sectionName = String(section.sectionName || '').includes(',') ? `"${section.sectionName}"` : section.sectionName || '';
+        const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
+        const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
+        const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
+        const weekday = String(schedule.weekday || '').includes(',') ? `"${schedule.weekday}"` : schedule.weekday || '';
+        const startTime = schedule.startTime || '';
+        const endTime = schedule.endTime || '';
+        const room = String(schedule.room || '').includes(',') ? `"${schedule.room}"` : schedule.room || '';
+        rows.push(`${sectionName},${advisor},${yearLevel},${subject},${weekday},${startTime},${endTime},${room}`);
+      });
+    }
   });
   
   const csvContent = rows.join('\n');
@@ -194,7 +217,7 @@ window.exportToCSV = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_export.csv';
+  a.download = 'sections_data_full.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -205,19 +228,30 @@ window.exportToJSON = function() {
   const dataToExport = DataTableManager.getFilteredData();
   if (!dataToExport.length) return;
   
-  const exportData = dataToExport.map(section => ({
-    sectionName: section.sectionName || '',
-    advisor: section.advisor || '',
-    yearLevel: section.yearLevel || '',
-    totalSchedules: section.totalSchedules || 0
-  }));
+  const exportData = dataToExport.map(section => {
+    const sectionSchedules = section.schedules || [];
+    const schedulesData = sectionSchedules.map(schedule => ({
+      subject: schedule.subject || '',
+      weekday: schedule.weekday || '',
+      startTime: schedule.startTime || '',
+      endTime: schedule.endTime || '',
+      room: schedule.room || ''
+    }));
+    
+    return {
+      sectionName: section.sectionName || '',
+      advisor: section.advisor || '',
+      yearLevel: section.yearLevel || '',
+      schedules: schedulesData
+    };
+  });
   
   const jsonContent = JSON.stringify(exportData, null, 2);
   const blob = new Blob([jsonContent], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_export.json';
+  a.download = 'sections_data_full.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -236,15 +270,30 @@ window.exportSelectedRows = function() {
   }
   
   const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
-  const headers = ['Section Name', 'Advisor', 'Year Level', 'Total Schedules'];
+  const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
   const rows = [headers.join(',')];
   
   selectedData.forEach(section => {
-    const sectionName = String(section.sectionName || '').includes(',') ? `"${section.sectionName}"` : section.sectionName || '';
-    const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
-    const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
-    const totalSchedules = section.totalSchedules || 0;
-    rows.push(`${sectionName},${advisor},${yearLevel},${totalSchedules}`);
+    const sectionSchedules = section.schedules || [];
+    
+    if (sectionSchedules.length === 0) {
+      const sectionName = String(section.sectionName || '').includes(',') ? `"${section.sectionName}"` : section.sectionName || '';
+      const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
+      const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
+      rows.push(`${sectionName},${advisor},${yearLevel},,,,`);
+    } else {
+      sectionSchedules.forEach(schedule => {
+        const sectionName = String(section.sectionName || '').includes(',') ? `"${section.sectionName}"` : section.sectionName || '';
+        const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
+        const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
+        const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
+        const weekday = String(schedule.weekday || '').includes(',') ? `"${schedule.weekday}"` : schedule.weekday || '';
+        const startTime = schedule.startTime || '';
+        const endTime = schedule.endTime || '';
+        const room = String(schedule.room || '').includes(',') ? `"${schedule.room}"` : schedule.room || '';
+        rows.push(`${sectionName},${advisor},${yearLevel},${subject},${weekday},${startTime},${endTime},${room}`);
+      });
+    }
   });
   
   const csvContent = rows.join('\n');
@@ -252,7 +301,7 @@ window.exportSelectedRows = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_selected_export.csv';
+  a.download = 'sections_selected_data.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -271,19 +320,30 @@ window.exportSelectedRowsJSON = function() {
   }
   
   const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
-  const exportData = selectedData.map(section => ({
-    sectionName: section.sectionName || '',
-    advisor: section.advisor || '',
-    yearLevel: section.yearLevel || '',
-    totalSchedules: section.totalSchedules || 0
-  }));
+  const exportData = selectedData.map(section => {
+    const sectionSchedules = section.schedules || [];
+    const schedulesData = sectionSchedules.map(schedule => ({
+      subject: schedule.subject || '',
+      weekday: schedule.weekday || '',
+      startTime: schedule.startTime || '',
+      endTime: schedule.endTime || '',
+      room: schedule.room || ''
+    }));
+    
+    return {
+      sectionName: section.sectionName || '',
+      advisor: section.advisor || '',
+      yearLevel: section.yearLevel || '',
+      schedules: schedulesData
+    };
+  });
   
   const jsonContent = JSON.stringify(exportData, null, 2);
   const blob = new Blob([jsonContent], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_selected_export.json';
+  a.download = 'sections_selected_data.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

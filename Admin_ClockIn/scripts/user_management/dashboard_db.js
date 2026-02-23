@@ -648,6 +648,12 @@ window.onclick = function(event) {
   if (event.target.classList.contains('modal')) {
     event.target.style.display = 'none';
   }
+  
+  const exportBtn = document.getElementById('exportBtn');
+  const exportMenu = document.getElementById('exportMenu');
+  if (exportBtn && exportMenu && !exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
+    exportMenu.style.display = 'none';
+  }
 };
 
 let statsExpanded = false;
@@ -672,3 +678,70 @@ function toggleStats() {
     }, 100);
   }
 }
+
+window.toggleExportMenu = function() {
+  const exportMenu = document.getElementById('exportMenu');
+  if (exportMenu) {
+    exportMenu.style.display = exportMenu.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+window.exportDashboardCSV = function() {
+  toggleExportMenu();
+  const records = window.allRecords || [];
+  
+  if (records.length === 0) {
+    alert('No data to export');
+    return;
+  }
+  
+  const headers = ['Name', 'Date', 'Time In', 'Status'];
+  const csvContent = [
+    headers.join(','),
+    ...records.map(record => {
+      const name = record.userName || '';
+      const date = record.date || '';
+      const timeIn = record.timeIn || '';
+      const status = record.status || '';
+      return `"${name}","${date}","${timeIn}","${status}"`;
+    })
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `dashboard_data_full_${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+window.exportDashboardJSON = function() {
+  toggleExportMenu();
+  const records = window.allRecords || [];
+  
+  if (records.length === 0) {
+    alert('No data to export');
+    return;
+  }
+  
+  const exportData = records.map(record => ({
+    name: record.userName || '',
+    date: record.date || '',
+    timeIn: record.timeIn || '',
+    status: record.status || ''
+  }));
+  
+  const jsonContent = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `dashboard_data_full_${new Date().toISOString().split('T')[0]}.json`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};

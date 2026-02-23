@@ -65,7 +65,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           name: user.name || '',
           email: user.email || '',
           employment: user.employment || '',
-          totalSchedules: userSchedules.length
+          totalSchedules: userSchedules.length,
+          schedules: userSchedules
         };
       });
 
@@ -167,14 +168,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.exportToCSV = function() {
-    const headers = ['Name', 'Email', 'Employment', 'Total Schedules'];
+    const headers = ['Name', 'Email', 'Employment', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
     const rows = [headers.join(',')];
     
     filteredUsers.forEach(user => {
-      const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
-      const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
-      const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
-      rows.push(`${name},${email},${employment},${user.totalSchedules}`);
+      const userSchedules = user.schedules || [];
+      
+      if (userSchedules.length === 0) {
+        const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name || '';
+        const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email || '';
+        const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment || '';
+        rows.push(`${name},${email},${employment},,,,`);
+      } else {
+        userSchedules.forEach(schedule => {
+          const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name || '';
+          const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email || '';
+          const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment || '';
+          const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
+          const weekday = String(schedule.weekday || '').includes(',') ? `"${schedule.weekday}"` : schedule.weekday || '';
+          const startTime = schedule.startTime || '';
+          const endTime = schedule.endTime || '';
+          const room = String(schedule.room || '').includes(',') ? `"${schedule.room}"` : schedule.room || '';
+          rows.push(`${name},${email},${employment},${subject},${weekday},${startTime},${endTime},${room}`);
+        });
+      }
     });
     
     const csvContent = rows.join('\n');
@@ -182,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_export.csv';
+    a.download = 'schedules_data_full.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -190,19 +207,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.exportToJSON = function() {
-    const exportData = filteredUsers.map(user => ({
-      name: user.name || '',
-      email: user.email || '',
-      employment: user.employment || '',
-      totalSchedules: user.totalSchedules
-    }));
+    const exportData = filteredUsers.map(user => {
+      const userSchedules = user.schedules || [];
+      const schedulesData = userSchedules.map(schedule => ({
+        subject: schedule.subject || '',
+        weekday: schedule.weekday || '',
+        startTime: schedule.startTime || '',
+        endTime: schedule.endTime || '',
+        room: schedule.room || ''
+      }));
+      
+      return {
+        name: user.name || '',
+        email: user.email || '',
+        employment: user.employment || '',
+        schedules: schedulesData
+      };
+    });
     
     const jsonContent = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_export.json';
+    a.download = 'schedules_data_full.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -221,14 +249,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
-    const headers = ['Name', 'Email', 'Employment', 'Total Schedules'];
+    const headers = ['Name', 'Email', 'Employment', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
     const rows = [headers.join(',')];
     
     selectedData.forEach(user => {
-      const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
-      const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
-      const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
-      rows.push(`${name},${email},${employment},${user.totalSchedules}`);
+      const userSchedules = user.schedules || [];
+      
+      if (userSchedules.length === 0) {
+        const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name || '';
+        const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email || '';
+        const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment || '';
+        rows.push(`${name},${email},${employment},,,,`);
+      } else {
+        userSchedules.forEach(schedule => {
+          const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name || '';
+          const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email || '';
+          const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment || '';
+          const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
+          const weekday = String(schedule.weekday || '').includes(',') ? `"${schedule.weekday}"` : schedule.weekday || '';
+          const startTime = schedule.startTime || '';
+          const endTime = schedule.endTime || '';
+          const room = String(schedule.room || '').includes(',') ? `"${schedule.room}"` : schedule.room || '';
+          rows.push(`${name},${email},${employment},${subject},${weekday},${startTime},${endTime},${room}`);
+        });
+      }
     });
     
     const csvContent = rows.join('\n');
@@ -236,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_selected_export.csv';
+    a.download = 'schedules_selected_data.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -255,19 +299,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
-    const exportData = selectedData.map(user => ({
-      name: user.name || '',
-      email: user.email || '',
-      employment: user.employment || '',
-      totalSchedules: user.totalSchedules
-    }));
+    const exportData = selectedData.map(user => {
+      const userSchedules = user.schedules || [];
+      const schedulesData = userSchedules.map(schedule => ({
+        subject: schedule.subject || '',
+        weekday: schedule.weekday || '',
+        startTime: schedule.startTime || '',
+        endTime: schedule.endTime || '',
+        room: schedule.room || ''
+      }));
+      
+      return {
+        name: user.name || '',
+        email: user.email || '',
+        employment: user.employment || '',
+        schedules: schedulesData
+      };
+    });
     
     const jsonContent = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_selected_export.json';
+    a.download = 'schedules_selected_data.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

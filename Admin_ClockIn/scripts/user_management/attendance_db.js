@@ -197,14 +197,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.exportToCSV = function() {
-    const headers = ['Name', 'Email', 'Employment', 'Total Records'];
+    const headers = ['Name', 'Email', 'Employment', 'Date', 'Time In', 'Time Out', 'Status'];
     const rows = [headers.join(',')];
     
     filteredUsers.forEach(user => {
-      const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
-      const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
-      const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
-      rows.push(`${name},${email},${employment},${user.totalRecords}`);
+      const userAttendance = attendance.filter(a => a.employeeId === user.employeeId);
+      
+      if (userAttendance.length === 0) {
+        const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
+        const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
+        const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
+        rows.push(`${name},${email},${employment},,,,`);
+      } else {
+        userAttendance.forEach(record => {
+          const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
+          const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
+          const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
+          const date = record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : '';
+          const timeIn = record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '';
+          const timeOut = record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '';
+          const status = String(record.status || '').includes(',') ? `"${record.status}"` : record.status || '';
+          rows.push(`${name},${email},${employment},${date},${timeIn},${timeOut},${status}`);
+        });
+      }
     });
     
     const csvContent = rows.join('\n');
@@ -212,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'attendance_export.csv';
+    a.download = 'attendance_data_full.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -220,19 +235,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.exportToJSON = function() {
-    const exportData = filteredUsers.map(user => ({
-      name: user.name || '',
-      email: user.email || '',
-      employment: user.employment || '',
-      totalRecords: user.totalRecords
-    }));
+    const exportData = filteredUsers.map(user => {
+      const userAttendance = attendance.filter(a => a.employeeId === user.employeeId);
+      const attendanceRecords = userAttendance.map(record => ({
+        date: record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : null,
+        timeIn: record.timeIn ? new Date(record.timeIn).toISOString() : null,
+        timeOut: record.timeOut ? new Date(record.timeOut).toISOString() : null,
+        status: record.status || ''
+      }));
+      
+      return {
+        name: user.name || '',
+        email: user.email || '',
+        employment: user.employment || '',
+        attendanceRecords: attendanceRecords
+      };
+    });
     
     const jsonContent = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'attendance_export.json';
+    a.download = 'attendance_data_full.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -251,14 +276,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
-    const headers = ['Name', 'Email', 'Employment', 'Total Records'];
+    const headers = ['Name', 'Email', 'Employment', 'Date', 'Time In', 'Time Out', 'Status'];
     const rows = [headers.join(',')];
     
     selectedData.forEach(user => {
-      const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
-      const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
-      const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
-      rows.push(`${name},${email},${employment},${user.totalRecords}`);
+      const userAttendance = attendance.filter(a => a.employeeId === user.employeeId);
+      
+      if (userAttendance.length === 0) {
+        const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
+        const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
+        const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
+        rows.push(`${name},${email},${employment},,,,`);
+      } else {
+        userAttendance.forEach(record => {
+          const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
+          const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
+          const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
+          const date = record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : '';
+          const timeIn = record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '';
+          const timeOut = record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '';
+          const status = String(record.status || '').includes(',') ? `"${record.status}"` : record.status || '';
+          rows.push(`${name},${email},${employment},${date},${timeIn},${timeOut},${status}`);
+        });
+      }
     });
     
     const csvContent = rows.join('\n');
@@ -266,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'attendance_selected_export.csv';
+    a.download = 'attendance_selected_data.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -285,19 +325,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
-    const exportData = selectedData.map(user => ({
-      name: user.name || '',
-      email: user.email || '',
-      employment: user.employment || '',
-      totalRecords: user.totalRecords
-    }));
+    const exportData = selectedData.map(user => {
+      const userAttendance = attendance.filter(a => a.employeeId === user.employeeId);
+      const attendanceRecords = userAttendance.map(record => ({
+        date: record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : null,
+        timeIn: record.timeIn ? new Date(record.timeIn).toISOString() : null,
+        timeOut: record.timeOut ? new Date(record.timeOut).toISOString() : null,
+        status: record.status || ''
+      }));
+      
+      return {
+        name: user.name || '',
+        email: user.email || '',
+        employment: user.employment || '',
+        attendanceRecords: attendanceRecords
+      };
+    });
     
     const jsonContent = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'attendance_selected_export.json';
+    a.download = 'attendance_selected_data.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

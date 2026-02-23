@@ -31,6 +31,24 @@
             <h1 id="userName">Attendance Records</h1>
             <p class="tagline" id="userEmail"></p>
           </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="dropdown-wrapper">
+              <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+                <span class="material-symbols-outlined">download</span>
+                Export
+              </button>
+              <div id="exportMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="exportAttendanceDetailCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Export as CSV
+                </button>
+                <button class="action-dropdown-item" onclick="exportAttendanceDetailJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Export as JSON
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
