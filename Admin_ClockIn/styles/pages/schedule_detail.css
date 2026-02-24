@@ -695,3 +695,110 @@
   border: 1px solid #e2e8f0;
   border-radius: 8px;
 }
+
+/* Add Existing Schedule Button */
+.add-existing-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #059669;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-existing-btn:hover {
+  background: #047857;
+}
+
+.add-existing-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Modal Day Section */
+.modal-day-section {
+  margin-bottom: 16px;
+}
+
+.modal-day-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Schedule Checkbox Item */
+.schedule-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.schedule-checkbox-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.schedule-checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #059669;
+}
+
+.schedule-checkbox-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.schedule-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  font-family: monospace;
+}
+
+.schedule-subject {
+  font-size: 13px;
+  color: #374151;
+}
+
+.schedule-section {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Add Existing Schedule Modal Table View Styles */
+.modal-filter-bar { background: #f9fafb; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.modal-filter-bar .form-field { flex: 1; min-width: 120px; margin-bottom: 0; }
+.modal-filter-bar .form-field label { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+.modal-filter-bar .form-input { padding: 6px 10px; font-size: 13px; }
+#unassignedSchedulesTableContainer { overflow-x: auto; min-height: 200px; }
+#unassignedSchedulesTableContainer .users-table { width: 100%; min-width: 600px; margin: 0; }
+#unassignedSchedulesTableContainer .users-table th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
+#unassignedSchedulesTableContainer .users-table td { padding: 10px 12px; }
+#selectedCountDisplay { font-weight: 500; }

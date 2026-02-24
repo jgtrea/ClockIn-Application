@@ -13,7 +13,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const SCHEDULE_TABLE = 'schedule';
   const SECTIONS_TABLE = 'sections';
 
+  // Make constants available globally for modal functions
+  window.SCHEDULE_TABLE = SCHEDULE_TABLE;
+  window.SECTIONS_TABLE = SECTIONS_TABLE;
+
   const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  window.dayOrder = dayOrder;
   let allSections = [];
 
 
@@ -64,6 +69,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error loading schedule details:', err);
     }
   }
+
+  // Expose loadScheduleDetails globally for modal functions
+  window.loadScheduleDetails = loadScheduleDetails;
 
   function renderSchedule(schedules, sectionsMap) {
     const container = document.getElementById('schedulesByDayContainer');
@@ -229,7 +237,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateSelectAllState();
   };
 
-  window.deleteSelectedSchedules = async function() {
+  // Updated deleteSelectedSchedules to show confirmation dialog
+  window.deleteSelectedSchedules = function() {
     const selectedIds = [];
     document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
       selectedIds.push(cb.value);
@@ -240,23 +249,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    if (!confirm(`Are you sure you want to delete ${selectedIds.length} schedule(s)?`)) return;
+    // Store selected IDs for bulk delete
+    window.pendingDeleteScheduleIds = selectedIds;
     
-    try {
-      for (const schedId of selectedIds) {
-        const { error } = await supabase
-          .from(SCHEDULE_TABLE)
-          .delete()
-          .eq('schedId', schedId);
-        
-        if (error) throw error;
-      }
-      
-      clearSelection();
-      loadScheduleDetails();
-    } catch (err) {
-      console.error('Error deleting schedules:', err);
-      alert('Failed to delete schedules');
+    // Show the delete confirmation dialog
+    const dialog = document.getElementById('deleteConfirmDialog');
+    if (dialog) {
+      dialog.style.display = 'flex';
     }
   };
 
@@ -482,15 +481,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.closeDeleteDialog = function() {
     pendingDeleteSchedId = null;
+    window.pendingDeleteScheduleIds = null;
     const dialog = document.getElementById('deleteConfirmDialog');
     if (dialog) {
       dialog.style.display = 'none';
     }
   };
 
+  // Updated confirmDeleteSchedule to handle both single and bulk deletes
   window.confirmDeleteSchedule = async function(deleteType) {
-    const schedId = pendingDeleteSchedId;
-    if (!schedId) {
+    // Check if we have bulk delete (from selection) or single delete
+    const schedIds = window.pendingDeleteScheduleIds || (pendingDeleteSchedId ? [pendingDeleteSchedId] : []);
+    
+    if (schedIds.length === 0) {
       closeDeleteDialog();
       return;
     }
@@ -498,65 +501,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       if (deleteType === 'full') {
         // Delete entire schedule record
-        const { error } = await supabase
-          .from(SCHEDULE_TABLE)
-          .delete()
-          .eq('schedId', schedId);
-        
-        if (error) throw error;
+        for (const schedId of schedIds) {
+          const { error } = await supabase
+            .from(SCHEDULE_TABLE)
+            .delete()
+            .eq('schedId', schedId);
+          
+          if (error) throw error;
+        }
       } else if (deleteType === 'teacher') {
         // Remove teacher only - keep the schedule but set employeeId to null
-        const { error } = await supabase
-          .from(SCHEDULE_TABLE)
-          .update({ employeeId: null })
-          .eq('schedId', schedId);
-        
-        if (error) throw error;
+        for (const schedId of schedIds) {
+          const { error } = await supabase
+            .from(SCHEDULE_TABLE)
+            .update({ employeeId: null })
+            .eq('schedId', schedId);
+          
+          if (error) throw error;
+        }
       }
       
       closeDeleteDialog();
-      loadScheduleDetails();
-    } catch (err) {
-      console.error('Error deleting schedule:', err);
-      alert('Failed to delete schedule');
-      closeDeleteDialog();
-    }
-  };
-
-  // Override the original deleteSchedule to show dialog
-  window.deleteSchedule = function(schedId) {
-    showDeleteDialog(schedId);
-  };
-
-  window.deleteSelectedSchedules = async function() {
-    const selectedIds = [];
-    document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
-      selectedIds.push(cb.value);
-    });
-    
-    if (selectedIds.length === 0) {
-      alert('No rows selected');
-      return;
-    }
-    
-    if (!confirm(`Are you sure you want to delete ${selectedIds.length} schedule(s)?`)) return;
-    
-    try {
-      for (const schedId of selectedIds) {
-        const { error } = await supabase
-          .from(SCHEDULE_TABLE)
-          .delete()
-          .eq('schedId', schedId);
-        
-        if (error) throw error;
-      }
-      
       clearSelection();
       loadScheduleDetails();
     } catch (err) {
       console.error('Error deleting schedules:', err);
       alert('Failed to delete schedules');
+      closeDeleteDialog();
     }
+    
+    // Clear the pending IDs
+    window.pendingDeleteScheduleIds = null;
+  };
+
+  // Override the original deleteSchedule to show dialog
+  window.deleteSchedule = function(schedId) {
+    showDeleteDialog(schedId);
   };
 
   window.exportSelectedSchedulesCSV = function() {
@@ -785,7 +765,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const subject = document.getElementById('addSubject').value;
     const sectId = document.getElementById('addSection').value;
 
-if (!startTime || !endTime || !subject) {
+    if (!startTime || !endTime || !subject) {
       alert('Please fill in all fields');
       return;
     }
@@ -968,4 +948,229 @@ if (!startTime || !endTime || !subject) {
   });
 
   loadScheduleDetails();
+});
+
+// ==========================================
+// Add Existing Schedule Modal Functions - Table View with Filter & Sort
+// ==========================================
+
+let unassignedSchedulesData = [];
+let unassignedSectionsData = [];
+
+window.showAddExistingScheduleModal = async function() {
+  const modal = document.getElementById('addExistingScheduleModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    // Reset filters
+    document.getElementById('filterSubject').value = '';
+    document.getElementById('filterSection').value = '';
+    document.getElementById('filterDay').value = '';
+    document.getElementById('sortBy').value = 'weekday';
+    loadUnassignedSchedules();
+  }
+};
+
+window.closeAddExistingScheduleModal = function() {
+  const modal = document.getElementById('addExistingScheduleModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+};
+
+async function loadUnassignedSchedules() {
+  const supabase = window.supabaseClient;
+  const loadingEl = document.getElementById('unassignedLoading');
+  const noResultsEl = document.getElementById('unassignedNoResults');
+  const tableBody = document.getElementById('unassignedSchedulesList');
+  
+  if (!loadingEl || !tableBody) return;
+  
+  loadingEl.style.display = 'block';
+  noResultsEl.style.display = 'none';
+  tableBody.innerHTML = '';
+  
+  try {
+    // Fetch schedules where employeeId is null (unassigned)
+    const { data: schedules, error } = await supabase
+      .from(window.SCHEDULE_TABLE)
+      .select('*')
+      .is('employeeId', null);
+    
+    if (error) throw error;
+    
+    // Fetch sections for display
+    const { data: sectionsData, error: sectionsError } = await supabase
+      .from(window.SECTIONS_TABLE)
+      .select('*');
+    
+    if (sectionsError) throw sectionsError;
+    
+    unassignedSectionsData = sectionsData;
+    unassignedSchedulesData = schedules || [];
+    
+    // Populate section filter dropdown
+    const sectionFilter = document.getElementById('filterSection');
+    if (sectionFilter) {
+      sectionFilter.innerHTML = '<option value="">All Sections</option>';
+      sectionsData.forEach(section => {
+        sectionFilter.innerHTML += '<option value="' + section.sectId + '">' + section.sectionName + '</option>';
+      });
+    }
+    
+    loadingEl.style.display = 'none';
+    
+    // Apply initial filter and render
+    filterUnassignedSchedules();
+    
+  } catch (err) {
+    console.error('Error loading unassigned schedules:', err);
+    loadingEl.style.display = 'none';
+    noResultsEl.style.display = 'block';
+    noResultsEl.textContent = 'Error loading schedules. Please try again.';
+  }
+}
+
+window.filterUnassignedSchedules = function() {
+  const subjectFilter = document.getElementById('filterSubject').value.toLowerCase();
+  const sectionFilter = document.getElementById('filterSection').value;
+  const dayFilter = document.getElementById('filterDay').value;
+  const sortBy = document.getElementById('sortBy').value;
+  
+  const tableBody = document.getElementById('unassignedSchedulesList');
+  const noResultsEl = document.getElementById('unassignedNoResults');
+  
+  if (!tableBody) return;
+  
+  // Build sections map
+  const sectionsMap = {};
+  unassignedSectionsData.forEach(section => {
+    sectionsMap[section.sectId] = section.sectionName;
+  });
+  
+  // Filter schedules
+  let filtered = unassignedSchedulesData.filter(schedule => {
+    // Subject filter
+    if (subjectFilter && !(schedule.subject || '').toLowerCase().includes(subjectFilter)) {
+      return false;
+    }
+    // Section filter
+    if (sectionFilter && schedule.sectId !== sectionFilter) {
+      return false;
+    }
+    // Day filter
+    if (dayFilter && schedule.weekday !== dayFilter) {
+      return false;
+    }
+    return true;
+  });
+  
+  // Sort schedules
+  const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  filtered.sort((a, b) => {
+    switch (sortBy) {
+      case 'weekday':
+        return dayOrder.indexOf(a.weekday) - dayOrder.indexOf(b.weekday);
+      case 'startTime':
+        return (a.startTime || '').localeCompare(b.startTime || '');
+      case 'subject':
+        return (a.subject || '').localeCompare(b.subject || '');
+      case 'section':
+        return (sectionsMap[a.sectId] || '').localeCompare(sectionsMap[b.sectId] || '');
+      default:
+        return 0;
+    }
+  });
+  
+  // Render table
+  if (filtered.length === 0) {
+    tableBody.innerHTML = '';
+    noResultsEl.style.display = 'block';
+    return;
+  }
+  
+  noResultsEl.style.display = 'none';
+  
+  let html = '';
+  filtered.forEach(schedule => {
+    html += '<tr class="user-table-row">';
+    html += '<td class="checkbox-col">';
+    html += '<input type="checkbox" class="unassigned-schedule-checkbox" value="' + schedule.schedId + '" onchange="updateUnassignedSelectionCount()">';
+    html += '</td>';
+    html += '<td>' + (schedule.weekday || '-') + '</td>';
+    html += '<td>' + (schedule.startTime || '-') + '</td>';
+    html += '<td>' + (schedule.endTime || '-') + '</td>';
+    html += '<td>' + (schedule.subject || '-') + '</td>';
+    html += '<td>' + (sectionsMap[schedule.sectId] || '-') + '</td>';
+    html += '</tr>';
+  });
+  
+  tableBody.innerHTML = html;
+  
+  // Reset select all checkbox
+  document.getElementById('selectAllUnassigned').checked = false;
+  updateUnassignedSelectionCount();
+};
+
+window.toggleSelectAllUnassigned = function() {
+  const selectAll = document.getElementById('selectAllUnassigned').checked;
+  const checkboxes = document.querySelectorAll('.unassigned-schedule-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = selectAll;
+  });
+  updateUnassignedSelectionCount();
+};
+
+window.updateUnassignedSelectionCount = function() {
+  const checkboxes = document.querySelectorAll('.unassigned-schedule-checkbox:checked');
+  const countDisplay = document.getElementById('selectedCountDisplay');
+  if (countDisplay) {
+    countDisplay.textContent = checkboxes.length;
+  }
+};
+
+window.assignSelectedSchedules = async function() {
+  const checkboxes = document.querySelectorAll('.unassigned-schedule-checkbox:checked');
+  const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (selectedIds.length === 0) {
+    alert('Please select at least one schedule to assign');
+    return;
+  }
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const employeeIdToAssign = urlParams.get('employeeId');
+  
+  if (!employeeIdToAssign) {
+    alert('No employee ID found');
+    return;
+  }
+  
+  const supabase = window.supabaseClient;
+  
+  try {
+    for (const schedId of selectedIds) {
+      const { error } = await supabase
+        .from(window.SCHEDULE_TABLE)
+        .update({ employeeId: employeeIdToAssign })
+        .eq('schedId', schedId);
+      
+      if (error) throw error;
+    }
+    
+    alert('Successfully assigned ' + selectedIds.length + ' schedule(s) to this user');
+    closeAddExistingScheduleModal();
+    loadScheduleDetails();
+    
+  } catch (err) {
+    console.error('Error assigning schedules:', err);
+    alert('Failed to assign schedules');
+  }
+};
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+  const modal = document.getElementById('addExistingScheduleModal');
+  if (modal && event.target === modal) {
+    closeAddExistingScheduleModal();
+  }
 });
