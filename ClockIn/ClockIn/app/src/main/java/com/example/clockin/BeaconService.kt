@@ -27,6 +27,7 @@ class BeaconService : Service() {
     private var serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var rawScanner: android.bluetooth.le.BluetoothLeScanner? = null
 
+    // --- STATE VARIABLES ---
     var currentDistance: Double = 0.0
         private set
     var isBeaconFound: Boolean = false
@@ -83,13 +84,20 @@ class BeaconService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun startRawScan() {
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        rawScanner = bluetoothManager.adapter.bluetoothLeScanner
-        rawScanner?.startScan(object : ScanCallback() {
-            override fun onScanResult(callbackType: Int, result: ScanResult?) {
-                super.onScanResult(callbackType, result)
-            }
-        })
+        try {
+            val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            rawScanner = bluetoothManager.adapter.bluetoothLeScanner
+            rawScanner?.startScan(object : ScanCallback() {
+                override fun onScanResult(callbackType: Int, result: ScanResult?) {
+                    super.onScanResult(callbackType, result)
+                }
+            })
+        } catch (e: SecurityException) {
+            Log.e("BeaconService", "Missing Bluetooth scan permission! Cannot start raw scan.", e)
+            statusMessage = "Missing Bluetooth Permissions"
+        } catch (e: Exception) {
+            Log.e("BeaconService", "Error starting raw scan", e)
+        }
     }
 
     fun startMonitoring(beaconName: String, startTimeMillis: Long, schedId: String, empId: String, clockedIn: Boolean) {
@@ -134,6 +142,9 @@ class BeaconService : Service() {
             beaconManager?.addRangeNotifier { beacons, _ ->
                 processBeacons(beacons)
             }
+        } catch (e: SecurityException) {
+            Log.e("BeaconService", "SecurityException starting BeaconManager", e)
+            statusMessage = "Missing Bluetooth Permissions"
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -285,6 +296,10 @@ class BeaconService : Service() {
         try {
             @SuppressLint("MissingPermission")
             rawScanner?.stopScan(object : ScanCallback() {})
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: SecurityException) {
+            Log.e("BeaconService", "SecurityException stopping scan", e)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

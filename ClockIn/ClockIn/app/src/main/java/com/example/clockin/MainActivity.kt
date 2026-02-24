@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -116,14 +117,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun startAndBindBeaconService() {
+        try {
+            if (!isBound) {
+                Intent(this, BeaconService::class.java).also { intent ->
+                    startService(intent)
+                    bindService(intent, connection, Context.BIND_AUTO_CREATE)
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.e("MainActivity", "SecurityException starting BeaconService: ${e.message}")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to start BeaconService: ${e.message}")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        Intent(this, BeaconService::class.java).also { intent ->
-            startService(intent)
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        }
 
         NotificationTracker.init(this)
 
@@ -144,6 +155,8 @@ class MainActivity : ComponentActivity() {
                         header = "Permissions Required",
                         message = "Bluetooth and Location are needed for attendance."
                     )
+                } else {
+                    startAndBindBeaconService()
                 }
             }
 
@@ -154,10 +167,24 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-                        if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled) {
-                            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                            enableBluetoothLauncher.launch(enableBtIntent)
+                        try {
+                            val hasConnectPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                            } else {
+                                true
+                            }
+
+                            if (hasConnectPermission) {
+                                val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+                                if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled) {
+                                    val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                                    enableBluetoothLauncher.launch(enableBtIntent)
+                                }
+                            }
+                        } catch (e: SecurityException) {
+                            Log.e("MainActivity", "Bluetooth permission denied, skipping BT check", e)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
                     }
                 }
@@ -196,10 +223,14 @@ class MainActivity : ComponentActivity() {
                         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
                     }) {
                     permissionsLauncher.launch(permissionsToRequest.toTypedArray())
+                } else {
+                    startAndBindBeaconService()
                 }
 
-                val sessionRestored = SupabaseManager.loadSession()
-                startDestination = if (sessionRestored) "home" else "login"
+                // FIXED: Strictly enforce login state by fetching the user.
+                SupabaseManager.loadSession()
+                val currentUser = SupabaseManager.getCurrentUser()
+                startDestination = if (currentUser != null) "home" else "login"
                 isCheckingSession = false
             }
 

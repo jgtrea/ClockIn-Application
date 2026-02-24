@@ -14,9 +14,9 @@ object WifiChecker {
     }
 
     fun isConnectedToAllowedWifi(context: Context): Boolean {
-//        val currentSsid = getCurrentWifiSsid(context) ?: return false
-//        val cleanSsid = currentSsid.replace("\"", "")
-//        return cleanSsid == ALLOWED_WIFI_SSID
+        //val currentSsid = getCurrentWifiSsid(context) ?: return false
+        //val cleanSsid = currentSsid.replace("\"", "")
+        //return cleanSsid == ALLOWED_WIFI_SSID
         return true
     }
 
