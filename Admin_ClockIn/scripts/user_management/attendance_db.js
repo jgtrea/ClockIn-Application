@@ -288,6 +288,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
+    
+    let filename = 'attendance_selected_data.csv';
+    if (selectedData.length === 1 && selectedData[0].name) {
+      const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      filename = `attendance_${safeName}.csv`;
+    }
+    
     const headers = ['Name', 'Email', 'Employment', 'Date', 'Time In', 'Time Out', 'Status'];
     const rows = [headers.join(',')];
     
@@ -337,6 +344,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
+    
+    let filename = 'attendance_selected_data.json';
+    if (selectedData.length === 1 && selectedData[0].name) {
+      const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      filename = `attendance_${safeName}.json`;
+    }
+    
     const exportData = selectedData.map(user => {
       const userAttendance = attendance.filter(a => a.employeeId === user.employeeId);
       const attendanceRecords = userAttendance.map(record => ({

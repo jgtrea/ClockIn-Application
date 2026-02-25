@@ -272,6 +272,13 @@ window.exportSelectedRows = function() {
   }
   
   const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
+  
+  let filename = 'sections_selected_data.csv';
+  if (selectedData.length === 1 && selectedData[0].sectionName) {
+    const safeName = selectedData[0].sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    filename = `attendance_${safeName}.csv`;
+  }
+  
   const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
   const rows = [headers.join(',')];
   
@@ -322,6 +329,13 @@ window.exportSelectedRowsJSON = function() {
   }
   
   const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
+  
+  let filename = 'sections_selected_data.json';
+  if (selectedData.length === 1 && selectedData[0].sectionName) {
+    const safeName = selectedData[0].sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    filename = `attendance_${safeName}.json`;
+  }
+  
   const exportData = selectedData.map(section => {
     const sectionSchedules = section.schedules || [];
     const schedulesData = sectionSchedules.map(schedule => ({

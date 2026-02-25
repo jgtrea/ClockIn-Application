@@ -311,6 +311,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       showAlertPrompt('User deleted successfully', 'success');
       loadUsers();
+      DataTableManager.clearSelection();
+      const selectAllBtn = document.getElementById('selectAllUsers');
+      if (selectAllBtn) {
+        selectAllBtn.classList.remove('has-selection');
+      }
+      const selectionActionRow = document.getElementById('selectionActionRow');
+      if (selectionActionRow) {
+        selectionActionRow.style.display = 'none';
+      }
     } catch (err) {
       console.error('users_db: delete error', err);
       showAlertPrompt('Failed to delete user: ' + (err.message || err), 'error');
@@ -385,7 +394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let filename = 'users_selected_data.csv';
     if (selectedData.length === 1 && selectedData[0].name) {
       const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `user_${safeName}.csv`;
+      filename = `attendance_${safeName}.csv`;
     }
     
     const headers = ['Name', 'Email', 'Employment', 'Date Created'];
@@ -423,7 +432,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let filename = 'users_selected_data.json';
     if (selectedData.length === 1 && selectedData[0].name) {
       const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `user_${safeName}.json`;
+      filename = `attendance_${safeName}.json`;
     }
     
     const exportData = selectedData.map(user => ({
@@ -1048,7 +1057,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('users_db: Successfully imported ' + newUsers.length + ' users');
       loadUsers();
       showAlertPrompt('Successfully imported ' + newUsers.length + ' user(s)', 'success');
-      showAlertPrompt('Default password: password123', 'success', true);
+      
+      // Show default password notification with offset position
+      const alertContainer = document.getElementById('alertPromptContainer');
+      const newAlert = document.createElement('div');
+      newAlert.className = 'alert-prompt success';
+      newAlert.style.marginTop = '60px'; // Offset from the first notification
+      newAlert.innerHTML = `
+        <span class="alert-prompt-message">Default password: password123</span>
+        <button class="alert-prompt-close" onclick="this.parentElement.remove()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      `;
+      alertContainer.appendChild(newAlert);
+      setTimeout(() => newAlert.classList.add('show'), 10);
+      setTimeout(() => {
+        newAlert.classList.remove('show');
+        setTimeout(() => newAlert.remove(), 300);
+      }, 7000);
     } catch (err) {
       console.error('users_db: Import error', err);
       showAlertPrompt('Failed to import users');
