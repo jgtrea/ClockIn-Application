@@ -663,10 +663,10 @@ async function loadEmployees() {
   
   if (employeesData) {
     employees = employeesData;
-    const advisorSelect = document.getElementById('addAdvisor');
-    if (advisorSelect) {
-      advisorSelect.innerHTML = '<option value="">-- Select Advisor --</option>' + 
-        employeesData.map(e => `<option value="${e.name || e.email || 'Unknown'}">${e.name || e.email || 'Unknown'}</option>`).join('');
+    // Populate advisor datalist
+    const advisorDatalist = document.getElementById('advisorList');
+    if (advisorDatalist) {
+      advisorDatalist.innerHTML = employeesData.map(e => `<option value="${e.name || e.email || 'Unknown'}">`).join('');
     }
   }
 }
@@ -698,6 +698,7 @@ window.saveSection = async function() {
   }
 
   document.getElementById('addSectionName').value = '';
+  document.getElementById('addAdvisor').value = '';
   document.getElementById('addYearLevel').value = '';
   loadSections();
 };
@@ -715,11 +716,8 @@ window.editSection = function(sectionId) {
   row.dataset.originalAdvisor = section.advisor || '';
   row.dataset.originalYearLevel = section.yearLevel || '';
   
-  // Build advisor options - show all from user_employee_data
+  // Current advisor value
   const currentAdvisor = section.advisor || '';
-  const advisorOptions = employees
-    .map(emp => `<option value="${emp.name || emp.email || 'Unknown'}" ${currentAdvisor === (emp.name || emp.email) ? 'selected' : ''}>${emp.name || emp.email || 'Unknown'}</option>`)
-    .join('');
   
   // Build year level options (Grade 1 to Grade 12)
   const yearLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
@@ -735,11 +733,13 @@ window.editSection = function(sectionId) {
   `;
   
   document.getElementById(`advisor-${sectionId}`).innerHTML = `
-    <select class="edit-select" id="edit-advisor-${sectionId}">
-      <option value="">-- No Advisor --</option>
-      ${advisorOptions}
-    </select>
+    <input type="text" class="edit-input" id="edit-advisor-${sectionId}" value="${currentAdvisor}" placeholder="Advisor" list="edit-advisor-list-${sectionId}">
+    <datalist id="edit-advisor-list-${sectionId}"></datalist>
   `;
+  
+  // Populate advisor datalist for inline edit
+  const editAdvisorDatalist = document.getElementById(`edit-advisor-list-${sectionId}`);
+  editAdvisorDatalist.innerHTML = employees.map(e => `<option value="${e.name || e.email || 'Unknown'}">`).join('');
   
   document.getElementById(`yearLevel-${sectionId}`).innerHTML = `
     <select class="edit-select" id="edit-yearLevel-${sectionId}">

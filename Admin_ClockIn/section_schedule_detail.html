@@ -75,7 +75,8 @@
         <div class="form-row">
           <div class="form-field">
             <label>Employee</label>
-            <select id="addEmployee" class="form-input"></select>
+            <input type="text" id="addEmployee" class="form-input" list="employeeList" placeholder="Enter employee name">
+            <datalist id="employeeList"></datalist>
           </div>
           <div class="form-field">
             <label>Weekday</label>
@@ -99,7 +100,8 @@
           </div>
           <div class="form-field">
             <label>Subject</label>
-            <input type="text" id="addSubject" class="form-input" placeholder="Enter subject">
+            <input type="text" id="addSubject" class="form-input" list="subjectList" placeholder="Select or type subject">
+            <datalist id="subjectList"></datalist>
           </div>
           <div class="form-field-button">
             <button class="add-user-btn" onclick="saveSchedule()">

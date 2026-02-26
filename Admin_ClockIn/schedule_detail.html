@@ -65,10 +65,6 @@
                 </button>
               </div>
             </div>
-            <button class="add-user-btn" onclick="showAddExistingScheduleModal()">
-              <span class="material-symbols-outlined">playlist_add</span>
-              Add Existing Schedule
-            </button>
           </div>
         </div>
       </div>
@@ -78,38 +74,19 @@
       <div class="add-schedule-form">
         <div class="form-row">
           <div class="form-field">
-            <label>Weekday</label>
-            <select id="addWeekday" class="form-input">
-              <option value="Monday">Monday</option>
-              <option value="Tuesday">Tuesday</option>
-              <option value="Wednesday">Wednesday</option>
-              <option value="Thursday">Thursday</option>
-              <option value="Friday">Friday</option>
-              <option value="Saturday">Saturday</option>
-              <option value="Sunday">Sunday</option>
-              <option value="AllWeekdays">All Weekdays (Mon-Fri)</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label>Start Time</label>
-            <input type="time" id="addStartTime" class="form-input">
-          </div>
-          <div class="form-field">
-            <label>End Time</label>
-            <input type="time" id="addEndTime" class="form-input">
-          </div>
-          <div class="form-field">
             <label>Subject</label>
-            <input type="text" id="addSubject" class="form-input" placeholder="Enter subject">
+            <input type="text" id="addSubject" class="form-input" list="subjectList" placeholder="Select or type subject">
+            <datalist id="subjectList"></datalist>
           </div>
           <div class="form-field">
             <label>Section</label>
-            <select id="addSection" class="form-input"></select>
+            <input type="text" id="addSection" class="form-input" list="sectionList" placeholder="Select or type section">
+            <datalist id="sectionList"></datalist>
           </div>
           <div class="form-field-button">
-            <button class="add-user-btn" onclick="saveSchedule()">
-              <span class="material-symbols-outlined">add</span>
-              Add
+            <button class="add-user-btn" onclick="showAddExistingScheduleModal()">
+              <span class="material-symbols-outlined">playlist_add</span>
+              Add Schedule
             </button>
           </div>
         </div>

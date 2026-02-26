@@ -14,8 +14,15 @@ function getCurrentDay() {
   return days[today.getDay()];
 }
 
+// Get employee ID from selected name
+function getEmployeeIdByName(name) {
+  const employee = allEmployees.find(e => e.name === name);
+  return employee ? employee.employeeId : null;
+}
+
 async function updateSchedule(scheduleId) {
-  const employeeId = document.getElementById('addEmployee').value;
+  const employeeName = document.getElementById('addEmployee').value;
+  const employeeId = getEmployeeIdByName(employeeName);
   const weekday = document.getElementById('addWeekday').value;
   const startTime = document.getElementById('addStartTime').value;
   const endTime = document.getElementById('addEndTime').value;
@@ -23,6 +30,12 @@ async function updateSchedule(scheduleId) {
 
   if (!employeeId || !startTime || !endTime || !subject) {
     alert('Please fill in all fields');
+    return;
+  }
+
+  // Check if employeeId was found (in case user typed a name that doesn't exist)
+  if (!employeeId) {
+    alert('Please select a valid employee from the list');
     return;
   }
 
@@ -79,8 +92,35 @@ async function loadSectionSchedule() {
 
   if (!empError && employees) {
     allEmployees = employees;
-    const employeeSelect = document.getElementById('addEmployee');
-    employeeSelect.innerHTML = employees.map(e => `<option value="${e.employeeId}">${e.name}</option>`).join('');
+    // Populate employee datalist
+    const employeeDatalist = document.getElementById('employeeList');
+    employeeDatalist.innerHTML = employees.map(e => `<option value="${e.name}" data-id="${e.employeeId}">`).join('');
+  }
+
+  // Fetch subjects from subjects table (like schedule_detail.js does)
+  const { data: subjectsData } = await supabase
+    .from('subjects')
+    .select('subject_name')
+    .order('subject_name', { ascending: true });
+
+  if (subjectsData) {
+    const uniqueSubjects = subjectsData.map(s => s.subject_name).filter(s => s);
+    uniqueSubjects.sort();
+    const subjectDatalist = document.getElementById('subjectList');
+    subjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
+  } else {
+    // Fallback to schedule table if subjects table doesn't exist or is empty
+    const { data: allSchedules } = await supabase
+      .from('schedule')
+      .select('subject')
+      .not('subject', 'is', null);
+
+    if (allSchedules) {
+      const uniqueSubjects = [...new Set(allSchedules.map(s => s.subject).filter(s => s))];
+      uniqueSubjects.sort();
+      const subjectDatalist = document.getElementById('subjectList');
+      subjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
+    }
   }
 
   const { data: schedules, error } = await supabase
@@ -165,7 +205,7 @@ function renderSchedule(schedules) {
         <td class="teacher-cell" id="teacher-${schedule.schedId}">${schedule.user_employee_data?.name || '-'}</td>
         <td class="actions-col">
           <div class="action-buttons" id="actions-${schedule.schedId}">
-            <button class="btn-icon edit-btn" onclick="editSchedule('${schedule.schedId}')" title="Edit Schedule">
+            <button class="btn-icon edit-btn" onclick="window.editSchedule('${schedule.schedId}')" title="Edit Schedule">
               <span class="material-symbols-outlined">edit</span>
             </button>
             <button class="btn-icon delete-btn" onclick="deleteSchedule('${schedule.schedId}')" title="Delete Schedule">
@@ -173,10 +213,10 @@ function renderSchedule(schedules) {
             </button>
           </div>
           <div class="action-buttons" id="edit-actions-${schedule.schedId}" style="display: none;">
-            <button class="btn-icon save-btn" onclick="saveEditSchedule('${schedule.schedId}')" title="Save">
+            <button class="btn-icon save-btn" onclick="window.saveEditSchedule('${schedule.schedId}')" title="Save">
               <span class="material-symbols-outlined">check</span>
             </button>
-            <button class="btn-icon cancel-btn" onclick="cancelEditSchedule('${schedule.schedId}')" title="Cancel">
+            <button class="btn-icon cancel-btn" onclick="window.cancelEditSchedule('${schedule.schedId}')" title="Cancel">
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
@@ -235,7 +275,9 @@ function updateSelectAllState() {
         document.getElementById('addStartTime').value = schedule.startTime;
         document.getElementById('addEndTime').value = schedule.endTime;
         document.getElementById('addSubject').value = schedule.subject || '';
-        document.getElementById('addEmployee').value = schedule.employeeId;
+        // Set employee name (not ID) since we're using datalist
+        const employee = allEmployees.find(e => e.employeeId === schedule.employeeId);
+        document.getElementById('addEmployee').value = employee ? employee.name : '';
       }
     }
   } else {
@@ -255,7 +297,7 @@ function updateSelectAllState() {
       document.getElementById('addStartTime').value = '';
       document.getElementById('addEndTime').value = '';
       document.getElementById('addSubject').value = '';
-      document.getElementById('addEmployee').selectedIndex = 0;
+      document.getElementById('addEmployee').value = '';
     }
   }
 }
@@ -289,14 +331,20 @@ window.updateSelectedSchedules = async function() {
     return;
   }
   
-  const employeeId = document.getElementById('addEmployee').value;
+  const employeeName = document.getElementById('addEmployee').value;
+  const employeeId = getEmployeeIdByName(employeeName);
   const weekday = document.getElementById('addWeekday').value;
   const startTime = document.getElementById('addStartTime').value;
   const endTime = document.getElementById('addEndTime').value;
   const subject = document.getElementById('addSubject').value;
   
-  if (!employeeId || !startTime || !endTime || !subject) {
+  if (!employeeName || !startTime || !endTime || !subject) {
     alert('Please fill in all fields');
+    return;
+  }
+  
+  if (!employeeId) {
+    alert('Please select a valid employee from the list');
     return;
   }
   
@@ -361,7 +409,7 @@ window.deleteSelectedSchedules = async function() {
 };
 
 // Start inline editing in the table
-window.editSchedule = function(schedId) {
+window.editSchedule = async function(schedId) {
   const schedule = window.currentSchedules.find(s => s.schedId === schedId);
   if (!schedule) return;
   
@@ -374,12 +422,13 @@ window.editSchedule = function(schedId) {
   row.dataset.originalEndTime = schedule.endTime || '';
   row.dataset.originalEmployeeId = schedule.employeeId || '';
   
-  // Create text input for subject
+  // Create subject input with datalist
   const subjectCell = document.getElementById(`subject-${schedId}`);
   const currentSubject = schedule.subject || '';
   
   subjectCell.innerHTML = `
-    <input type="text" class="edit-input" id="edit-subject-${schedId}" value="${currentSubject}" placeholder="Subject">
+    <input type="text" class="edit-input" id="edit-subject-${schedId}" value="${currentSubject}" placeholder="Subject" list="edit-subject-list-${schedId}">
+    <datalist id="edit-subject-list-${schedId}"></datalist>
   `;
   
   // Create time inputs
@@ -394,23 +443,44 @@ window.editSchedule = function(schedId) {
     <input type="time" class="edit-input" id="edit-endTime-${schedId}" value="${schedule.endTime || ''}">
   `;
   
-  // Create employee dropdown
+  // Create employee input with datalist
   const teacherCell = document.getElementById(`teacher-${schedId}`);
-  const currentEmployeeId = schedule.employeeId || '';
-  const employeeOptions = allEmployees.map(e => 
-    `<option value="${e.employeeId}" ${e.employeeId === currentEmployeeId ? 'selected' : ''}>${e.name}</option>`
-  ).join('');
+  const currentEmployee = allEmployees.find(e => e.employeeId === schedule.employeeId);
+  const currentEmployeeName = currentEmployee ? currentEmployee.name : '';
   
   teacherCell.innerHTML = `
-    <select class="edit-select" id="edit-employee-${schedId}">
-      <option value="">No Teacher</option>
-      ${employeeOptions}
-    </select>
+    <input type="text" class="edit-input" id="edit-employee-${schedId}" value="${currentEmployeeName}" placeholder="Teacher" list="edit-employee-list-${schedId}">
+    <datalist id="edit-employee-list-${schedId}"></datalist>
   `;
+  
+  // Populate employee datalist
+  const employeeDatalist = document.getElementById(`edit-employee-list-${schedId}`);
+  employeeDatalist.innerHTML = allEmployees.map(e => `<option value="${e.name}">`).join('');
   
   // Hide edit buttons, show save/cancel
   document.getElementById(`actions-${schedId}`).style.display = 'none';
   document.getElementById(`edit-actions-${schedId}`).style.display = 'flex';
+  
+  // Populate subject datalist asynchronously (after inputs are rendered)
+  const subjectDatalist = document.getElementById(`edit-subject-list-${schedId}`);
+  const supabase = window.supabaseClient;
+  const { data: subjectsData } = await supabase
+    .from('subjects')
+    .select('subject_name')
+    .order('subject_name', { ascending: true });
+  
+  if (subjectsData && subjectsData.length > 0) {
+    const uniqueSubjects = subjectsData.map(s => s.subject_name).filter(s => s);
+    subjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
+  } else {
+    // Fallback to schedule table
+    const { data: allSchedulesForSubject } = await supabase
+      .from('schedule')
+      .select('subject')
+      .not('subject', 'is', null);
+    const uniqueSubjects = [...new Set(allSchedulesForSubject?.map(s => s.subject).filter(s => s) || [])];
+    subjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
+  }
 };
 
 window.cancelEditSchedule = function(schedId) {
@@ -449,7 +519,10 @@ window.saveEditSchedule = async function(schedId) {
   const subject = document.getElementById(`edit-subject-${schedId}`).value;
   const startTime = document.getElementById(`edit-startTime-${schedId}`).value;
   const endTime = document.getElementById(`edit-endTime-${schedId}`).value;
-  const employeeId = document.getElementById(`edit-employee-${schedId}`).value;
+  const employeeName = document.getElementById(`edit-employee-${schedId}`).value;
+  // Look up employee ID by name
+  const employee = allEmployees.find(e => e.name === employeeName);
+  const employeeId = employee ? employee.employeeId : null;
   
   if (!subject || !startTime || !endTime) {
     alert('Please fill in all fields');
@@ -497,14 +570,20 @@ window.deleteSchedule = async function(schedId) {
 };
 
 window.saveSchedule = async function() {
-  const employeeId = document.getElementById('addEmployee').value;
+  const employeeName = document.getElementById('addEmployee').value;
+  const employeeId = getEmployeeIdByName(employeeName);
   const weekday = document.getElementById('addWeekday').value;
   const startTime = document.getElementById('addStartTime').value;
   const endTime = document.getElementById('addEndTime').value;
   const subject = document.getElementById('addSubject').value;
 
-  if (!employeeId || !startTime || !endTime || !subject) {
+  if (!employeeName || !startTime || !endTime || !subject) {
     alert('Please fill in all fields');
+    return;
+  }
+
+  if (!employeeId) {
+    alert('Please select a valid employee from the list');
     return;
   }
 
@@ -524,6 +603,15 @@ window.saveSchedule = async function() {
     console.error('Error saving schedule:', error);
     alert('Failed to save schedule');
     return;
+  }
+
+  // Add new subject to the datalist if it doesn't exist
+  const subjectDatalist = document.getElementById('subjectList');
+  const existingOptions = Array.from(subjectDatalist.options).map(opt => opt.value);
+  if (!existingOptions.includes(subject)) {
+    const newOption = document.createElement('option');
+    newOption.value = subject;
+    subjectDatalist.appendChild(newOption);
   }
 
   document.getElementById('addStartTime').value = '';

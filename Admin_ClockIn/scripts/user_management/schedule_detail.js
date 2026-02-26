@@ -54,8 +54,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         sectionsMap[section.sectId] = section.sectionName;
       });
 
-      const sectionSelect = document.getElementById('addSection');
-      sectionSelect.innerHTML = allSections.map(s => `<option value="${s.sectId}">${s.sectionName}</option>`).join('');
+      // Populate section datalist
+      const sectionDatalist = document.getElementById('sectionList');
+      sectionDatalist.innerHTML = sectionsData.map(s => `<option value="${s.sectionName}">`).join('');
+
+      // Populate subject datalist with ALL unique subjects from entire schedule table
+      const { data: allScheduleData } = await supabase
+        .from(SCHEDULE_TABLE)
+        .select('subject');
+      
+      const uniqueSubjects = [...new Set(allScheduleData?.map(s => s.subject).filter(s => s) || [])];
+      uniqueSubjects.sort();
+      const subjectDatalist = document.getElementById('subjectList');
+      subjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
 
       scheduleData.sort((a, b) => {
         const dayA = dayOrder.indexOf(a.weekday);
@@ -199,18 +210,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (selectedIds.length === 1) {
         const schedule = window.currentSchedules.find(s => s.schedId === selectedIds[0]);
         if (schedule) {
-          document.getElementById('addWeekday').value = schedule.weekday;
-          document.getElementById('addStartTime').value = schedule.startTime;
-          document.getElementById('addEndTime').value = schedule.endTime;
-          document.getElementById('addSubject').value = schedule.subject || '';
-          document.getElementById('addSection').value = schedule.sectId;
+          const weekdayEl = document.getElementById('addWeekday');
+          const startTimeEl = document.getElementById('addStartTime');
+          const endTimeEl = document.getElementById('addEndTime');
+          const subjectEl = document.getElementById('addSubject');
+          const sectionEl = document.getElementById('addSection');
+          
+          if (weekdayEl) weekdayEl.value = schedule.weekday;
+          if (startTimeEl) startTimeEl.value = schedule.startTime;
+          if (endTimeEl) endTimeEl.value = schedule.endTime;
+          if (subjectEl) subjectEl.value = schedule.subject || '';
+          if (sectionEl) sectionEl.value = schedule.sectId;
         }
       } else {
         // Multiple selection - clear form
-        document.getElementById('addWeekday').value = 'Monday';
-        document.getElementById('addStartTime').value = '';
-        document.getElementById('addEndTime').value = '';
-        document.getElementById('addSubject').value = '';
+        const weekdayEl = document.getElementById('addWeekday');
+        const startTimeEl = document.getElementById('addStartTime');
+        const endTimeEl = document.getElementById('addEndTime');
+        const subjectEl = document.getElementById('addSubject');
+        
+        if (weekdayEl) weekdayEl.value = 'Monday';
+        if (startTimeEl) startTimeEl.value = '';
+        if (endTimeEl) endTimeEl.value = '';
+        if (subjectEl) subjectEl.value = '';
       }
     } else {
       if (selectionActionRow) {
@@ -278,11 +300,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       const schedule = window.currentSchedules.find(s => s.schedId === selectedIds[0]);
       if (!schedule) return;
       
-      document.getElementById('addWeekday').value = schedule.weekday;
-      document.getElementById('addStartTime').value = schedule.startTime;
-      document.getElementById('addEndTime').value = schedule.endTime;
-      document.getElementById('addSubject').value = schedule.subject || '';
-      document.getElementById('addSection').value = schedule.sectId;
+      const weekdayEl = document.getElementById('addWeekday');
+      const startTimeEl = document.getElementById('addStartTime');
+      const endTimeEl = document.getElementById('addEndTime');
+      const subjectEl = document.getElementById('addSubject');
+      const sectionEl = document.getElementById('addSection');
+      
+      if (weekdayEl) weekdayEl.value = schedule.weekday;
+      if (startTimeEl) startTimeEl.value = schedule.startTime;
+      if (endTimeEl) endTimeEl.value = schedule.endTime;
+      if (subjectEl) subjectEl.value = schedule.subject || '';
+      if (sectionEl) sectionEl.value = schedule.sectId;
       
       // Change button to Update
       const saveBtn = document.querySelector('.add-user-btn');
@@ -290,10 +318,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       saveBtn.onclick = function() { window.updateSelectedSchedules(); };
     } else {
       // Multiple selection - clear form but allow setting new values
-      document.getElementById('addWeekday').value = 'Monday';
-      document.getElementById('addStartTime').value = '';
-      document.getElementById('addEndTime').value = '';
-      document.getElementById('addSubject').value = '';
+      const weekdayEl = document.getElementById('addWeekday');
+      const startTimeEl = document.getElementById('addStartTime');
+      const endTimeEl = document.getElementById('addEndTime');
+      const subjectEl = document.getElementById('addSubject');
+      
+      if (weekdayEl) weekdayEl.value = 'Monday';
+      if (startTimeEl) startTimeEl.value = '';
+      if (endTimeEl) endTimeEl.value = '';
+      if (subjectEl) subjectEl.value = '';
       
       // Change button to Update Selected
       const saveBtn = document.querySelector('.add-user-btn');
@@ -318,11 +351,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    const weekday = document.getElementById('addWeekday').value;
-    const startTime = document.getElementById('addStartTime').value;
-    const endTime = document.getElementById('addEndTime').value;
-    const subject = document.getElementById('addSubject').value;
-    const sectId = document.getElementById('addSection').value;
+    const weekdayEl = document.getElementById('addWeekday');
+    const startTimeEl = document.getElementById('addStartTime');
+    const endTimeEl = document.getElementById('addEndTime');
+    const subjectEl = document.getElementById('addSubject');
+    const sectionEl = document.getElementById('addSection');
+    
+    const weekday = weekdayEl ? weekdayEl.value : '';
+    const startTime = startTimeEl ? startTimeEl.value : '';
+    const endTime = endTimeEl ? endTimeEl.value : '';
+    const subject = subjectEl ? subjectEl.value : '';
+    const sectId = sectionEl ? sectionEl.value : '';
 
     // Build update object - only include non-empty fields
     const updateData = {};
@@ -361,7 +400,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  window.editSchedule = function(schedId) {
+  window.editSchedule = async function(schedId) {
     const schedule = window.currentSchedules.find(s => s.schedId === schedId);
     if (!schedule) return;
     
@@ -385,23 +424,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       <input type="time" class="edit-input" id="edit-endTime-${schedId}" value="${schedule.endTime || ''}">
     `;
     
-    // Create subject input
+    // Create subject input with datalist
     const subjectCell = document.getElementById(`subject-${schedId}`);
     subjectCell.innerHTML = `
-      <input type="text" class="edit-input" id="edit-subject-${schedId}" value="${schedule.subject || ''}" placeholder="Subject">
+      <input type="text" class="edit-input" id="edit-subject-${schedId}" value="${schedule.subject || ''}" placeholder="Subject" list="edit-subject-list-${schedId}">
+      <datalist id="edit-subject-list-${schedId}"></datalist>
     `;
     
-    // Create section dropdown
+    // Populate subject datalist
+    const editSubjectDatalist = document.getElementById(`edit-subject-list-${schedId}`);
+    // Fetch ALL unique subjects from entire schedule table
+    const { data: allSchedulesForSubject } = await supabase
+      .from(SCHEDULE_TABLE)
+      .select('subject');
+    const uniqueSubjects = [...new Set(allSchedulesForSubject?.map(s => s.subject).filter(s => s) || [])];
+    editSubjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
+    
+    // Create section input with datalist
     const sectionCell = document.getElementById(`section-${schedId}`);
-    const sectionOptions = allSections.map(s => 
-      `<option value="${s.sectId}" ${s.sectId === schedule.sectId ? 'selected' : ''}>${s.sectionName}</option>`
-    ).join('');
+    const currentSection = allSections.find(s => s.sectId === schedule.sectId);
+    const currentSectionName = currentSection ? currentSection.sectionName : '';
     
     sectionCell.innerHTML = `
-      <select class="edit-select" id="edit-sectId-${schedId}">
-        ${sectionOptions}
-      </select>
+      <input type="text" class="edit-input" id="edit-sectId-${schedId}" value="${currentSectionName}" placeholder="Section" list="edit-section-list-${schedId}">
+      <datalist id="edit-section-list-${schedId}"></datalist>
     `;
+    
+    // Populate section datalist
+    const editSectionDatalist = document.getElementById(`edit-section-list-${schedId}`);
+    editSectionDatalist.innerHTML = allSections.map(s => `<option value="${s.sectionName}">`).join('');
     
     // Hide edit buttons, show save/cancel
     document.getElementById(`actions-${schedId}`).style.display = 'none';
@@ -445,7 +496,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const subject = document.getElementById(`edit-subject-${schedId}`).value;
     const startTime = document.getElementById(`edit-startTime-${schedId}`).value;
     const endTime = document.getElementById(`edit-endTime-${schedId}`).value;
-    const sectId = document.getElementById(`edit-sectId-${schedId}`).value;
+    const sectionName = document.getElementById(`edit-sectId-${schedId}`).value;
+    
+    // Look up sectId by section name
+    const section = allSections.find(s => s.sectionName === sectionName);
+    const sectId = section ? section.sectId : null;
+    
+    if (!subject || !startTime || !endTime || !sectId) {
+      alert('Please fill in all fields');
+      return;
+    }
     
     try {
       const { error } = await supabase
@@ -759,13 +819,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   window.saveSchedule = async function() {
-    const weekday = document.getElementById('addWeekday').value;
-    const startTime = document.getElementById('addStartTime').value;
-    const endTime = document.getElementById('addEndTime').value;
-    const subject = document.getElementById('addSubject').value;
-    const sectId = document.getElementById('addSection').value;
+    const weekdayEl = document.getElementById('addWeekday');
+    const startTimeEl = document.getElementById('addStartTime');
+    const endTimeEl = document.getElementById('addEndTime');
+    const subjectEl = document.getElementById('addSubject');
+    const sectionEl = document.getElementById('addSection');
+    
+    const weekday = weekdayEl ? weekdayEl.value : '';
+    const startTime = startTimeEl ? startTimeEl.value : '';
+    const endTime = endTimeEl ? endTimeEl.value : '';
+    const subject = subjectEl ? subjectEl.value : '';
+    const sectionName = sectionEl ? sectionEl.value : '';
+    
+    // Look up sectId by section name
+    const section = allSections.find(s => s.sectionName === sectionName);
+    const sectId = section ? section.sectId : null;
 
-    if (!startTime || !endTime || !subject) {
+    if (!startTime || !endTime || !subject || !sectId) {
       alert('Please fill in all fields');
       return;
     }
@@ -808,11 +878,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   
   window.updateSchedule = async function(scheduleId) {
-    const weekday = document.getElementById('addWeekday').value;
-    const startTime = document.getElementById('addStartTime').value;
-    const endTime = document.getElementById('addEndTime').value;
-    const subject = document.getElementById('addSubject').value;
-    const sectId = document.getElementById('addSection').value;
+    const weekdayEl = document.getElementById('addWeekday');
+    const startTimeEl = document.getElementById('addStartTime');
+    const endTimeEl = document.getElementById('addEndTime');
+    const subjectEl = document.getElementById('addSubject');
+    const sectionEl = document.getElementById('addSection');
+    
+    const weekday = weekdayEl ? weekdayEl.value : '';
+    const startTime = startTimeEl ? startTimeEl.value : '';
+    const endTime = endTimeEl ? endTimeEl.value : '';
+    const subject = subjectEl ? subjectEl.value : '';
+    const sectId = sectionEl ? sectionEl.value : '';
 
     if (!startTime || !endTime || !subject) {
       alert('Please fill in all fields');
@@ -820,6 +896,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
+      // Check if subject exists in subjects table, if not add it
+      const { data: existingSubject } = await supabase
+        .from('subjects')
+        .select('subject_name')
+        .eq('subject_name', subject)
+        .single();
+      
+      if (!existingSubject) {
+        await supabase
+          .from('subjects')
+          .insert({ subject_name: subject });
+      }
+
       const { error } = await supabase
         .from(SCHEDULE_TABLE)
         .update({
