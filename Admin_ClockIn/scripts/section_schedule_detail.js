@@ -28,7 +28,7 @@ async function updateSchedule(scheduleId) {
   const endTime = document.getElementById('addEndTime').value;
   const subject = document.getElementById('addSubject').value;
 
-  if (!employeeId || !startTime || !endTime || !subject) {
+  if (!employeeId || !startTime || !endTime) {
     alert('Please fill in all fields');
     return;
   }
@@ -238,36 +238,40 @@ function renderSchedule(schedules) {
 
 // Toggle selection for a single schedule
 window.toggleUserSelection = function(schedId) {
+  const checkbox = document.querySelector(`.user-checkbox[value="${schedId}"]`);
+  if (checkbox) {
+    if (checkbox.checked) {
+      selectedSchedules.add(schedId);
+    } else {
+      selectedSchedules.delete(schedId);
+    }
+  }
   updateSelectAllState();
 };
 
 function updateSelectAllState() {
   const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
-  const selectionActionRow = document.getElementById('selectionActionRow');
   const selectedCount = document.getElementById('selectedCount');
+  const selectAllBtn = document.getElementById('selectAllSchedules');
+  const selectionActions = document.getElementById('selectionActions');
   
   const hasSelection = checkedBoxes.length > 0;
+  
   if (hasSelection) {
-    if (selectionActionRow) {
-      selectionActionRow.style.display = 'flex';
-      if (selectedCount) {
-        selectedCount.textContent = checkedBoxes.length;
-      }
+    if (selectionActions) {
+      selectionActions.style.display = 'flex';
+    }
+    if (selectedCount) {
+      selectedCount.textContent = checkedBoxes.length;
     }
     
-    // Get selected IDs
+    if (selectAllBtn) {
+      selectAllBtn.classList.add('has-selection');
+    }
+    
     const selectedIds = [];
     checkedBoxes.forEach(cb => selectedIds.push(cb.value));
     
-    // Change Add button to Update
-    const saveBtn = document.querySelector('.add-user-btn');
-    if (saveBtn && !saveBtn.classList.contains('update-mode')) {
-      saveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Update';
-      saveBtn.onclick = function() { window.updateSelectedSchedules(); };
-      saveBtn.classList.add('update-mode');
-    }
-    
-    // Populate form with first selected schedule if single selection
     if (selectedIds.length === 1) {
       const schedule = window.currentSchedules.find(s => s.schedId === selectedIds[0]);
       if (schedule) {
@@ -275,42 +279,31 @@ function updateSelectAllState() {
         document.getElementById('addStartTime').value = schedule.startTime;
         document.getElementById('addEndTime').value = schedule.endTime;
         document.getElementById('addSubject').value = schedule.subject || '';
-        // Set employee name (not ID) since we're using datalist
         const employee = allEmployees.find(e => e.employeeId === schedule.employeeId);
         document.getElementById('addEmployee').value = employee ? employee.name : '';
       }
     }
   } else {
-    if (selectionActionRow) {
-      selectionActionRow.style.display = 'none';
+    if (selectionActions) {
+      selectionActions.style.display = 'none';
     }
     
-    // Reset Add button
-    const saveBtn = document.querySelector('.add-user-btn');
-    if (saveBtn && saveBtn.classList.contains('update-mode')) {
-      saveBtn.innerHTML = '<span class="material-symbols-outlined">add</span> Add';
-      saveBtn.onclick = window.saveSchedule;
-      saveBtn.classList.remove('update-mode');
-      
-      // Reset form
-      document.getElementById('addWeekday').value = 'Monday';
-      document.getElementById('addStartTime').value = '';
-      document.getElementById('addEndTime').value = '';
-      document.getElementById('addSubject').value = '';
-      document.getElementById('addEmployee').value = '';
+    if (selectAllBtn) {
+      selectAllBtn.classList.remove('has-selection');
     }
   }
 }
 
-// Toggle select all
 window.toggleSelectAll = function() {
   const selectAllBtn = document.getElementById('selectAllSchedules');
   const checkboxes = document.querySelectorAll('.user-checkbox');
   
   if (selectAllBtn.classList.contains('has-selection')) {
     checkboxes.forEach(cb => cb.checked = false);
+    selectedSchedules.clear();
   } else {
     checkboxes.forEach(cb => cb.checked = true);
+    checkboxes.forEach(cb => selectedSchedules.add(cb.value));
   }
   
   updateSelectAllState();
@@ -320,6 +313,7 @@ window.toggleSelectAll = function() {
 window.clearSelection = function() {
   const checkboxes = document.querySelectorAll('.user-checkbox');
   checkboxes.forEach(cb => cb.checked = false);
+  selectedSchedules.clear();
   updateSelectAllState();
 };
 
@@ -338,7 +332,7 @@ window.updateSelectedSchedules = async function() {
   const endTime = document.getElementById('addEndTime').value;
   const subject = document.getElementById('addSubject').value;
   
-  if (!employeeName || !startTime || !endTime || !subject) {
+  if (!employeeName || !startTime || !endTime) {
     alert('Please fill in all fields');
     return;
   }
@@ -524,7 +518,7 @@ window.saveEditSchedule = async function(schedId) {
   const employee = allEmployees.find(e => e.name === employeeName);
   const employeeId = employee ? employee.employeeId : null;
   
-  if (!subject || !startTime || !endTime) {
+  if (!startTime || !endTime) {
     alert('Please fill in all fields');
     return;
   }
@@ -577,7 +571,7 @@ window.saveSchedule = async function() {
   const endTime = document.getElementById('addEndTime').value;
   const subject = document.getElementById('addSubject').value;
 
-  if (!employeeName || !startTime || !endTime || !subject) {
+  if (!employeeName || !startTime || !endTime) {
     alert('Please fill in all fields');
     return;
   }
@@ -651,7 +645,7 @@ window.exportAllSchedulesCSV = function() {
     const startTime = schedule.startTime || '';
     const endTime = schedule.endTime || '';
     const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
-    const teacher = schedule.employeeName || '';
+    const teacher = schedule.user_employee_data?.name || '-';
     rows.push(`${weekday},${startTime},${endTime},${subject},${teacher}`);
   });
   
@@ -660,7 +654,7 @@ window.exportAllSchedulesCSV = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'section_schedules_export.csv';
+  a.download = 'sections_data_full.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -680,7 +674,7 @@ window.exportAllSchedulesJSON = function() {
     startTime: schedule.startTime || '',
     endTime: schedule.endTime || '',
     subject: schedule.subject || '',
-    teacher: schedule.employeeName || ''
+    teacher: schedule.user_employee_data?.name || '-'
   }));
   
   const jsonContent = JSON.stringify(exportData, null, 2);
@@ -688,7 +682,7 @@ window.exportAllSchedulesJSON = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'section_schedules_export.json';
+  a.download = 'sections_data_full.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -712,7 +706,7 @@ window.exportSelectedSchedulesCSV = function() {
     const startTime = schedule.startTime || '';
     const endTime = schedule.endTime || '';
     const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
-    const teacher = schedule.employeeName || '';
+    const teacher = schedule.user_employee_data?.name || '-';
     rows.push(`${weekday},${startTime},${endTime},${subject},${teacher}`);
   });
   
@@ -721,7 +715,7 @@ window.exportSelectedSchedulesCSV = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'selected_schedules_export.csv';
+  a.download = 'sections_selected_data.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -741,7 +735,7 @@ window.exportSelectedSchedulesJSON = function() {
     startTime: schedule.startTime || '',
     endTime: schedule.endTime || '',
     subject: schedule.subject || '',
-    teacher: schedule.employeeName || ''
+    teacher: schedule.user_employee_data?.name || '-'
   }));
   
   const jsonContent = JSON.stringify(exportData, null, 2);
@@ -749,7 +743,7 @@ window.exportSelectedSchedulesJSON = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'selected_schedules_export.json';
+  a.download = 'sections_selected_data.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

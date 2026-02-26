@@ -204,6 +204,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
+    const selectedItems = DataTableManager.getSelectedItems();
+    let filename = 'attendance_data_full.csv';
+    
+    // If only one item is selected, use the user's name in the filename
+    if (selectedItems.length === 1) {
+      const userName = selectedItems[0].name || 'user';
+      const safeName = userName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      filename = `attendance_${safeName}.csv`;
+    } else if (selectedItems.length > 1) {
+      filename = `attendance_selected_${selectedItems.length}.csv`;
+    }
+    
     const headers = ['Name', 'Email', 'Employment', 'Date', 'Time In', 'Time Out', 'Status'];
     const rows = [headers.join(',')];
     
@@ -234,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'attendance_data_full.csv';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

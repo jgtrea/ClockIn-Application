@@ -333,6 +333,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
+    const selectedItems = DataTableManager.getSelectedItems();
+    let filename = 'users_selected_data.csv';
+    
     const headers = ['Name', 'Email', 'Employment', 'Date Created'];
     const rows = [headers.join(',')];
     
@@ -349,7 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'users_data_full.csv';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -363,6 +366,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
+    const selectedItems = DataTableManager.getSelectedItems();
+    let filename = 'users_selected_data.json';
+    
     const exportData = dataToExport.map(user => ({
       name: user.name || '',
       email: user.email || '',
@@ -375,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'users_data_full.json';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -392,10 +398,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
     
     let filename = 'users_selected_data.csv';
-    if (selectedData.length === 1 && selectedData[0].name) {
-      const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `attendance_${safeName}.csv`;
-    }
     
     const headers = ['Name', 'Email', 'Employment', 'Date Created'];
     const rows = [headers.join(',')];
@@ -430,10 +432,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
     
     let filename = 'users_selected_data.json';
-    if (selectedData.length === 1 && selectedData[0].name) {
-      const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `attendance_${safeName}.json`;
-    }
     
     const exportData = selectedData.map(user => ({
       name: user.name || '',
@@ -463,12 +461,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     let confirmMessage = '';
     if (selectedIds.length === 1) {
-      const { data: userData } = await supabase
-        .from(USERS_TABLE)
-        .select('name')
-        .eq('employeeId', selectedIds[0])
-        .single();
-      confirmMessage = `Are you sure you want to delete ${userData?.name || 'this user'}?`;
+      confirmMessage = 'Are you sure you want to delete this user?';
     } else {
       confirmMessage = `Are you sure you want to delete ${selectedIds.length} user(s)?`;
     }
@@ -882,56 +875,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.importFromCSV = function() {
     console.log('Import from CSV clicked');
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.csv';
-    fileInput.style.display = 'none';
-    document.body.appendChild(fileInput);
     
-    fileInput.onchange = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      
+    // Use the utility function to create file input
+    window.importData.createFileInput('.csv', async (file) => {
       try {
-        const csvContent = await file.text();
-        const rows = parseCSV(csvContent);
+        const rows = await window.importData.importFromCSV(file);
         await importUsersFromData(rows, 'CSV');
       } catch (err) {
         console.error('users_db: CSV import error', err);
         showAlertPrompt('Failed to import CSV');
       }
-      fileInput.value = '';
-    };
+    });
     
-    fileInput.click();
     showImportMenu();
   };
 
   window.importFromJSON = function() {
     console.log('Import from JSON clicked');
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.json';
-    fileInput.style.display = 'none';
-    document.body.appendChild(fileInput);
     
-    fileInput.onchange = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      
+    // Use the utility function to create file input
+    window.importData.createFileInput('.json', async (file) => {
       try {
-        const jsonContent = await file.text();
-        const data = JSON.parse(jsonContent);
+        const data = await window.importData.importFromJSON(file);
         const rows = Array.isArray(data) ? data : [data];
         await importUsersFromData(rows, 'JSON');
       } catch (err) {
         console.error('users_db: JSON import error', err);
         showAlertPrompt('Failed to import JSON');
       }
-      fileInput.value = '';
-    };
+    });
     
-    fileInput.click();
     showImportMenu();
   };
 

@@ -42,7 +42,7 @@ async function loadSections() {
 
   const { data: schedules } = await supabase
     .from('schedule')
-    .select('*');
+    .select('*, user_employee_data(name, email)');
 
   window.allSchedules = schedules || [];
   
@@ -188,7 +188,7 @@ window.exportToCSV = function() {
   const dataToExport = DataTableManager.getFilteredData();
   if (!dataToExport || !dataToExport.length) return;
   
-  const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
+  const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Teacher', 'Weekday', 'Start Time', 'End Time', 'Room'];
   const rows = [headers.join(',')];
   
   dataToExport.forEach(section => {
@@ -205,11 +205,12 @@ window.exportToCSV = function() {
         const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
         const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
         const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
+        const teacher = schedule.user_employee_data?.name || '-';
         const weekday = String(schedule.weekday || '').includes(',') ? `"${schedule.weekday}"` : schedule.weekday || '';
         const startTime = schedule.startTime || '';
         const endTime = schedule.endTime || '';
         const room = String(schedule.room || '').includes(',') ? `"${schedule.room}"` : schedule.room || '';
-        rows.push(`${sectionName},${advisor},${yearLevel},${subject},${weekday},${startTime},${endTime},${room}`);
+        rows.push(`${sectionName},${advisor},${yearLevel},${subject},${teacher},${weekday},${startTime},${endTime},${room}`);
       });
     }
   });
@@ -234,6 +235,7 @@ window.exportToJSON = function() {
     const sectionSchedules = section.schedules || [];
     const schedulesData = sectionSchedules.map(schedule => ({
       subject: schedule.subject || '',
+      teacher: schedule.user_employee_data?.name || '-',
       weekday: schedule.weekday || '',
       startTime: schedule.startTime || '',
       endTime: schedule.endTime || '',
@@ -274,12 +276,8 @@ window.exportSelectedRows = function() {
   const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
   
   let filename = 'sections_selected_data.csv';
-  if (selectedData.length === 1 && selectedData[0].sectionName) {
-    const safeName = selectedData[0].sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    filename = `attendance_${safeName}.csv`;
-  }
   
-  const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
+  const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Teacher', 'Weekday', 'Start Time', 'End Time', 'Room'];
   const rows = [headers.join(',')];
   
   selectedData.forEach(section => {
@@ -296,11 +294,12 @@ window.exportSelectedRows = function() {
         const advisor = String(section.advisor || '').includes(',') ? `"${section.advisor}"` : section.advisor || '';
         const yearLevel = String(section.yearLevel || '').includes(',') ? `"${section.yearLevel}"` : section.yearLevel || '';
         const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
+        const teacher = schedule.user_employee_data?.name || '-';
         const weekday = String(schedule.weekday || '').includes(',') ? `"${schedule.weekday}"` : schedule.weekday || '';
         const startTime = schedule.startTime || '';
         const endTime = schedule.endTime || '';
         const room = String(schedule.room || '').includes(',') ? `"${schedule.room}"` : schedule.room || '';
-        rows.push(`${sectionName},${advisor},${yearLevel},${subject},${weekday},${startTime},${endTime},${room}`);
+        rows.push(`${sectionName},${advisor},${yearLevel},${subject},${teacher},${weekday},${startTime},${endTime},${room}`);
       });
     }
   });
@@ -331,15 +330,12 @@ window.exportSelectedRowsJSON = function() {
   const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
   
   let filename = 'sections_selected_data.json';
-  if (selectedData.length === 1 && selectedData[0].sectionName) {
-    const safeName = selectedData[0].sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    filename = `attendance_${safeName}.json`;
-  }
   
   const exportData = selectedData.map(section => {
     const sectionSchedules = section.schedules || [];
     const schedulesData = sectionSchedules.map(schedule => ({
       subject: schedule.subject || '',
+      teacher: schedule.user_employee_data?.name || '-',
       weekday: schedule.weekday || '',
       startTime: schedule.startTime || '',
       endTime: schedule.endTime || '',
@@ -616,10 +612,23 @@ window.deleteSelectedSections = async function() {
   }
   
   selectedSections.clear();
+  
+  const checkboxes = document.querySelectorAll('.section-checkbox');
+  checkboxes.forEach(cb => cb.checked = false);
+  
+  const selectAllBtn = document.getElementById('selectAllSections');
+  if (selectAllBtn) {
+    selectAllBtn.classList.remove('has-selection');
+  }
+  
+  const selectionActionRow = document.getElementById('selectionActionRow');
+  if (selectionActionRow) {
+    selectionActionRow.style.display = 'none';
+  }
+  
   loadSections();
 };
 
-// Remove advisor from selected sections
 window.removeAdvisorFromSelected = async function() {
   if (selectedSections.size === 0) return;
   
