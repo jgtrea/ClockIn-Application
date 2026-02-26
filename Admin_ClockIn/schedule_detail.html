@@ -73,24 +73,18 @@
 
       <div class="add-schedule-form">
         <div class="form-row">
-          <div class="form-field">
-            <label>Subject</label>
-            <input type="text" id="addSubject" class="form-input" list="subjectList" placeholder="Select or type subject">
-            <datalist id="subjectList"></datalist>
-          </div>
-          <div class="form-field">
-            <label>Section</label>
-            <input type="text" id="addSection" class="form-input" list="sectionList" placeholder="Select or type section">
-            <datalist id="sectionList"></datalist>
-          </div>
           <div class="form-field-button">
-            <button class="add-user-btn" onclick="showAddExistingScheduleModal()">
+            <button class="add-user-btn" onclick="showAddExistingScheduleModal()" style="background: #FF725E; border-color: #FF725E;">
               <span class="material-symbols-outlined">playlist_add</span>
               Add Schedule
             </button>
           </div>
         </div>
       </div>
+      
+      <!-- Hidden datalists for modal functionality -->
+      <datalist id="subjectList"></datalist>
+      <datalist id="sectionList"></datalist>
       
       <div id="selectionActionRow" class="selection-action-bar" style="display: none; margin-bottom: 16px;">
         <div class="selection-info">
@@ -151,12 +145,12 @@
   </div>
 </div>
 
-<!-- Add Existing Schedule Modal -->
+<!-- Add Schedule Modal -->
 <div id="addExistingScheduleModal" class="confirm-dialog-overlay" style="display: none;">
   <div class="confirm-dialog" style="max-width: 800px; max-height: 80vh; display: flex; flex-direction: column;">
     <div class="confirm-dialog-header">
-      <span class="material-symbols-outlined confirm-dialog-icon" style="color: #059669;">playlist_add</span>
-      <h3>Add Existing Schedule</h3>
+      <span class="material-symbols-outlined confirm-dialog-icon" style="color: #FF725E;">playlist_add</span>
+      <h3>Add Schedule</h3>
     </div>
     <div class="modal-filter-bar" style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
       <div class="form-field" style="flex: 1; min-width: 120px; margin-bottom: 0;">
@@ -165,9 +159,8 @@
       </div>
       <div class="form-field" style="flex: 1; min-width: 120px; margin-bottom: 0;">
         <label style="font-size: 12px; font-weight: 600; color: #64748b;">Filter by Section</label>
-        <select id="filterSection" class="form-input" onchange="filterUnassignedSchedules()">
-          <option value="">All Sections</option>
-        </select>
+        <input type="text" id="filterSection" class="form-input" placeholder="Select section..." list="filterSectionList" oninput="filterUnassignedSchedules()">
+        <datalist id="filterSectionList"></datalist>
       </div>
       <div class="form-field" style="flex: 1; min-width: 120px; margin-bottom: 0;">
         <label style="font-size: 12px; font-weight: 600; color: #64748b;">Filter by Day</label>
@@ -220,7 +213,7 @@
       </div>
       <div style="display: flex; gap: 8px;">
         <button class="confirm-dialog-btn cancel-btn" onclick="closeAddExistingScheduleModal()" style="width: auto; padding: 10px 20px;">Cancel</button>
-        <button class="confirm-dialog-btn" onclick="assignSelectedSchedules()" style="width: auto; padding: 10px 20px; background: #059669; color: white; border-color: #059669;">
+        <button class="confirm-dialog-btn" onclick="assignSelectedSchedules()" style="width: auto; padding: 10px 20px; background: #FF725E; color: white; border-color: #FF725E;">
           <span class="material-symbols-outlined">check</span>
           Assign Selected
         </button>

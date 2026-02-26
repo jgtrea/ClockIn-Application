@@ -56,7 +56,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Populate section datalist
       const sectionDatalist = document.getElementById('sectionList');
-      sectionDatalist.innerHTML = sectionsData.map(s => `<option value="${s.sectionName}">`).join('');
+      if (sectionDatalist) {
+        sectionDatalist.innerHTML = sectionsData.map(s => `<option value="${s.sectionName}">`).join('');
+      }
 
       // Populate subject datalist with ALL unique subjects from entire schedule table
       const { data: allScheduleData } = await supabase
@@ -66,7 +68,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const uniqueSubjects = [...new Set(allScheduleData?.map(s => s.subject).filter(s => s) || [])];
       uniqueSubjects.sort();
       const subjectDatalist = document.getElementById('subjectList');
-      subjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
+      if (subjectDatalist) {
+        subjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
+      }
 
       scheduleData.sort((a, b) => {
         const dayA = dayOrder.indexOf(a.weekday);
@@ -1097,13 +1101,10 @@ async function loadUnassignedSchedules() {
     unassignedSectionsData = sectionsData;
     unassignedSchedulesData = schedules || [];
     
-    // Populate section filter dropdown
-    const sectionFilter = document.getElementById('filterSection');
-    if (sectionFilter) {
-      sectionFilter.innerHTML = '<option value="">All Sections</option>';
-      sectionsData.forEach(section => {
-        sectionFilter.innerHTML += '<option value="' + section.sectId + '">' + section.sectionName + '</option>';
-      });
+    // Populate section filter datalist
+    const sectionFilterDatalist = document.getElementById('filterSectionList');
+    if (sectionFilterDatalist) {
+      sectionFilterDatalist.innerHTML = sectionsData.map(s => '<option value="' + s.sectionName + '">').join('');
     }
     
     loadingEl.style.display = 'none';
@@ -1143,8 +1144,13 @@ window.filterUnassignedSchedules = function() {
       return false;
     }
     // Section filter
-    if (sectionFilter && schedule.sectId !== sectionFilter) {
-      return false;
+    if (sectionFilter) {
+      // Get section name from sectId
+      const section = unassignedSectionsData?.find(s => s.sectId === schedule.sectId);
+      const sectionName = section ? section.sectionName : '';
+      if (!sectionName.toLowerCase().includes(sectionFilter.toLowerCase())) {
+        return false;
+      }
     }
     // Day filter
     if (dayFilter && schedule.weekday !== dayFilter) {
