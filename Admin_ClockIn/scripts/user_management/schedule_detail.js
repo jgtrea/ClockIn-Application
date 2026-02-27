@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   window.dayOrder = dayOrder;
   let allSections = [];
+  let selectedSchedules = new Set();
 
 
   async function loadScheduleDetails() {
@@ -181,107 +182,110 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   window.toggleUserSelection = function(schedId) {
+    const checkbox = document.querySelector(`.user-checkbox[value="${schedId}"]`);
+    if (checkbox) {
+      if (checkbox.checked) {
+        selectedSchedules.add(schedId);
+      } else {
+        selectedSchedules.delete(schedId);
+      }
+    }
     updateSelectAllState();
   };
 
   function updateSelectAllState() {
     const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
     const selectionActionRow = document.getElementById('selectionActionRow');
+    const selectionActions = document.getElementById('selectionActions');
     const selectedCount = document.getElementById('selectedCount');
+    const selectAllBtn = document.getElementById('selectAllSchedules');
     
     const hasSelection = checkedBoxes.length > 0;
+    
+    // Show/hide selection action row
     if (hasSelection) {
       if (selectionActionRow) {
         selectionActionRow.style.display = 'flex';
-        if (selectedCount) {
-          selectedCount.textContent = checkedBoxes.length;
-        }
+      }
+      if (selectionActions) {
+        selectionActions.style.display = 'flex';
+      }
+      if (selectedCount) {
+        selectedCount.textContent = checkedBoxes.length;
       }
       
-      // Get selected IDs
-      const selectedIds = [];
-      checkedBoxes.forEach(cb => selectedIds.push(cb.value));
-      
-      // Change Add button to Update
-      const saveBtn = document.querySelector('.add-user-btn');
-      if (saveBtn && !saveBtn.classList.contains('update-mode')) {
-        saveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Update';
-        saveBtn.onclick = function() { window.updateSelectedSchedules(); };
-        saveBtn.classList.add('update-mode');
-      }
-      
-      // Populate form with first selected schedule if single selection
-      if (selectedIds.length === 1) {
-        const schedule = window.currentSchedules.find(s => s.schedId === selectedIds[0]);
-        if (schedule) {
-          const weekdayEl = document.getElementById('addWeekday');
-          const startTimeEl = document.getElementById('addStartTime');
-          const endTimeEl = document.getElementById('addEndTime');
-          const subjectEl = document.getElementById('addSubject');
-          const sectionEl = document.getElementById('addSection');
-          
-          if (weekdayEl) weekdayEl.value = schedule.weekday;
-          if (startTimeEl) startTimeEl.value = schedule.startTime;
-          if (endTimeEl) endTimeEl.value = schedule.endTime;
-          if (subjectEl) subjectEl.value = schedule.subject || '';
-          if (sectionEl) sectionEl.value = schedule.sectId;
-        }
-      } else {
-        // Multiple selection - clear form
-        const weekdayEl = document.getElementById('addWeekday');
-        const startTimeEl = document.getElementById('addStartTime');
-        const endTimeEl = document.getElementById('addEndTime');
-        const subjectEl = document.getElementById('addSubject');
-        
-        if (weekdayEl) weekdayEl.value = 'Monday';
-        if (startTimeEl) startTimeEl.value = '';
-        if (endTimeEl) endTimeEl.value = '';
-        if (subjectEl) subjectEl.value = '';
+      if (selectAllBtn) {
+        selectAllBtn.classList.add('has-selection');
       }
     } else {
       if (selectionActionRow) {
         selectionActionRow.style.display = 'none';
       }
-      // Change Update button back to Add
-      const saveBtn = document.querySelector('.add-user-btn');
-      if (saveBtn && saveBtn.classList.contains('update-mode')) {
-        saveBtn.innerHTML = '<span class="material-symbols-outlined">add</span> Add';
-        saveBtn.onclick = window.saveSchedule;
-        saveBtn.classList.remove('update-mode');
+      if (selectionActions) {
+        selectionActions.style.display = 'none';
+      }
+      if (selectAllBtn) {
+        selectAllBtn.classList.remove('has-selection');
       }
     }
   }
 
   window.toggleSelectAll = function() {
-    // Only clear all selections (unselect all)
-    clearSelection();
+    const selectAllBtn = document.getElementById('selectAllSchedules');
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    
+    if (selectAllBtn && selectAllBtn.classList.contains('has-selection')) {
+      // Deselect all
+      checkboxes.forEach(cb => cb.checked = false);
+      selectedSchedules.clear();
+    } else {
+      // Select all
+      checkboxes.forEach(cb => cb.checked = true);
+      checkboxes.forEach(cb => selectedSchedules.add(cb.value));
+    }
+    
+    updateSelectAllState();
   };
 
   window.clearSelection = function() {
     const checkboxes = document.querySelectorAll('.user-checkbox');
     checkboxes.forEach(cb => cb.checked = false);
+    selectedSchedules.clear();
     updateSelectAllState();
   };
 
-  // Updated deleteSelectedSchedules to show confirmation dialog
-  window.deleteSelectedSchedules = function() {
-    const selectedIds = [];
-    document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
-      selectedIds.push(cb.value);
-    });
+  // Updated deleteSelectedSchedules to show simple alert confirmation
+  window.deleteSelectedSchedules = async function() {
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
     
-    if (selectedIds.length === 0) {
-      alert('No rows selected');
+    if (checkedBoxes.length === 0) {
+      alert('No schedules selected');
       return;
     }
     
-    // Store selected IDs for bulk delete
-    window.pendingDeleteScheduleIds = selectedIds;
+    const confirmMsg = checkedBoxes.length === 1
+      ? 'Are you sure you want to delete this schedule?'
+      : `Are you sure you want to delete ${checkedBoxes.length} schedules? This action cannot be undone.`;
     
-    // Show the delete confirmation dialog
-    const dialog = document.getElementById('deleteConfirmDialog');
-    if (dialog) {
-      dialog.style.display = 'flex';
+    if (!confirm(confirmMsg)) return;
+
+    const supabase = window.supabaseClient;
+    const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    try {
+      const { error } = await supabase
+        .from(SCHEDULE_TABLE)
+        .delete()
+        .in('schedId', selectedIds);
+      
+      if (error) throw error;
+      
+      alert(`Deleted ${selectedIds.length} schedule(s)`);
+      clearSelection();
+      loadScheduleDetails();
+    } catch (err) {
+      console.error('Error deleting schedules:', err);
+      alert('Failed to delete schedules');
     }
   };
 
@@ -598,9 +602,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.pendingDeleteScheduleIds = null;
   };
 
-  // Override the original deleteSchedule to show dialog
-  window.deleteSchedule = function(schedId) {
-    showDeleteDialog(schedId);
+  // Delete single schedule
+  window.deleteSchedule = async function(schedId) {
+    if (!confirm('Are you sure you want to delete this schedule?')) return;
+    
+    const supabase = window.supabaseClient;
+    
+    try {
+      const { error } = await supabase
+        .from(SCHEDULE_TABLE)
+        .delete()
+        .eq('schedId', schedId);
+      
+      if (error) throw error;
+      
+      alert('Schedule deleted successfully');
+      loadScheduleDetails();
+    } catch (err) {
+      console.error('Error deleting schedule:', err);
+      alert('Failed to delete schedule');
+    }
   };
 
   window.exportSelectedSchedulesCSV = function() {
