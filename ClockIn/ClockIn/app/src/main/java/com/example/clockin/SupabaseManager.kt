@@ -358,8 +358,18 @@ object SupabaseManager {
                     return@withContext Result.failure(Exception("Beacon not detected! Please move closer to the room's beacon."))
                 }
 
+                val activeClass = getCurrentClassBeacon()
+                    ?: return@withContext Result.failure(Exception("You have no active class scheduled right now."))
+                val actualScheduleId = activeClass.schedId
+
+                val myCurrentSchedule = client.from("schedule")
+                    .select { filter { eq("schedId", actualScheduleId) } }
+                    .decodeSingleOrNull<Schedule>()
+                    ?: return@withContext Result.failure(Exception("Error retrieving your schedule details."))
+                val myTargetSectId = myCurrentSchedule.sectId
+
                 val qrData = client.from("qr")
-                    .select(columns = Columns.list("schedId")) {
+                    .select(columns = Columns.list("sectId", "scanCount")) {
                         filter {
                             eq("qrId", qrId)
                             eq("status", true)
@@ -369,37 +379,22 @@ object SupabaseManager {
                     ?: return@withContext Result.failure(Exception("Invalid or inactive QR Code"))
 
                 val currentScanCount = qrData["scanCount"]?.toIntOrNull() ?: 0
-
                 client.from("qr").update({
                     set("scanCount", currentScanCount + 1)
                 }) {
-                    filter {
-                        eq("qrId", qrId)
-                    }
+                    filter { eq("qrId", qrId) }
                 }
 
-                val scheduleId = qrData["schedId"] ?: return@withContext Result.failure(Exception("QR has no schedule linked"))
+                val qrSectId = qrData["sectId"] ?: return@withContext Result.failure(Exception("QR has no section linked"))
 
-                val schedule = client.from("schedule")
-                    .select { filter { eq("schedId", scheduleId) } }
-                    .decodeSingleOrNull<Schedule>()
-                    ?: return@withContext Result.failure(Exception("Schedule not found"))
-
-                val dayFormat = SimpleDateFormat("EEEE", Locale.US)
-                val currentDay = dayFormat.format(Date())
-
-                if (!schedule.weekday.trim().equals(currentDay, ignoreCase = true)) {
-                    return@withContext Result.failure(Exception("Wrong Day! This schedule is for ${schedule.weekday}."))
-                }
-
-                if (schedule.employeeId != user.id) {
-                    return@withContext Result.failure(Exception("Not your QR Code. This belongs to another employee."))
+                if (myTargetSectId != qrSectId) {
+                    return@withContext Result.failure(Exception("Wrong Room! This QR code does not belong to your current class section."))
                 }
 
                 val myAttendanceRecords = client.from("attendance")
                     .select {
                         filter {
-                            eq("schedId", scheduleId)
+                            eq("schedId", actualScheduleId)
                             eq("employeeId", user.id)
                         }
                     }
@@ -429,13 +424,13 @@ object SupabaseManager {
                     return@withContext Result.success("Already Completed for Today")
                 }
 
-                val status = calculateStatus(schedule.startTime, now)
+                val status = calculateStatus(myCurrentSchedule.startTime, now)
 
                 val newAttendance = Attendance(
                     id = UUID.randomUUID().toString(),
                     status = status,
                     timeIn = nowStr,
-                    schedId = scheduleId,
+                    schedId = actualScheduleId,
                     employeeId = user.id
                 )
 
