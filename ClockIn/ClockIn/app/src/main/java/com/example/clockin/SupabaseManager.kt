@@ -89,6 +89,12 @@ data class ClassSession(
     val schedId: String
 )
 
+@Serializable
+data class QrRecord(
+    val sectId: String? = null,
+    val scanCount: Int = 0
+)
+
 object SupabaseManager {
     private const val TAG = "SupabaseManager"
     private const val SUPABASE_URL = "https://ckgvtzsslrxklmbkztxe.supabase.co"
@@ -375,17 +381,17 @@ object SupabaseManager {
                             eq("status", true)
                         }
                     }
-                    .decodeSingleOrNull<Map<String, String>>()
+                    .decodeSingleOrNull<QrRecord>()
                     ?: return@withContext Result.failure(Exception("Invalid or inactive QR Code"))
 
-                val currentScanCount = qrData["scanCount"]?.toIntOrNull() ?: 0
+                val currentScanCount = qrData.scanCount
                 client.from("qr").update({
                     set("scanCount", currentScanCount + 1)
                 }) {
                     filter { eq("qrId", qrId) }
                 }
 
-                val qrSectId = qrData["sectId"] ?: return@withContext Result.failure(Exception("QR has no section linked"))
+                val qrSectId = qrData.sectId ?: return@withContext Result.failure(Exception("QR has no section linked"))
 
                 if (myTargetSectId != qrSectId) {
                     return@withContext Result.failure(Exception("Wrong Room! This QR code does not belong to your current class section."))

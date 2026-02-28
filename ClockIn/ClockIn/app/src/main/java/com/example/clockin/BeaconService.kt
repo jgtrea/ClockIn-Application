@@ -1,9 +1,6 @@
 package com.example.clockin
 
 import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
@@ -11,11 +8,16 @@ import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.altbeacon.beacon.Beacon
 import org.altbeacon.beacon.BeaconManager
 import org.altbeacon.beacon.Region
@@ -27,7 +29,6 @@ class BeaconService : Service() {
     private var serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var rawScanner: android.bluetooth.le.BluetoothLeScanner? = null
 
-    // --- STATE VARIABLES ---
     var currentDistance: Double = 0.0
         private set
     var isBeaconFound: Boolean = false
@@ -62,7 +63,6 @@ class BeaconService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(NOTIFICATION_ID, createNotification("Initializing...", "Waiting for beacon..."))
         setupBeaconManager()
         startRawScan()
         startTimerLoop()
@@ -161,7 +161,6 @@ class BeaconService : Service() {
         isClockedIn = false
         statusMessage = "Idle"
         beaconManager?.removeAllRangeNotifiers()
-        updateNotification("Idle", "No active class")
         onUpdate?.invoke(0.0, false, 300L, "Idle")
     }
 
@@ -193,7 +192,6 @@ class BeaconService : Service() {
                     if (prefs.getBoolean("incomplete_$scheduleId", false)) {
                         isMarkedIncomplete = true
                         statusMessage = "Marked Incomplete"
-                        updateNotification("Attendance Failed", "Marked Incomplete (Out of Range)")
                         withContext(Dispatchers.Main) {
                             onUpdate?.invoke(0.0, false, 0L, "Status: Incomplete")
                         }
@@ -208,7 +206,7 @@ class BeaconService : Service() {
                     val graceMillisLeft = if (gracePeriodEnd > now) gracePeriodEnd - now else 0L
                     val graceTimeStr = formatTime(graceMillisLeft / 1000)
 
-                    if (isPastGracePeriod && isClockedIn) {
+                    if (isClockedIn) {
                         if (!isBeaconFound) {
                             var deadline = prefs.getLong("deadline_$scheduleId", 0L)
                             if (deadline == 0L) {
@@ -220,7 +218,6 @@ class BeaconService : Service() {
                             remainingTime = millisLeft / 1000
 
                             statusMessage = "OUT OF RANGE! ${formatTime(remainingTime)} (Dist: $distStr)"
-                            updateNotification("WARNING: Beacon Lost!", "Time: ${formatTime(remainingTime)} - Dist: $distStr")
 
                             if (remainingTime <= 0) {
                                 isMarkedIncomplete = true
@@ -233,15 +230,20 @@ class BeaconService : Service() {
                             remainingTime = 300L
 
                             statusMessage = "Connected (Dist: $distStr)"
-                            updateNotification("Connected: $targetBeaconName", "Dist: $distStr")
                         }
                     } else {
-                        if (isBeaconFound) {
-                            statusMessage = "Beacon Found (Dist: $distStr). Grace Period: $graceTimeStr"
-                            updateNotification("Beacon Found", "Ready for Clock In")
+                        if (isPastGracePeriod) {
+                            statusMessage = if (isBeaconFound) {
+                                "Beacon Found (Dist: $distStr). Grace Period Ended (Late)"
+                            } else {
+                                "Searching (Dist: $distStr)... Grace Period Ended (Late)"
+                            }
                         } else {
-                            statusMessage = "Searching (Dist: $distStr)... Grace Period: $graceTimeStr"
-                            updateNotification("Searching...", "Looking for $targetBeaconName")
+                            statusMessage = if (isBeaconFound) {
+                                "Beacon Found (Dist: $distStr). Grace Period: $graceTimeStr"
+                            } else {
+                                "Searching, Come Closer to the Beacon \n(Dist: $distStr)... Grace Period: $graceTimeStr"
+                            }
                         }
                     }
 
@@ -259,27 +261,6 @@ class BeaconService : Service() {
                 SupabaseManager.markIncomplete(scheduleId, employeeId)
             }
         }
-    }
-
-    private fun createNotification(title: String, content: String): Notification {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Attendance Monitoring", NotificationManager.IMPORTANCE_LOW)
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
-        }
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(content)
-            .setSmallIcon(android.R.drawable.ic_popup_sync)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .build()
-    }
-
-    private fun updateNotification(title: String, content: String) {
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.notify(NOTIFICATION_ID, createNotification(title, content))
     }
 
     private fun formatTime(seconds: Long): String {
