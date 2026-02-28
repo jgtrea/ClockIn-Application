@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateSelectAllState();
   };
 
-  // Updated deleteSelectedSchedules to show simple alert confirmation
+  // Updated deleteSelectedSchedules to show custom delete dialog
   window.deleteSelectedSchedules = async function() {
     const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
     
@@ -263,29 +263,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    const confirmMsg = checkedBoxes.length === 1
-      ? 'Are you sure you want to delete this schedule?'
-      : `Are you sure you want to delete ${checkedBoxes.length} schedules? This action cannot be undone.`;
-    
-    if (!confirm(confirmMsg)) return;
-
-    const supabase = window.supabaseClient;
+    // Store selected IDs for the dialog
     const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+    window.pendingDeleteScheduleIds = selectedIds;
     
-    try {
-      const { error } = await supabase
-        .from(SCHEDULE_TABLE)
-        .delete()
-        .in('schedId', selectedIds);
-      
-      if (error) throw error;
-      
-      alert(`Deleted ${selectedIds.length} schedule(s)`);
-      clearSelection();
-      loadScheduleDetails();
-    } catch (err) {
-      console.error('Error deleting schedules:', err);
-      alert('Failed to delete schedules');
+    // Show the custom delete confirmation dialog
+    const dialog = document.getElementById('deleteConfirmDialog');
+    if (dialog) {
+      dialog.style.display = 'flex';
     }
   };
 

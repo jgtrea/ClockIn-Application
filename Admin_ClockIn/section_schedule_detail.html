@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   <link rel="stylesheet" href="styles/user_ui.css">
   <link rel="stylesheet" href="styles/pages/schedule_detail.css">
+  <link rel="stylesheet" href="styles/pages/confirm_dialog.css">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
@@ -90,6 +91,7 @@
               <option value="Friday">Friday</option>
               <option value="Saturday">Saturday</option>
               <option value="Sunday">Sunday</option>
+              <option value="AllWeekdays">All Weekdays (Mon-Fri)</option>
             </select>
           </div>
           <div class="form-field">
@@ -153,6 +155,33 @@
       </div>
 
     </main>
+  </div>
+</div>
+
+<!-- Custom Delete Confirmation Dialog -->
+<div id="deleteConfirmDialog" class="confirm-dialog-overlay" style="display: none;">
+  <div class="confirm-dialog">
+    <div class="confirm-dialog-header">
+      <span class="material-symbols-outlined confirm-dialog-icon">delete_warning</span>
+      <h3>Delete Schedule</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>What would you like to do?</p>
+      <div class="confirm-dialog-options">
+        <button class="confirm-dialog-btn full-schedule-btn" onclick="confirmDeleteSchedule('full')">
+          <span class="material-symbols-outlined">delete_forever</span>
+          Remove Entire Schedule
+        </button>
+        <button class="confirm-dialog-btn teacher-only-btn" onclick="confirmDeleteSchedule('teacher')">
+          <span class="material-symbols-outlined">person_remove</span>
+          Remove Teacher Only
+        </button>
+      </div>
+      <p class="confirm-dialog-hint">The schedule will remain for other teachers.</p>
+    </div>
+    <div class="confirm-dialog-footer">
+      <button class="confirm-dialog-btn cancel-btn" onclick="closeDeleteDialog()">Cancel</button>
+    </div>
   </div>
 </div>
 

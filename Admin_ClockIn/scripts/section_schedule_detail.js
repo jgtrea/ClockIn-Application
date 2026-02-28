@@ -368,37 +368,85 @@ window.updateSelectedSchedules = async function() {
   }
 };
 
-// Delete selected schedules
-window.deleteSelectedSchedules = async function() {
+// Delete selected schedules - show dialog instead of simple confirm
+window.deleteSelectedSchedules = function() {
   const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
   if (checkedBoxes.length === 0) {
     alert('No schedules selected');
     return;
   }
   
-  const confirmMsg = checkedBoxes.length === 1
-    ? 'Are you sure you want to delete this schedule?'
-    : `Are you sure you want to delete ${checkedBoxes.length} schedules? This action cannot be undone.`;
+  // Store selected IDs for the dialog
+  const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+  window.pendingDeleteScheduleIds = selectedIds;
   
-  if (!confirm(confirmMsg)) return;
+  // Show the delete confirmation dialog
+  const dialog = document.getElementById('deleteConfirmDialog');
+  if (dialog) {
+    dialog.style.display = 'flex';
+  }
+};
+
+// Show delete dialog
+window.showDeleteDialog = function() {
+  const dialog = document.getElementById('deleteConfirmDialog');
+  if (dialog) {
+    dialog.style.display = 'flex';
+  }
+};
+
+// Close delete dialog
+window.closeDeleteDialog = function() {
+  window.pendingDeleteScheduleIds = null;
+  const dialog = document.getElementById('deleteConfirmDialog');
+  if (dialog) {
+    dialog.style.display = 'none';
+  }
+};
+
+// Confirm delete action
+window.confirmDeleteSchedule = async function(deleteType) {
+  const schedIds = window.pendingDeleteScheduleIds;
+  
+  if (!schedIds || schedIds.length === 0) {
+    closeDeleteDialog();
+    return;
+  }
 
   const supabase = window.supabaseClient;
-  const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
   
   try {
-    const { error } = await supabase
-      .from('schedule')
-      .delete()
-      .in('schedId', selectedIds);
+    if (deleteType === 'full') {
+      // Delete entire schedule record
+      const { error } = await supabase
+        .from('schedule')
+        .delete()
+        .in('schedId', schedIds);
+      
+      if (error) throw error;
+      
+      alert(`Deleted ${schedIds.length} schedule(s)`);
+    } else if (deleteType === 'teacher') {
+      // Remove teacher only - keep the schedule but set employeeId to null
+      for (const schedId of schedIds) {
+        const { error } = await supabase
+          .from('schedule')
+          .update({ employeeId: null })
+          .eq('schedId', schedId);
+        
+        if (error) throw error;
+      }
+      
+      alert(`Removed teacher from ${schedIds.length} schedule(s)`);
+    }
     
-    if (error) throw error;
-    
-    alert(`Deleted ${selectedIds.length} schedule(s)`);
+    closeDeleteDialog();
     clearSelection();
     loadSectionSchedule();
   } catch (err) {
     console.error('Error deleting schedules:', err);
     alert('Failed to delete schedules');
+    closeDeleteDialog();
   }
 };
 
@@ -581,17 +629,24 @@ window.saveSchedule = async function() {
     return;
   }
 
+  // Handle "All Weekdays" option - create records for Monday to Friday
+  const weekdays = weekday === 'AllWeekdays' 
+    ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] 
+    : [weekday];
+
   const supabase = window.supabaseClient;
+  const schedulesToInsert = weekdays.map(day => ({
+    employeeId: employeeId,
+    weekday: day,
+    startTime: startTime,
+    endTime: endTime,
+    subject: subject,
+    sectId: sectId
+  }));
+
   const { error } = await supabase
     .from('schedule')
-    .insert([{
-      employeeId: employeeId,
-      weekday: weekday,
-      startTime: startTime,
-      endTime: endTime,
-      subject: subject,
-      sectId: sectId
-    }]);
+    .insert(schedulesToInsert);
 
   if (error) {
     console.error('Error saving schedule:', error);
