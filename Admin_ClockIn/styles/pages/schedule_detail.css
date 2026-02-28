@@ -320,6 +320,9 @@
 /* Day Section Styles */
 .day-section {
   margin-bottom: 24px;
+  width: 100%;
+  min-width: 0;
+  display: block;
 }
 
 .day-section .day-header {
@@ -336,6 +339,34 @@
 
 .day-section .users-table-container {
   margin-bottom: 16px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Table column widths for consistent alignment */
+.day-section .users-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.day-section .users-table th,
+.day-section .users-table td {
+  width: auto;
+  text-align: left;
+}
+
+.day-section .users-table th:first-child,
+.day-section .users-table td:first-child {
+  width: 48px;
+  min-width: 48px;
+  text-align: center;
+}
+
+.day-section .users-table th:last-child,
+.day-section .users-table td:last-child {
+  width: 100px;
+  min-width: 100px;
+  text-align: center;
 }
 
 /* Selection Action Bar */

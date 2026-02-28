@@ -613,19 +613,15 @@ window.deleteSchedule = async function(schedId) {
 
 window.saveSchedule = async function() {
   const employeeName = document.getElementById('addEmployee').value;
-  const employeeId = getEmployeeIdByName(employeeName);
+  const employeeId = employeeName ? getEmployeeIdByName(employeeName) : null;
   const weekday = document.getElementById('addWeekday').value;
   const startTime = document.getElementById('addStartTime').value;
   const endTime = document.getElementById('addEndTime').value;
   const subject = document.getElementById('addSubject').value;
 
-  if (!employeeName || !startTime || !endTime) {
-    alert('Please fill in all fields');
-    return;
-  }
-
-  if (!employeeId) {
-    alert('Please select a valid employee from the list');
+  // All fields are required EXCEPT employee
+  if (!weekday || !startTime || !endTime || !subject) {
+    alert('Please fill in all fields (weekday, start time, end time, and subject)');
     return;
   }
 
@@ -636,7 +632,7 @@ window.saveSchedule = async function() {
 
   const supabase = window.supabaseClient;
   const schedulesToInsert = weekdays.map(day => ({
-    employeeId: employeeId,
+    employeeId: employeeId, // Can be null if employee is not specified
     weekday: day,
     startTime: startTime,
     endTime: endTime,
