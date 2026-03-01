@@ -96,7 +96,7 @@
   border-color: #6ee7b7;
 }
 
-.cancel-btn {
+.confirm-dialog-btn.cancel-btn {
   width: 100%;
   color: #6b7280;
 }
