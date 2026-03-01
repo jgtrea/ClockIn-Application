@@ -220,12 +220,12 @@
   width: 100%;
   min-width: 600px;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .users-table th {
   background: #e5e7eb;
-  padding: 12px 16px;
+  padding: 14px 2%;
   text-align: left;
   font-weight: 600;
   font-size: 12px;
@@ -233,13 +233,17 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid #d1d5db;
+  vertical-align: middle;
+  width: auto;
 }
 
 .users-table td {
-  padding: 14px 16px;
+  padding: 16px 2%;
   border-bottom: 1px solid #e5e7eb;
   font-size: 14px;
   color: #111827;
+  vertical-align: middle;
+  width: auto;
 }
 
 .users-table tbody tr {
@@ -337,7 +341,7 @@
 .action-buttons {
   display: flex;
   gap: 8px;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .btn-icon {
