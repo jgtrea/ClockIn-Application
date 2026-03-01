@@ -120,10 +120,10 @@
 
 /* Action Buttons */
 .btn-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #fff;
   cursor: pointer;
   display: flex;

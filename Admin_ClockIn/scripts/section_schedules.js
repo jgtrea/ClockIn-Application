@@ -103,7 +103,7 @@ function renderSections() {
           <button class="btn-icon edit-btn" onclick="editSection('${section.sectId}')" title="Edit">
             <span class="material-symbols-outlined">edit</span>
           </button>
-          <button class="btn-icon" onclick="viewSectionSchedule('${section.sectId}', '${section.sectionName}')" title="View">
+          <button class="btn-icon view-btn" onclick="viewSectionSchedule('${section.sectId}', '${section.sectionName}')" title="View">
             <span class="material-symbols-outlined">visibility</span>
           </button>
         </div>

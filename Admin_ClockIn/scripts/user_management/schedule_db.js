@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <td class="date-col">${user.totalSchedules}</td>
         <td class="actions-col">
           <div class="action-buttons">
-            <button class="btn-icon edit-btn" onclick="window.viewSchedule('${user.employeeId}')" title="View Schedule">
+            <button class="btn-icon view-btn" onclick="window.viewSchedule('${user.employeeId}')" title="View Schedule">
               <span class="material-symbols-outlined">visibility</span>
             </button>
           </div>

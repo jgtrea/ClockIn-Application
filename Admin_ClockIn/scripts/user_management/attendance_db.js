@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <td class="date-col">${user.totalRecords}</td>
         <td class="actions-col">
           <div class="action-buttons">
-            <button class="btn-icon edit-btn" onclick="window.viewAttendance('${user.employeeId}')" title="View Attendance">
+            <button class="btn-icon view-btn" onclick="window.viewAttendance('${user.employeeId}')" title="View Attendance">
               <span class="material-symbols-outlined">visibility</span>
             </button>
           </div>
