@@ -15,6 +15,7 @@
   <script src="../Authentification/auth-guard.js"></script>
   <script src="scripts/managers/paginate.js" defer></script>
   <script src="scripts/export_data.js"></script>
+  <script src="scripts/qr_code.js"></script>
   <script src="scripts/import_data.js"></script>
   <script src="scripts/section_schedule_detail.js" defer></script>
 </head>
@@ -36,6 +37,10 @@
             <p class="tagline" id="sectionInfo"></p>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="export-btn" id="qrCodeBtn" onclick="showQRPrompt(sectId, sectionName)">
+              <span class="material-symbols-outlined">qr_code</span>
+              QR Code
+            </button>
             <div class="dropdown-wrapper">
               <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
                 <span class="material-symbols-outlined">download</span>

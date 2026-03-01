@@ -692,18 +692,35 @@ window.saveSection = async function() {
   }
 
   const supabase = window.supabaseClient;
-  const { error } = await supabase
+  const { data: sectionData, error } = await supabase
     .from('sections')
     .insert([{
       sectionName: sectionName,
       advisor: advisor,
       yearLevel: parseInt(yearLevel)
-    }]);
+    }])
+    .select();
 
   if (error) {
     console.error('Error saving section:', error);
     alert('Failed to save section');
     return;
+  }
+
+  // Create QR record for the new section
+  if (sectionData && sectionData.length > 0) {
+    const newSectionId = sectionData[0].sectId;
+    try {
+      await supabase
+        .from('qr')
+        .insert([{
+          sectId: newSectionId,
+          status: true
+        }]);
+    } catch (qrError) {
+      console.error('Error creating QR for section:', qrError);
+      // Continue even if QR creation fails
+    }
   }
 
   document.getElementById('addSectionName').value = '';
