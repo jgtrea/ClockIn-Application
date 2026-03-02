@@ -11,6 +11,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   let filteredUsers = [];
   let searchTerm = '';
 
+  function parseDatabaseTimestamp(timestamp) {
+    if (!timestamp) return null;
+    
+    if (timestamp instanceof Date) return timestamp;
+    
+    const timestampStr = String(timestamp);
+    
+    const hasTimezone = /[+-]\d{2}:?\d{2}$/.test(timestampStr);
+    
+    if (hasTimezone) {
+      const dateTimePart = timestampStr.replace(/[+-]\d{2}:?\d{2}$/, '');
+      
+      const localTimestamp = dateTimePart.replace('T', ' ');
+      
+      const [datePart, timePart] = localTimestamp.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+      
+      return new Date(year, month - 1, day, hours, minutes, seconds);
+    } else {
+      return new Date(timestampStr.replace('T', ' '));
+    }
+  }
+
+  function formatTimeFromDB(timestamp) {
+    if (!timestamp) return '';
+    
+    const date = parseDatabaseTimestamp(timestamp);
+    if (!date || isNaN(date.getTime())) return '';
+    
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function getDateFromDB(timestamp) {
+    if (!timestamp) return '';
+    
+    const date = parseDatabaseTimestamp(timestamp);
+    if (!date || isNaN(date.getTime())) return '';
+    
+    return date.toISOString().split('T')[0];
+  }
+
   Paginate.init({
     containerId: 'attendance_db',
     itemsPerPage: 10,
@@ -232,9 +274,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
           const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
           const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
-          const date = record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : '';
-          const timeIn = record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '';
-          const timeOut = record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '';
+          const date = record.timeIn ? getDateFromDB(record.timeIn) : '';
+          const timeIn = record.timeIn ? formatTimeFromDB(record.timeIn) : '';
+          const timeOut = record.timeOut ? formatTimeFromDB(record.timeOut) : '';
           const status = String(record.status || '').includes(',') ? `"${record.status}"` : record.status || '';
           rows.push(`${name},${email},${employment},${date},${timeIn},${timeOut},${status}`);
         });
@@ -323,9 +365,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           const name = String(user.name || '').includes(',') ? `"${user.name}"` : user.name;
           const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
           const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
-          const date = record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : '';
-          const timeIn = record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '';
-          const timeOut = record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '';
+          const date = record.timeIn ? getDateFromDB(record.timeIn) : '';
+          const timeIn = record.timeIn ? formatTimeFromDB(record.timeIn) : '';
+          const timeOut = record.timeOut ? formatTimeFromDB(record.timeOut) : '';
           const status = String(record.status || '').includes(',') ? `"${record.status}"` : record.status || '';
           rows.push(`${name},${email},${employment},${date},${timeIn},${timeOut},${status}`);
         });

@@ -5,6 +5,83 @@
   overflow: hidden;
 }
 
+/* 175% Resolution / High Zoom */
+@media screen and (max-width: 1100px) {
+  .users-table {
+    font-size: 12px !important;
+  }
+
+  .users-table th {
+    padding: 10px 12px !important;
+    font-size: 10px !important;
+  }
+
+  .users-table td {
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .search-username-input {
+    font-size: 12px !important;
+    width: 140px !important;
+    height: 28px !important;
+  }
+
+  .add-user-btn,
+  .selection-action-btn {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+  }
+
+  .pagination-container {
+    padding: 12px !important;
+  }
+
+  .pagination-left,
+  .pagination-right {
+    font-size: 11px !important;
+    gap: 4px !important;
+  }
+
+  .pagination-btn {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .pagination-btn .material-symbols-outlined {
+    font-size: 14px !important;
+  }
+
+  .items-per-page-select,
+  .items-per-page-input,
+  .page-number-input {
+    font-size: 11px !important;
+    width: 45px !important;
+    height: 26px !important;
+  }
+
+  .table-header {
+    padding: 12px !important;
+  }
+
+  .selection-action-row {
+    padding: 10px !important;
+  }
+
+  .action-buttons {
+    gap: 4px !important;
+  }
+
+  .btn-icon {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .btn-icon .material-symbols-outlined {
+    font-size: 14px !important;
+  }
+}
+
 .table-header {
   display: flex;
   justify-content: space-between;

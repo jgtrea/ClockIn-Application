@@ -5,9 +5,32 @@ class ScheduleOverview {
     this.sectionsContainer = document.getElementById('sectionsContainer');
   }
 
+  parseDatabaseTimestamp(timestamp) {
+    if (!timestamp) return null;
+    
+    if (timestamp instanceof Date) return timestamp;
+    
+    const timestampStr = String(timestamp);
+    
+    const hasTimezone = /[+-]\d{2}:?\d{2}$/.test(timestampStr);
+    
+    if (hasTimezone) {
+      const dateTimePart = timestampStr.replace(/[+-]\d{2}:?\d{2}$/, '');
+      
+      const localTimestamp = dateTimePart.replace('T', ' ');
+      
+      const [datePart, timePart] = localTimestamp.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+      
+      return new Date(year, month - 1, day, hours, minutes, seconds);
+    } else {
+      return new Date(timestampStr.replace('T', ' '));
+    }
+  }
+
   init() {
     this.loadSections();
-    // Refresh every 30 seconds for real-time updates
     setInterval(() => this.refresh(), 30000);
   }
 
@@ -119,7 +142,8 @@ class ScheduleOverview {
         if (a.schedId !== currentSchedule.schedId) return false;
         if (!a.timeIn) return false;
         
-        const attendanceTime = new Date(a.timeIn);
+        const attendanceTime = this.parseDatabaseTimestamp(a.timeIn);
+        if (!attendanceTime || isNaN(attendanceTime.getTime())) return false;
         const attendanceMinutes = attendanceTime.getHours() * 60 + attendanceTime.getMinutes();
         
         // Check if attendance time is within the current class time range

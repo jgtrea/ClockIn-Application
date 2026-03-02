@@ -65,7 +65,7 @@ const FilterManager = (function() {
       Paginate.setPage(1);
     }
     
-    toggleFilterMenu();
+    closeFilterMenu();
     
     const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
     if (filterWrapper) filterWrapper.classList.remove('active');
@@ -90,10 +90,24 @@ const FilterManager = (function() {
     }
   }
 
+  function closeFilterMenu() {
+    const filterMenu = document.getElementById('filterMenu');
+    const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+    
+    if (filterMenu) {
+      filterMenu.style.display = 'none';
+    }
+    
+    if (filterWrapper) {
+      filterWrapper.classList.remove('active');
+    }
+  }
+
   return {
     init,
     setUsers,
     applyFilters,
-    toggleFilterMenu
+    toggleFilterMenu,
+    closeFilterMenu
   };
 })();

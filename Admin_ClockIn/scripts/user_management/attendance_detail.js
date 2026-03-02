@@ -9,6 +9,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  function parseDatabaseTimestamp(timestamp) {
+    if (!timestamp) return null;
+    
+    if (timestamp instanceof Date) return timestamp;
+    
+    const timestampStr = String(timestamp);
+    
+    const hasTimezone = /[+-]\d{2}:?\d{2}$/.test(timestampStr);
+    
+    if (hasTimezone) {
+      const dateTimePart = timestampStr.replace(/[+-]\d{2}:?\d{2}$/, '');
+      
+      const localTimestamp = dateTimePart.replace('T', ' ');
+      
+      const [datePart, timePart] = localTimestamp.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+      
+      return new Date(year, month - 1, day, hours, minutes, seconds);
+    } else {
+      return new Date(timestampStr.replace('T', ' '));
+    }
+  }
+
+  function formatTimeFromDB(timestamp) {
+    if (!timestamp) return '';
+    
+    const date = parseDatabaseTimestamp(timestamp);
+    if (!date || isNaN(date.getTime())) return '';
+    
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function getDateFromDB(timestamp) {
+    if (!timestamp) return null;
+    
+    const date = parseDatabaseTimestamp(timestamp);
+    if (!date || isNaN(date.getTime())) return null;
+    
+    return date.toISOString().split('T')[0];
+  }
+
   const USERS_TABLE = 'user_employee_data';
   const SCHEDULE_TABLE = 'schedule';
   const ATTENDANCE_TABLE = 'attendance';
@@ -149,17 +191,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const month = currentDate.getMonth();
     
     const monthRecords = allAttendance.filter(record => {
-      const recordDate = new Date(record.timeIn);
-      return recordDate.getFullYear() === year && recordDate.getMonth() === month;
+      const recordDate = parseDatabaseTimestamp(record.timeIn);
+      return recordDate && recordDate.getFullYear() === year && recordDate.getMonth() === month;
     });
 
     const formattedRecords = monthRecords.map(record => {
       const schedule = scheduleMap[record.schedId] || {};
       return {
         attendId: record.attendId,
-        date: new Date(record.timeIn),
-        timeIn: new Date(record.timeIn),
-        timeOut: record.timeOut ? new Date(record.timeOut) : null,
+        date: parseDatabaseTimestamp(record.timeIn),
+        timeIn: parseDatabaseTimestamp(record.timeIn),
+        timeOut: record.timeOut ? parseDatabaseTimestamp(record.timeOut) : null,
         subject: schedule.subject,
         section: sectionsMap[schedule.sectId],
         status: record.status,
@@ -180,7 +222,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const daySchedules = Object.values(scheduleMap).filter(s => s.weekday === weekday);
     
     const dayAttendance = allAttendance.filter(record => {
-      const recordDate = new Date(record.timeIn);
+      const recordDate = parseDatabaseTimestamp(record.timeIn);
+      if (!recordDate) return false;
       const recordDateStr = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate()).toISOString().split('T')[0];
       return recordDateStr === dateStr;
     });
@@ -200,9 +243,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (attendance) {
         combinedRecords.push({
           attendId: attendance.attendId,
-          date: new Date(attendance.timeIn),
-          timeIn: new Date(attendance.timeIn),
-          timeOut: attendance.timeOut ? new Date(attendance.timeOut) : null,
+          date: parseDatabaseTimestamp(attendance.timeIn),
+          timeIn: parseDatabaseTimestamp(attendance.timeIn),
+          timeOut: attendance.timeOut ? parseDatabaseTimestamp(attendance.timeOut) : null,
           subject: schedule.subject,
           section: sectionsMap[schedule.sectId],
           status: attendance.status,
@@ -227,9 +270,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const schedule = scheduleMap[att.schedId];
         combinedRecords.push({
           attendId: att.attendId,
-          date: new Date(att.timeIn),
-          timeIn: new Date(att.timeIn),
-          timeOut: att.timeOut ? new Date(att.timeOut) : null,
+          date: parseDatabaseTimestamp(att.timeIn),
+          timeIn: parseDatabaseTimestamp(att.timeIn),
+          timeOut: att.timeOut ? parseDatabaseTimestamp(att.timeOut) : null,
           subject: schedule ? schedule.subject : '-',
           section: schedule ? sectionsMap[schedule.sectId] : '-',
           status: att.status,
@@ -433,9 +476,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const rows = [headers.join(',')];
     
     allAttendance.forEach(record => {
-      const date = record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : '';
-      const timeIn = record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '';
-      const timeOut = record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '';
+      const date = record.timeIn ? getDateFromDB(record.timeIn) : '';
+      const timeIn = record.timeIn ? formatTimeFromDB(record.timeIn) : '';
+      const timeOut = record.timeOut ? formatTimeFromDB(record.timeOut) : '';
       const status = String(record.status || '').includes(',') ? `"${record.status}"` : record.status || '';
       const section = scheduleMap[record.schedId] ? sectionsMap[scheduleMap[record.schedId].sectId] || '' : '';
       const sectionStr = String(section).includes(',') ? `"${section}"` : section;

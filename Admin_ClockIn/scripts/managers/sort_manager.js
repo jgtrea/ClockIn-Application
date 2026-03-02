@@ -64,7 +64,7 @@ const SortManager = (function() {
       Paginate.setPage(1);
     }
     
-    toggleSortMenu();
+    closeSortMenu();
     
     const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
     if (sortWrapper) sortWrapper.classList.remove('active');
@@ -89,10 +89,24 @@ const SortManager = (function() {
     }
   }
 
+  function closeSortMenu() {
+    const sortMenu = document.getElementById('sortMenu');
+    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+    
+    if (sortMenu) {
+      sortMenu.style.display = 'none';
+    }
+    
+    if (sortWrapper) {
+      sortWrapper.classList.remove('active');
+    }
+  }
+
   return {
     init,
     setFilteredUsers,
     applySort,
-    toggleSortMenu
+    toggleSortMenu,
+    closeSortMenu
   };
 })();

@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
   <script src="../Authentification/auth-guard.js"></script>
+  <script src="scripts/utils/timestamp_utils.js" defer></script>
   <script src="scripts/managers/clock_index.js" defer></script>
   <script src="scripts/managers/schedule_overview.js" defer></script>
   <script src="scripts/user_management/attendance_trend_db.js" defer></script>
@@ -88,9 +89,9 @@
           </div>
 
           <div class="chart-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
               <h3 class="chart-title">Attendance Overview</h3>
-              <div style="display: flex; gap: 8px; align-items: center;">
+              <div class="chart-filters" style="display: flex; gap: 8px; align-items: center;">
                 <select id="countTypeSelect" onchange="toggleCountType()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
                   <option value="total">Total Attendance</option>
                   <option value="each">Individual Attendance</option>

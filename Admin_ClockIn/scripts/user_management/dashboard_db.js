@@ -1,3 +1,54 @@
+function parseDatabaseTimestamp(timestamp) {
+  if (!timestamp) return null;
+  
+  if (timestamp instanceof Date) return timestamp;
+  
+  const timestampStr = String(timestamp);
+  
+  const hasTimezone = /[+-]\d{2}:?\d{2}$/.test(timestampStr);
+  
+  if (hasTimezone) {
+    const dateTimePart = timestampStr.replace(/[+-]\d{2}:?\d{2}$/, '');
+    
+    const localTimestamp = dateTimePart.replace('T', ' ');
+    
+    const [datePart, timePart] = localTimestamp.split(' ');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+    
+    return new Date(year, month - 1, day, hours, minutes, seconds);
+  } else {
+    return new Date(timestampStr.replace('T', ' '));
+  }
+}
+
+function formatTimeFromDB(timestamp) {
+  if (!timestamp) return 'N/A';
+  
+  const date = parseDatabaseTimestamp(timestamp);
+  if (!date || isNaN(date.getTime())) return 'N/A';
+  
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatTimeFromDB24(timestamp) {
+  if (!timestamp) return '';
+  
+  const date = parseDatabaseTimestamp(timestamp);
+  if (!date || isNaN(date.getTime())) return '';
+  
+  return date.toLocaleTimeString('en-US', { hour12: false }).split(' ')[0];
+}
+
+function getDateFromDB(timestamp) {
+  if (!timestamp) return null;
+  
+  const date = parseDatabaseTimestamp(timestamp);
+  if (!date || isNaN(date.getTime())) return null;
+  
+  return date.toISOString().split('T')[0];
+}
+
 function loadChart(callback) {
   requestAnimationFrame(callback);
 }
@@ -18,7 +69,7 @@ const sectionRecordsPerPage = 5;
 
 function searchByName(term) {
   currentSearchTerm = term || '';
-  applyRecentClockinsFilters();
+  applyFilters();
 }
 
 function filterByDate(date) {
@@ -39,6 +90,246 @@ function filterByDateRange() {
   
   applyDateRangeFilters();
 }
+
+// Toggle Filter Dropdown
+function toggleFilterMenu() {
+  const filterMenu = document.getElementById('filterMenu');
+  const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+  const isOpen = filterMenu && filterMenu.style.display === 'block';
+  
+  if (filterMenu) {
+    filterMenu.style.display = isOpen ? 'none' : 'block';
+  }
+  const sortMenu = document.getElementById('sortMenu');
+  if (sortMenu) {
+    sortMenu.style.display = 'none';
+  }
+  
+  if (filterWrapper) {
+    filterWrapper.classList.toggle('active', !isOpen);
+  }
+}
+
+// Toggle Sort Dropdown
+function toggleSortMenu() {
+  const sortMenu = document.getElementById('sortMenu');
+  const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+  const isOpen = sortMenu && sortMenu.style.display === 'block';
+  
+  if (sortMenu) {
+    sortMenu.style.display = isOpen ? 'none' : 'block';
+  }
+  const filterMenu = document.getElementById('filterMenu');
+  if (filterMenu) {
+    filterMenu.style.display = 'none';
+  }
+  
+  if (sortWrapper) {
+    sortWrapper.classList.toggle('active', !isOpen);
+  }
+}
+
+// Column options for recent clockin filter
+const recentClockinFilterColumns = [
+  { value: 'userName', label: 'Name' },
+  { value: 'date', label: 'Date' },
+  { value: 'timeIn', label: 'Time In' },
+  { value: 'timeOut', label: 'Time Out' },
+  { value: 'status', label: 'Status' },
+  { value: 'section', label: 'Section' },
+  { value: 'subject', label: 'Subject' }
+];
+
+// Column options for recent clockin sort
+const recentClockinSortColumns = [
+  { value: 'userName', label: 'Name' },
+  { value: 'date', label: 'Date' },
+  { value: 'timeIn', label: 'Time In' },
+  { value: 'timeOut', label: 'Time Out' },
+  { value: 'status', label: 'Status' },
+  { value: 'section', label: 'Section' },
+  { value: 'subject', label: 'Subject' }
+];
+
+// Add Filter Row with column options for recent clockin
+window.addFilterRow = function() {
+  const activeFilters = document.getElementById('activeFilters');
+  const filterRow = document.createElement('div');
+  filterRow.className = 'filter-row';
+  
+  const optionsHtml = recentClockinFilterColumns.map(col => 
+    `<option value="${col.value}">${col.label}</option>`
+  ).join('');
+  
+  filterRow.innerHTML = `
+    <select class="filter-column-select">
+      ${optionsHtml}
+    </select>
+    <span>:</span>
+    <input type="text" class="filter-value-input" placeholder="Enter value...">
+    <button class="remove-filter-btn" onclick="this.parentElement.remove()">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  `;
+  
+  activeFilters.appendChild(filterRow);
+};
+
+// Add Sort Row with column options for recent clockin
+window.addSortRow = function() {
+  const activeSorts = document.getElementById('activeSorts');
+  const sortRow = document.createElement('div');
+  sortRow.className = 'filter-row';
+  
+  const optionsHtml = recentClockinSortColumns.map(col => 
+    `<option value="${col.value}">${col.label}</option>`
+  ).join('');
+  
+  sortRow.innerHTML = `
+    <select class="filter-column-select">
+      ${optionsHtml}
+    </select>
+    <span>:</span>
+    <select class="filter-column-select">
+      <option value="asc">Ascending</option>
+      <option value="desc">Descending</option>
+    </select>
+    <button class="remove-filter-btn" onclick="this.parentElement.remove()">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  `;
+  
+  activeSorts.appendChild(sortRow);
+};
+
+window.applyFilters = function() {
+  if (!allRecords || allRecords.length === 0) {
+    console.warn('No records available for filtering');
+    return;
+  }
+  
+  const filterRows = document.querySelectorAll('#activeFilters .filter-row');
+  const filters = [];
+  
+  filterRows.forEach(row => {
+    const select = row.querySelector('select');
+    const input = row.querySelector('input');
+    if (select && input && input.value.trim()) {
+      filters.push({
+        column: select.value,
+        value: input.value.trim().toLowerCase()
+      });
+    }
+  });
+  
+  let sourceData = [...allRecords];
+  
+  // Apply name search if exists
+  if (currentSearchTerm) {
+    sourceData = sourceData.filter(record => {
+      const name = (record.userName || '').toLowerCase();
+      return name.includes(currentSearchTerm.toLowerCase());
+    });
+  }
+  
+  if (filters.length === 0) {
+    filteredRecords = sourceData;
+    document.getElementById('filterStatus').textContent = '';
+  } else {
+    filteredRecords = sourceData.filter(record => {
+      return filters.every(filter => {
+        const cellValue = record[filter.column] || '';
+        return String(cellValue).toLowerCase().includes(filter.value);
+      });
+    });
+    document.getElementById('filterStatus').textContent = `Filtered (${filters.length})`;
+  }
+  
+  // Update total count
+  const totalRecordsCount = document.getElementById('totalRecordsCount');
+  if (totalRecordsCount) {
+    totalRecordsCount.textContent = filteredRecords.length;
+  }
+  
+  currentPage = 1;
+  toggleFilterMenu();
+  
+  const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+  if (filterWrapper) filterWrapper.classList.remove('active');
+  
+  applySort();
+  renderPage();
+};
+
+window.applySort = function() {
+  if (!filteredRecords || filteredRecords.length === 0) {
+    console.warn('No data available for sorting');
+    return;
+  }
+  
+  const sortRows = document.querySelectorAll('#activeSorts .filter-row');
+  const sorts = [];
+  
+  sortRows.forEach(row => {
+    const selects = row.querySelectorAll('select');
+    if (selects.length >= 2) {
+      const column = selects[0].value;
+      const orderValue = selects[1].value;
+      sorts.push({
+        column: column,
+        ascending: orderValue === 'asc'
+      });
+    }
+  });
+  
+  if (sorts.length > 0) {
+    const sortedData = [...filteredRecords].sort((a, b) => {
+      for (const sort of sorts) {
+        const { column, ascending } = sort;
+        let valueA, valueB;
+        
+        if (column === 'date' || column === 'timeIn' || column === 'timeOut') {
+          valueA = a[column] || '';
+          valueB = b[column] || '';
+        } else {
+          valueA = (a[column] || '').toLowerCase();
+          valueB = (b[column] || '').toLowerCase();
+        }
+        
+        if (valueA !== valueB) {
+          return ascending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
+        }
+      }
+      return 0;
+    });
+    filteredRecords = sortedData;
+  }
+  
+  currentPage = 1;
+  toggleSortMenu();
+  
+  const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+  if (sortWrapper) sortWrapper.classList.remove('active');
+  
+  renderPage();
+};
+
+window.clearFilters = function() {
+  const activeFilters = document.getElementById('activeFilters');
+  if (activeFilters) activeFilters.innerHTML = '';
+  
+  filteredRecords = [...allRecords];
+  document.getElementById('filterStatus').textContent = '';
+  
+  // Update total count
+  const totalRecordsCount = document.getElementById('totalRecordsCount');
+  if (totalRecordsCount) {
+    totalRecordsCount.textContent = filteredRecords.length;
+  }
+  
+  applySort();
+  renderPage();
+};
 
 function applyDateRangeFilters() {
   let filtered = [...allRecords];
@@ -85,34 +376,6 @@ function applyDateRangeFilters() {
   filteredRecords = filtered;
   currentPage = 1;
   renderPage();
-}
-
-function applyRecentClockinsFilters() {
-  let filtered = [...allRecords];
-  
-  if (currentSearchTerm) {
-    filtered = filtered.filter(record => {
-      const name = (record.userName || '').toLowerCase();
-      return name.includes(currentSearchTerm.toLowerCase());
-    });
-  }
-  
-  if (currentDateFilter) {
-    filtered = filtered.filter(record => {
-      return record.date === currentDateFilter;
-    });
-  }
-  
-  filteredRecords = filtered;
-  currentPage = 1;
-  renderPage();
-}
-
-function toggleFilterMenu() {
-  const filterMenu = document.getElementById('filterMenu');
-  if (filterMenu) {
-    filterMenu.style.display = filterMenu.style.display === 'none' ? 'block' : 'none';
-  }
 }
 
 window.dashboardStats = {
@@ -173,6 +436,33 @@ async function loadRecentActivity() {
 
     if (attendanceError) throw attendanceError;
 
+    // Load schedules for section information
+    const { data: schedulesData, error: schedulesError } = await supabase
+      .from('schedule')
+      .select('*');
+
+    if (schedulesError) throw schedulesError;
+
+    // Load sections
+    const { data: sectionsData, error: sectionsError } = await supabase
+      .from('sections')
+      .select('*');
+
+    if (sectionsError) throw sectionsError;
+
+    // Create a map of schedId to sectionName and subject
+    const schedToSection = {};
+    const schedToSubject = {};
+    if (schedulesData && sectionsData) {
+      schedulesData.forEach(sched => {
+        const section = sectionsData.find(s => s.sectId === sched.sectId);
+        if (section) {
+          schedToSection[sched.schedId] = section.sectionName;
+          schedToSubject[sched.schedId] = sched.subject || '';
+        }
+      });
+    }
+
     window.dashboardStats.totalTeachers = usersData.length;
     window.dashboardStats.onSchedule = 0;
     window.dashboardStats.late = 0;
@@ -190,12 +480,19 @@ async function loadRecentActivity() {
       const userAttendance = attendanceData.filter(a => a.employeeId === userId);
 
       userAttendance.forEach(record => {
-        const recordDate = record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : null;
+        const recordDate = record.timeIn ? getDateFromDB(record.timeIn) : null;
         const status = record.status || 'Present';
+        const sectionName = record.schedId ? (schedToSection[record.schedId] || '') : '';
+        const subjectName = record.schedId ? (schedToSubject[record.schedId] || '') : '';
         
         allRecords.push({
           userName: userName,
-          timeIn: record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : 'N/A',
+          section: sectionName,
+          subject: subjectName,
+          timeIn: formatTimeFromDB(record.timeIn),
+          timeInOriginal: formatTimeFromDB24(record.timeIn),
+          timeOut: formatTimeFromDB(record.timeOut),
+          timeOutOriginal: formatTimeFromDB24(record.timeOut),
           date: recordDate || 'N/A',
           status: status,
           timestamp: record.timeIn || null
@@ -231,30 +528,65 @@ async function loadRecentActivity() {
       }
     });
 
-    allRecords.sort((a, b) => {
-      const aValid = a.date && a.date !== 'N/A';
-      const bValid = b.date && b.date !== 'N/A';
-      
-      if (!aValid && !bValid) return 0;
-      if (!aValid) return 1;
-      if (!bValid) return -1;
-      
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      
-      if (dateB - dateA !== 0) {
-        return dateB - dateA;
-      }
-      if (a.timeIn !== b.timeIn) {
-        return b.timeIn.localeCompare(a.timeIn);
-      }
-      return 0;
-    });
+    // Sort by timestamp descending (latest clock-in first)
+    const bodyPage = document.body.getAttribute('data-page');
+    const isRecentClockinPage = bodyPage === 'recent_clockin';
+    
+    if (isRecentClockinPage) {
+      allRecords.sort((a, b) => {
+        const aValid = a.timestamp && a.timestamp !== null;
+        const bValid = b.timestamp && b.timestamp !== null;
+        
+        if (!aValid && !bValid) return 0;
+        if (!aValid) return 1;
+        if (!bValid) return -1;
+        
+        const timeA = parseDatabaseTimestamp(a.timestamp);
+        const timeB = parseDatabaseTimestamp(b.timestamp);
+        
+        if (!timeA || !timeB) return 0;
+        
+        return timeB - timeA;
+      });
+    } else {
+      allRecords.sort((a, b) => {
+        const aValid = a.date && a.date !== 'N/A';
+        const bValid = b.date && b.date !== 'N/A';
+        
+        if (!aValid && !bValid) return 0;
+        if (!aValid) return 1;
+        if (!bValid) return -1;
+        
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        
+        if (dateB - dateA !== 0) {
+          return dateB - dateA;
+        }
+        if (a.timeIn !== b.timeIn) {
+          return b.timeIn.localeCompare(a.timeIn);
+        }
+        return 0;
+      });
+    }
     
     
     updateDashboardStats();
     
     window.allRecords = allRecords;
+    
+    // Populate section filter dropdown
+    if (sectionsData) {
+      const sectionFilter = document.getElementById('filterSection');
+      if (sectionFilter) {
+        sectionsData.forEach(section => {
+          const option = document.createElement('option');
+          option.value = section.sectionName;
+          option.textContent = section.sectionName;
+          sectionFilter.appendChild(option);
+        });
+      }
+    }
     
     const weeklyData = await getWeeklyAttendanceData();
     
@@ -268,9 +600,19 @@ async function loadRecentActivity() {
     
     if (isDashboard) {
       filteredRecords = [...allRecords].sort((a, b) => {
-        const dateTimeA = a.date + ' ' + (a.timeIn || '');
-        const dateTimeB = b.date + ' ' + (b.timeIn || '');
-        return dateTimeB.localeCompare(dateTimeA);
+        const aValid = a.timestamp && a.timestamp !== null;
+        const bValid = b.timestamp && b.timestamp !== null;
+        
+        if (!aValid && !bValid) return 0;
+        if (!aValid) return 1;
+        if (!bValid) return -1;
+        
+        const timeA = parseDatabaseTimestamp(a.timestamp);
+        const timeB = parseDatabaseTimestamp(b.timestamp);
+        
+        if (!timeA || !timeB) return 0;
+        
+        return timeB - timeA;
       });
     } else {
       filteredRecords = [...allRecords];
@@ -278,6 +620,12 @@ async function loadRecentActivity() {
       const totalRecentClockinsEl = document.getElementById('totalRecentClockins');
       if (totalRecentClockinsEl) {
         totalRecentClockinsEl.textContent = filteredRecords.length;
+      }
+      
+      // Set total records count for recent clockin page
+      const totalRecordsCount = document.getElementById('totalRecordsCount');
+      if (totalRecordsCount) {
+        totalRecordsCount.textContent = filteredRecords.length;
       }
     }
     renderPage();
@@ -309,18 +657,32 @@ function renderPage() {
   const endIndex = startIndex + recordsPerPage;
   const pageRecords = filteredRecords.slice(startIndex, endIndex);
   
-  activityFeed.innerHTML = pageRecords.map(record => `
-    <div class="user-table-row" style="background: #fff; border-bottom: 1px solid #e5e7eb; padding: 16px; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
-      <div>
-        <div style="font-weight: 700; font-size: 16px; color: #111827;">${record.userName}</div>
-        <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${record.date}</div>
+  activityFeed.innerHTML = pageRecords.map(record => {
+    const status = record.status || 'Present';
+    const statusLower = status.toLowerCase();
+    let statusClass = statusLower;
+    if (statusLower === 'incomplete') {
+      statusClass = 'unattended';
+    }
+    return `
+    <div class="user-table-row" style="background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 16px; display: table; width: 100%; table-layout: fixed;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+      <div style="display: table-cell; vertical-align: middle; width: 25%; padding-right: 20px;">
+        <div style="font-weight: 700; font-size: 14px; color: #111827;">${record.userName}</div>
+        <div style="font-size: 12px; color: #9ca3af;">${record.date}</div>
       </div>
-      <div style="text-align: right;">
-        <div style="font-weight: 600; color: #FF725E;">${record.timeIn}</div>
-        <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">${record.status}</div>
+      <div style="display: table-cell; vertical-align: middle; width: 25%; padding-left: 20px; padding-right: 20px;">
+        <div style="font-size: 13px; color: #6b7280;">${record.section || 'N/A'}</div>
+        <div style="font-size: 13px; color: #6b7280;">${record.subject || 'N/A'}</div>
+      </div>
+      <div style="display: table-cell; vertical-align: middle; width: 25%; padding-left: 20px; padding-right: 20px;">
+        <div style="font-weight: 600; color: #10B981; font-size: 13px;">${record.timeIn}</div>
+        <div style="font-weight: 600; color: #FF725E; font-size: 13px;">${record.timeOut}</div>
+      </div>
+      <div style="display: table-cell; vertical-align: middle; width: 25%; padding-left: 20px;">
+        <span class="status-badge status-${statusClass}" style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">${status}</span>
       </div>
     </div>
-  `).join('');
+  `; }).join('');
   
   if (pagination && pageInfo && prevBtn && nextBtn) {
     if (totalPages > 1) {
@@ -450,7 +812,7 @@ async function loadSectionClockins() {
         const schedAttendance = attendanceData.filter(a => 
           a.schedId === schedule.schedId && 
           a.timeIn && 
-          new Date(a.timeIn).toISOString().split('T')[0] === today
+          getDateFromDB(a.timeIn) === today
         );
         if (schedAttendance.length > 0) {
           clockedIn++;
