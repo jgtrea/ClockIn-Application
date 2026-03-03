@@ -668,8 +668,6 @@ async function loadEmployees() {
     .select('*')
     .order('name');
   
-  console.log('Loaded employees:', employeesData, error);
-  
   if (employeesData) {
     employees = employeesData;
     // Populate advisor datalist

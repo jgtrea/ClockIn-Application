@@ -185,7 +185,6 @@
           document.getElementById('notificationsList').innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading notifications.</p>';
           return;
         }
-        console.log('Loaded notifications:', data);
         notifications = data || [];
         renderNotificationHistory();
       })

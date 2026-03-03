@@ -1,21 +1,9 @@
-/**
- * Auth Guard - Protects pages from unauthorized access
- * Include this script in all pages to ensure user is logged in
- * 
- * Usage:
- * - For admin pages: <script src="../access/auth-guard.js"></script>
- * - For user pages: <script src="../access/auth-guard.js"></script>
- *   then add <body data-allow-employees="true">
- */
-
 (function() {
   'use strict';
 
   const LOGIN_PAGE = '../index.html';
 
-  // Wait for DOM and supabase to be ready
   async function initAuthCheck() {
-    // Wait for supabase client
     if (!window.supabaseClient) {
       await new Promise(resolve => setTimeout(resolve, 100));
       if (!window.supabaseClient) {
@@ -37,7 +25,6 @@
         return;
       }
 
-      // Verify user exists in the database
       const userInfo = await getUserInfo(session.user.email);
       
       if (!userInfo) {
@@ -46,15 +33,11 @@
         return;
       }
 
-      // Check if user has appropriate role
       if (!allowEmployees && userInfo.type !== 'admin') {
         console.log('Admin access required, redirecting to login');
         redirectToLogin();
         return;
       }
-
-      // User is authenticated
-      console.log('User authenticated:', userInfo.type);
       
     } catch (e) {
       console.error('Auth check failed:', e);
@@ -66,7 +49,6 @@
     const supabase = window.supabaseClient;
 
     try {
-      // Check admin table first
       const { data: adminData, error: adminError } = await supabase
         .from('user_admin_data')
         .select('adminId, email')
@@ -77,7 +59,6 @@
         return { id: adminData.adminId, type: 'admin' };
       }
 
-      // Check employee table
       const { data: empData, error: empError } = await supabase
         .from('user_employee_data')
         .select('employeeId, email')
@@ -96,7 +77,6 @@
   }
 
   function redirectToLogin() {
-    // Use top.location to redirect the parent window if in iframe
     if (window.top && window.top !== window) {
       window.top.location.href = LOGIN_PAGE;
     } else {
@@ -104,7 +84,6 @@
     }
   }
 
-  // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAuthCheck);
   } else {
