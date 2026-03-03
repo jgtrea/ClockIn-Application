@@ -33,9 +33,9 @@ async function checkExistingSession() {
       const email = session.user.email;
       const userInfo = await getUserIdByEmail(email);
       if (userInfo && userInfo.type === 'admin') {
-        window.location.href = '../Admin_ClockIn/index_admin.html';
+        window.location.href = '../admin_clockin/index_admin.html';
       } else {
-        window.location.href = '../User_ClockIn/index_user.html';
+        window.location.href = '../user_clockin/index_user.html';
       }
     }
   } catch (e) {
@@ -52,13 +52,13 @@ function setupAuthListener() {
         const userInfo = await getUserIdByEmail(session.user.email);
 
         if (userInfo && userInfo.type === 'admin') {
-          window.location.href = '../Admin_ClockIn/index_admin.html';
+          window.location.href = '../admin_clockin/index_admin.html';
         } else {
-          window.location.href = '../User_ClockIn/index_user.html';
+          window.location.href = '../user_clockin/index_user.html';
         }
       } catch (e) {
         console.error('Privilege check failed', e);
-        window.location.href = '../User_ClockIn/index_user.html';
+        window.location.href = '../user_clockin/index_user.html';
       }
     }
   });
@@ -111,9 +111,9 @@ if (loginForm) {
       storageKey.setItem('userId', userInfo.id);
 
       if (isAdmin) {
-        window.location.href = '../Admin_ClockIn/index_admin.html';
+        window.location.href = '../admin_clockin/index_admin.html';
       } else {
-        window.location.href = '../User_ClockIn/index_user.html';
+        window.location.href = '../user_clockin/index_user.html';
       }
 
     } catch (err) {

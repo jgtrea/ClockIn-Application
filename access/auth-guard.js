@@ -3,8 +3,8 @@
  * Include this script in all pages to ensure user is logged in
  * 
  * Usage:
- * - For admin pages: <script src="../Authentification/auth-guard.js"></script>
- * - For user pages: <script src="../Authentification/auth-guard.js"></script>
+ * - For admin pages: <script src="../access/auth-guard.js"></script>
+ * - For user pages: <script src="../access/auth-guard.js"></script>
  *   then add <body data-allow-employees="true">
  */
 
