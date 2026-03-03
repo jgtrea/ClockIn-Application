@@ -379,39 +379,203 @@ function applyDateRangeFilters() {
 }
 
 window.dashboardStats = {
-  totalTeachers: 0,
+  totalEmployees: 0,
+  totalInstances: 0,
   onSchedule: 0,
   late: 0,
   absent: 0,
-  excused: 0
+  excused: 0,
+  selectedTeacherId: null,
+  teacherRecords: []
 };
 
 function updateDashboardStats() {
-  const totalTeachersEl = document.getElementById('totalTeachers');
+  const totalEmployeesEl = document.getElementById('totalEmployees');
+  const totalInstancesEl = document.getElementById('totalInstances');
   const onScheduleEl = document.getElementById('onSchedule');
   const lateTodayEl = document.getElementById('lateToday');
   const absentTodayEl = document.getElementById('absentToday');
   const excusedTodayEl = document.getElementById('excusedToday');
   
-  const totalTeachersPct = document.getElementById('totalTeachersPct');
   const onSchedulePct = document.getElementById('onSchedulePct');
   const lateTodayPct = document.getElementById('lateTodayPct');
   const absentTodayPct = document.getElementById('absentTodayPct');
   const excusedTodayPct = document.getElementById('excusedTodayPct');
   
-  if (totalTeachersEl) totalTeachersEl.textContent = window.dashboardStats.totalTeachers;
+  if (totalEmployeesEl) totalEmployeesEl.textContent = window.dashboardStats.totalEmployees;
+  if (totalInstancesEl) totalInstancesEl.textContent = window.dashboardStats.totalInstances;
   if (onScheduleEl) onScheduleEl.textContent = window.dashboardStats.onSchedule;
   if (lateTodayEl) lateTodayEl.textContent = window.dashboardStats.late;
   if (absentTodayEl) absentTodayEl.textContent = window.dashboardStats.absent;
   if (excusedTodayEl) excusedTodayEl.textContent = window.dashboardStats.excused;
   
-  const total = window.dashboardStats.totalTeachers || 1;
-  if (totalTeachersPct) totalTeachersPct.textContent = '100%';
+  // Calculate percentages based on total instances (onSchedule + late + absent + excused)
+  const total = window.dashboardStats.totalInstances || 1;
   if (onSchedulePct) onSchedulePct.textContent = total > 0 ? Math.round((window.dashboardStats.onSchedule / total) * 100) + '%' : '0%';
   if (lateTodayPct) lateTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.late / total) * 100) + '%' : '0%';
   if (absentTodayPct) absentTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.absent / total) * 100) + '%' : '0%';
   if (excusedTodayPct) excusedTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.excused / total) * 100) + '%' : '0%';
 }
+
+// Teacher search functionality
+window.searchTeacher = function() {
+  const searchInput = document.getElementById('teacherSearchInput');
+  const searchTerm = searchInput.value.toLowerCase();
+  const records = window.allRecords || [];
+  
+  if (!searchTerm) {
+    // Clear search - show all stats
+    window.dashboardStats.selectedTeacherId = null;
+    calculateOverallStats();
+    return;
+  }
+  
+  // Find teacher by exact name match first (for datalist selection)
+  let teacherRecords = records.filter(r => 
+    r.userName && r.userName.toLowerCase() === searchTerm
+  );
+  
+  // If no exact match, try partial match
+  if (teacherRecords.length === 0) {
+    teacherRecords = records.filter(r => 
+      r.userName && r.userName.toLowerCase().includes(searchTerm)
+    );
+  }
+  
+  if (teacherRecords.length > 0) {
+    // Get the unique teacher name
+    const teacherName = teacherRecords[0].userName;
+    
+    window.dashboardStats.selectedTeacherId = teacherName;
+    window.dashboardStats.teacherRecords = teacherRecords;
+    
+    // Get selected date from statsDate input
+    const statsDateEl = document.getElementById('statsDate');
+    const selectedDate = statsDateEl?.value || new Date().toISOString().split('T')[0];
+    
+    // Calculate stats for this teacher for selected date
+    const teacherTodayRecords = teacherRecords.filter(r => r.date === selectedDate);
+    
+    window.dashboardStats.totalEmployees = 1; // Searching for one specific teacher
+    window.dashboardStats.totalInstances = teacherTodayRecords.length;
+    window.dashboardStats.onSchedule = teacherTodayRecords.filter(r => r.status === 'Present').length;
+    window.dashboardStats.late = teacherTodayRecords.filter(r => r.status === 'Late').length;
+    window.dashboardStats.absent = teacherTodayRecords.filter(r => r.status === 'Absent').length;
+    window.dashboardStats.excused = teacherTodayRecords.filter(r => r.status === 'Excused').length;
+    
+    updateDashboardStats();
+    initStatsPagination();
+  } else {
+    // No records found - show all zeros
+    window.dashboardStats.selectedTeacherId = searchTerm;
+    window.dashboardStats.teacherRecords = [];
+    window.dashboardStats.totalEmployees = 0;
+    window.dashboardStats.totalInstances = 0;
+    window.dashboardStats.onSchedule = 0;
+    window.dashboardStats.late = 0;
+    window.dashboardStats.absent = 0;
+    window.dashboardStats.excused = 0;
+    
+    updateDashboardStats();
+    initStatsPagination();
+  }
+};
+
+window.clearTeacherSearch = function() {
+  const searchInput = document.getElementById('teacherSearchInput');
+  if (searchInput) searchInput.value = '';
+  
+  window.dashboardStats.selectedTeacherId = null;
+  window.dashboardStats.teacherRecords = [];
+  
+  calculateOverallStats();
+  initStatsPagination();
+};
+
+// Populate teacher datalist with all teacher names
+window.populateTeacherList = function(usersData) {
+  const teacherList = document.getElementById('teacherList');
+  
+  if (!teacherList) return;
+  
+  // Get unique teacher names from users data
+  let teacherNames = [];
+  if (usersData && Array.isArray(usersData)) {
+    teacherNames = usersData.map(u => u.name).filter(name => name);
+  }
+  
+  // Also include any names from records that might not be in usersData
+  const records = window.allRecords || [];
+  records.forEach(r => {
+    if (r.userName) teacherNames.push(r.userName);
+  });
+  
+  // Remove duplicates and sort alphabetically
+  const uniqueNames = [...new Set(teacherNames)].sort();
+  
+  // Clear existing options
+  teacherList.innerHTML = '';
+  
+  // Add options
+  uniqueNames.forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    teacherList.appendChild(option);
+  });
+};
+
+function calculateOverallStats() {
+  const records = window.allRecords || [];
+  
+  // Get selected date from statsDate input, or default to today
+  const statsDateEl = document.getElementById('statsDate');
+  const selectedDate = statsDateEl?.value || new Date().toISOString().split('T')[0];
+  
+  // Get total employees from usersData if available, otherwise from records
+  if (window.allUsers && Array.isArray(window.allUsers)) {
+    window.dashboardStats.totalEmployees = window.allUsers.length;
+  } else {
+    const uniqueUsers = new Set(records.map(r => r.userName));
+    window.dashboardStats.totalEmployees = uniqueUsers.size;
+  }
+  
+  // Filter records by selected date
+  const filteredRecords = records.filter(r => r.date === selectedDate);
+  
+  window.dashboardStats.totalInstances = filteredRecords.length;
+  window.dashboardStats.onSchedule = filteredRecords.filter(r => r.status === 'Present').length;
+  window.dashboardStats.late = filteredRecords.filter(r => r.status === 'Late').length;
+  window.dashboardStats.absent = filteredRecords.filter(r => r.status === 'Absent').length;
+  window.dashboardStats.excused = filteredRecords.filter(r => r.status === 'Excused').length;
+  
+  updateDashboardStats();
+}
+
+// Handle stats date change
+window.onStatsDateChanged = function() {
+  const statsDateEl = document.getElementById('statsDate');
+  const chartDateEl = document.getElementById('chartDate');
+  
+  if (statsDateEl && statsDateEl.value) {
+    // Sync the chart date picker
+    if (chartDateEl) {
+      chartDateEl.value = statsDateEl.value;
+    }
+    
+    // Update the chart's selected date and refresh
+    if (typeof updateChartForTrend === 'function') {
+      // Set the selectedDate in attendance_trend_db.js
+      if (typeof window.selectedDate !== 'undefined') {
+        window.selectedDate = statsDateEl.value;
+      }
+      updateChartForTrend('weekly');
+    }
+    
+    // Recalculate stats for the selected date
+    calculateOverallStats();
+    initStatsPagination();
+  }
+};
 
 async function loadRecentActivity() {
   const activityFeed = document.getElementById('activityFeed');
@@ -462,16 +626,8 @@ async function loadRecentActivity() {
         }
       });
     }
-
-    window.dashboardStats.totalTeachers = usersData.length;
-    window.dashboardStats.onSchedule = 0;
-    window.dashboardStats.late = 0;
-    window.dashboardStats.absent = 0;
-    window.dashboardStats.excused = 0;
     
     const today = new Date().toISOString().split('T')[0];
-
-    const todayRecordsByUser = {};
 
     usersData.forEach(user => {
       const userName = user.name || 'Unknown User';
@@ -497,37 +653,21 @@ async function loadRecentActivity() {
           status: status,
           timestamp: record.timeIn || null
         });
-        
-        if (recordDate === today) {
-          if (!todayRecordsByUser[userId]) {
-            todayRecordsByUser[userId] = [];
-          }
-          todayRecordsByUser[userId].push(status);
-        }
       });
     });
-
-    usersData.forEach(user => {
-      const userId = user.employeeId;
-      const userStatuses = todayRecordsByUser[userId] || [];
-      
-      if (userStatuses.length === 0) {
-        window.dashboardStats.absent++;
-      } else {
-        userStatuses.forEach(status => {
-          if (status === 'Present') {
-            window.dashboardStats.onSchedule++;
-          } else if (status === 'Late') {
-            window.dashboardStats.late++;
-          } else if (status === 'Excused') {
-            window.dashboardStats.excused++;
-          } else if (status === 'Absent') {
-            window.dashboardStats.absent++;
-          }
-        });
-      }
-    });
-
+    
+    window.allRecords = allRecords;
+    window.allUsers = usersData;
+    
+    // Calculate stats using instance-based calculation
+    calculateOverallStats();
+    
+    // Initialize stats pagination
+    initStatsPagination();
+    
+    // Populate teacher datalist with all users
+    populateTeacherList(usersData);
+    
     // Sort by timestamp descending (latest clock-in first)
     const bodyPage = document.body.getAttribute('data-page');
     const isRecentClockinPage = bodyPage === 'recent_clockin';
@@ -570,11 +710,6 @@ async function loadRecentActivity() {
       });
     }
     
-    
-    updateDashboardStats();
-    
-    window.allRecords = allRecords;
-    
     // Populate section filter dropdown
     if (sectionsData) {
       const sectionFilter = document.getElementById('filterSection');
@@ -590,11 +725,18 @@ async function loadRecentActivity() {
     
     const weeklyData = await getWeeklyAttendanceData();
     
-    loadChart(() => {
-      updateChart(weeklyData, 'weekly');
-    });
+    // Use updateChartForTrend from attendance_trend_db.js
+    if (typeof updateChartForTrend === 'function') {
+      updateChartForTrend('weekly');
+    } else {
+      loadChart(() => {
+        if (typeof updateChart === 'function') {
+          updateChart(weeklyData, 'weekly');
+        }
+      });
+    }
     
-    const isDashboard = document.getElementById('totalTeachers') !== null;
+    const isDashboard = document.getElementById('totalInstances') !== null;
     
     recordsPerPage = isDashboard ? 5 : 10;
     
@@ -755,6 +897,69 @@ window.changeItemsPerPage = function(value) {
     }
   } catch (e) {
     console.error('Error in changeItemsPerPage:', e);
+  }
+}
+
+// Stats pagination with scroll animation
+let statsScrollPosition = 0;
+let statsCardWidth = 0;
+const statsVisibleCards = 5;
+
+function initStatsPagination() {
+  statsScrollPosition = 0;
+  const container = document.getElementById('statsScrollContainer');
+  const firstCard = container?.querySelector('.stat-card');
+  if (firstCard) {
+    statsCardWidth = firstCard.offsetWidth + 12; // card width + gap
+  }
+  
+  if (container) {
+    container.scrollLeft = 0;
+    container.addEventListener('scroll', function() {
+      statsScrollPosition = container.scrollLeft;
+      updateStatsScrollButtons();
+    });
+  }
+  updateStatsScrollButtons();
+}
+
+window.changeStatsPage = function(direction) {
+  const container = document.getElementById('statsScrollContainer');
+  if (!container || statsCardWidth === 0) return;
+  
+  const maxScroll = container.scrollWidth - container.clientWidth;
+  const scrollAmount = statsCardWidth * statsVisibleCards;
+  
+  if (direction === 1) {
+    const newPosition = Math.min(statsScrollPosition + scrollAmount, maxScroll);
+    container.scrollTo({ left: newPosition, behavior: 'smooth' });
+    statsScrollPosition = newPosition;
+  } else {
+    const newPosition = Math.max(statsScrollPosition - scrollAmount, 0);
+    container.scrollTo({ left: newPosition, behavior: 'smooth' });
+    statsScrollPosition = newPosition;
+  }
+  
+  updateStatsScrollButtons();
+};
+
+function updateStatsScrollButtons() {
+  const container = document.getElementById('statsScrollContainer');
+  const statsPrevBtn = document.getElementById('statsPrevBtn');
+  const statsNextBtn = document.getElementById('statsNextBtn');
+  
+  if (!container) return;
+  
+  const maxScroll = container.scrollWidth - container.clientWidth;
+  
+  if (statsPrevBtn) {
+    statsPrevBtn.style.opacity = statsScrollPosition <= 0 ? '0.5' : '1';
+    statsPrevBtn.style.pointerEvents = statsScrollPosition <= 0 ? 'none' : 'auto';
+  }
+  
+  if (statsNextBtn) {
+    statsNextBtn.style.opacity = statsScrollPosition >= maxScroll ? '0.5' : '1';
+    statsNextBtn.style.pointerEvents = statsScrollPosition >= maxScroll ? 'none' : 'auto';
   }
 }
 
@@ -1033,8 +1238,11 @@ function toggleStats() {
   
   if (statsExpanded) {
     setTimeout(async () => {
-      const weeklyData = await getWeeklyAttendanceData();
-      if (typeof updateChart === 'function') {
+      // Use updateChartForTrend from attendance_trend_db.js
+      if (typeof updateChartForTrend === 'function') {
+        updateChartForTrend('weekly');
+      } else if (typeof updateChart === 'function') {
+        const weeklyData = await getWeeklyAttendanceData();
         updateChart(weeklyData, 'weekly');
       }
     }, 100);

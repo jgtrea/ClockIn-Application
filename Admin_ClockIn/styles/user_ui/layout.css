@@ -20,18 +20,20 @@
 .content h1 {
   color: #111827;
   font-size: 24px;
+  text-align: left;
 }
 
 .tagline {
   color: var(--muted);
   margin-top: 6px;
   font-size: 14px;
+  text-align: left;
 }
 
 .dashboard-title-wrapper {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
 }
 

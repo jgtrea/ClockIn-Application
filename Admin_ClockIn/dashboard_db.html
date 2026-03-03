@@ -10,12 +10,13 @@
   <link rel="stylesheet" href="styles/container_card/dashboard_db.css">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="../Supabase/supabase_config.js" defer></script>
   <script src="../Authentification/auth-guard.js"></script>
   <script src="scripts/utils/timestamp_utils.js" defer></script>
   <script src="scripts/managers/clock_index.js" defer></script>
   <script src="scripts/managers/schedule_overview.js" defer></script>
-  <script src="scripts/user_management/attendance_trend_db.js" defer></script>
+  <script src="scripts/user_management/attendance_trend_db.js"></script>
   <script src="scripts/user_management/dashboard_db.js" defer></script>
 </head>
 
@@ -32,113 +33,143 @@
             A smart and efficient way to monitor attendance in real time.
           </p>
         </div>
-        <div class="dropdown-wrapper">
-          <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
-            <span class="material-symbols-outlined">download</span>
-            <span>Export</span>
-          </button>
-          <div id="exportMenu" class="action-dropdown" style="display: none;">
-            <button class="action-dropdown-item" onclick="exportDashboardCSV()">
-              <span class="material-symbols-outlined">table_chart</span>
-              <span>Export as CSV</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="dropdown-wrapper">
+            <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+              <span class="material-symbols-outlined">download</span>
+              <span>Export</span>
             </button>
-            <button class="action-dropdown-item" onclick="exportDashboardJSON()">
-              <span class="material-symbols-outlined">code</span>
-              <span>Export as JSON</span>
-            </button>
+            <div id="exportMenu" class="action-dropdown" style="display: none;">
+              <button class="action-dropdown-item" onclick="exportDashboardCSV()">
+                <span class="material-symbols-outlined">table_chart</span>
+                <span>Export as CSV</span>
+              </button>
+              <button class="action-dropdown-item" onclick="exportDashboardJSON()">
+                <span class="material-symbols-outlined">code</span>
+                <span>Export as JSON</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="stats-container">
-        <div class="stat-grid">
-            <div class="stat-card">
-              <div class="stat-left">
-                <div class="stat-label">Total Teachers</div>
-                <div class="stat-value total-users" id="totalTeachers">-</div>
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+
+      <!-- Search and Stats Container -->
+      <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <!-- Search by teacher name and date -->
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px;">
+          <input type="text" id="teacherSearchInput" list="teacherList" oninput="searchTeacher()" placeholder="Search username..." style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; width: 200px;">
+          <datalist id="teacherList"></datalist>
+          <button onclick="clearTeacherSearch()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">Clear</button>
+          <input type="date" id="statsDate" onchange="onStatsDateChanged()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
+          <div style="margin-left: auto; display: flex; gap: 4px; align-items: center;">
+            <button onclick="changeStatsPage(-1)" id="statsPrevBtn" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center;">
+              <span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span>
+            </button>
+            <button onclick="changeStatsPage(1)" id="statsNextBtn" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center;">
+              <span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-container">
+          <div class="stat-scroll-container" id="statsScrollContainer">
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Total Employees</div>
+                  <div class="stat-value" id="totalEmployees" style="color: black;">-</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Total Attendance</div>
+                  <div class="stat-value total-users" id="totalInstances" style="color: black;">-</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Present</div>
+                  <div class="stat-value on-schedule" id="onSchedule" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="onSchedulePct">-</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Late</div>
+                  <div class="stat-value late-today" id="lateToday" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="lateTodayPct">-</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Absent</div>
+                  <div class="stat-value absent-today" id="absentToday" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="absentTodayPct">-</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Excused</div>
+                  <div class="stat-value excused-today" id="excusedToday" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="excusedTodayPct">-</div>
+              </div>
+          </div>
+        </div>
+      </div>
+
+          <div class="dashboard-bottom">
+            <div class="recent-activity-container recent-activity-half">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 class="recent-activity-title">Recent</h2>
+                <button class="view-all-btn" onclick="window.location.href='recent_clockin.html'">View All</button>
+              </div>
+              <div id="activityFeed">
+                <p class="loading-text">Loading recent activity...</p>
+              </div>
+              <div id="pagination">
+                <button id="prevBtn" onclick="changePage(-1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>
+                <span id="pageInfo" class="page-info"></span>
+                <button id="nextBtn" onclick="changePage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
               </div>
             </div>
-            <div class="stat-card">
-              <div class="stat-left">
-                <div class="stat-label">Arrived on Schedule</div>
-                <div class="stat-value on-schedule" id="onSchedule">-</div>
+            <div class="recent-activity-container recent-activity-half">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 class="recent-activity-title">Section</h2>
               </div>
-              <div class="stat-percentage" id="onSchedulePct">-</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-left">
-                <div class="stat-label">Arrived Late</div>
-                <div class="stat-value late-today" id="lateToday">-</div>
+              <div id="sectionClockinsFeed">
+                <p class="loading-text">Loading section clock-ins...</p>
               </div>
-              <div class="stat-percentage" id="lateTodayPct">-</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-left">
-                <div class="stat-label">Absent</div>
-                <div class="stat-value absent-today" id="absentToday">-</div>
+              <div id="sectionPagination">
+                <button id="sectionPrevBtn" onclick="changeSectionPage(-1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>
+                <span id="sectionPageInfo" class="page-info"></span>
+                <button id="sectionNextBtn" onclick="changeSectionPage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
               </div>
-              <div class="stat-percentage" id="absentTodayPct">-</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-left">
-                <div class="stat-label">Excused</div>
-                <div class="stat-value excused-today" id="excusedToday">-</div>
-              </div>
-              <div class="stat-percentage" id="excusedTodayPct">-</div>
             </div>
           </div>
 
-          <div class="chart-section">
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+
+          <div class="chart-section" style="margin-top: 24px;">
             <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h3 class="chart-title">Attendance Overview</h3>
+              <h3 class="chart-title">Attendance Trend</h3>
               <div class="chart-filters" style="display: flex; gap: 8px; align-items: center;">
+                <input type="date" id="chartDate" onchange="onDateSelected()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
                 <select id="countTypeSelect" onchange="toggleCountType()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
                   <option value="total">Total Attendance</option>
                   <option value="each">Individual Attendance</option>
                 </select>
                 <select id="trendSelect" onchange="onTrendChange()" style="padding: 6px 30px 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
+                  <option value="weekly">This Week</option>
+                  <option value="monthly">This Month</option>
+                  <option value="yearly">This Year</option>
                 </select>
               </div>
             </div>
             <div id="attendanceChart">
             </div>
         </div>
-      </div>
-
-      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
-
-      <div class="dashboard-bottom">
-        <div class="recent-activity-container recent-activity-half">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 class="recent-activity-title">Recent Clock-ins</h2>
-            <button class="view-all-btn" onclick="window.location.href='recent_clockin.html'">View All</button>
-          </div>
-          <div id="activityFeed">
-            <p class="loading-text">Loading recent activity...</p>
-          </div>
-          <div id="pagination">
-            <button id="prevBtn" onclick="changePage(-1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>
-            <span id="pageInfo" class="page-info"></span>
-            <button id="nextBtn" onclick="changePage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
-          </div>
-        </div>
-        <div class="recent-activity-container recent-activity-half">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 class="recent-activity-title">Section Clock-ins</h2>
-          </div>
-          <div id="sectionClockinsFeed">
-            <p class="loading-text">Loading section clock-ins...</p>
-          </div>
-          <div id="sectionPagination">
-            <button id="sectionPrevBtn" onclick="changeSectionPage(-1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>
-            <span id="sectionPageInfo" class="page-info"></span>
-            <button id="sectionNextBtn" onclick="changeSectionPage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
-          </div>
-        </div>
-      </div>
 
     </main>
   </div>

@@ -84,6 +84,39 @@
   cursor: pointer;
 }
 
+.chart-filters input[type="date"] {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #6b7280;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chart-filters input[type="date"]:focus {
+  outline: none;
+  border-color: #FF725E;
+}
+
+.chart-filters button {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #6b7280;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chart-filters button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
 .chart-title {
   margin: 0 0 16px 0;
   font-size: 18px;
@@ -96,6 +129,12 @@
   border-radius: 8px;
   position: relative;
   margin-bottom: 40px;
+  width: 100%;
+}
+
+#attendanceChart canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .chart-bar {
@@ -309,9 +348,33 @@
   margin-bottom: 16px;
 }
 
-.chart-section {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
+/* Stats scroll container */
+.stats-container {
+  width: 100%;
+  overflow: hidden;
+}
+
+.stat-scroll-container {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0;
+}
+
+.stat-scroll-container .stat-card {
+  min-width: calc((100% - 48px) / 5);
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+.stat-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.stat-scroll-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -1,180 +1,222 @@
 let currentTrend = 'weekly';
-let countType = 'total'; // 'total' = total attendance, 'each' = each attendance
+let countType = 'total';
+window.selectedDate = null;
+
+// Initialize chart view on page load
+document.addEventListener('DOMContentLoaded', function() {
+});
+
+function showDatePicker() {
+  const dateInput = document.getElementById('chartDate');
+  
+  if (dateInput) {
+    dateInput.showPicker();
+  }
+}
 
 function toggleCountType() {
   const select = document.getElementById('countTypeSelect');
   countType = select.value;
+  // Use selectedDate if available, otherwise use currentTrend
   updateChartForTrend(currentTrend);
-}
-
-function updateChart(attendanceData, trend = 'weekly') {
-  const chart = document.getElementById('attendanceChart');
-  
-  if (!chart) return;
-  const maxValue = Math.max(...attendanceData);
-  let step = Math.ceil(maxValue / 5);
-  if (step === 0) step = 1;
-  const topValue = step * 5;
-  const lineCount = 5;
-  chart.innerHTML = '';
-  
-  if (chart.offsetWidth === 0) {
-    return;
-  }
-  
-  const chartHeight = 160;
-  const spacing = chartHeight / lineCount;
-  const zeroLineTop = 20 + (lineCount * spacing) + 6;
-  
-  for (let i = 0; i <= lineCount; i++) {
-    const value = topValue - (i * step);
-    
-    let labelPosition, linePosition;
-    
-    const topPos = 20 + (i * spacing);
-    labelPosition = `top: ${topPos - 3}px`;
-    linePosition = `top: ${topPos + 6}px`;
-    
-    const label = document.createElement('div');
-    label.className = 'y-label';
-    label.style.cssText = `position: absolute; left: 10px; ${labelPosition}; font-size: 12px; color: #6b7280;`;
-    label.textContent = Number.isInteger(value) ? value : value.toFixed(2);
-    chart.appendChild(label);
-    
-    const line = document.createElement('div');
-    line.className = 'grid-line';
-    line.style.cssText = `position: absolute; ${linePosition}; left: 25px; right: 15px; height: 1px; background: #e5e7eb; z-index: 1;`;
-    chart.appendChild(line);
-  }
-  
-  const today = new Date();
-  
-  let totalUsers = window.dashboardStats?.totalTeachers || 0;
-  if (totalUsers === 0) {
-    totalUsers = maxValue > 0 ? maxValue : 1;
-  }
-  
-  attendanceData.forEach((value, index) => {
-    const height = Math.max((value / topValue) * chartHeight, 3);
-    let date, isToday = false;
-    
-    if (trend === 'weekly') {
-      date = new Date(today);
-      date.setDate(today.getDate() - (3 - index));
-      isToday = date.toDateString() === today.toDateString();
-    } else if (trend === 'monthly') {
-      const date = new Date(today.getFullYear(), today.getMonth() - (3 - index), 1);
-      isToday = date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-    } else if (trend === 'yearly') {
-      const year = today.getFullYear() - (3 - index);
-      isToday = year === today.getFullYear();
-    }
-    
-    const chartWidth = chart.offsetWidth - 50;
-    const barWidth = Math.min(60, chartWidth / 7 - 10);
-    const barSpacing = chartWidth / 7;
-    const barLeft = 25 + (index * barSpacing) + (barSpacing - barWidth) / 2;
-    
-    const bar = document.createElement('div');
-    bar.className = 'chart-bar';
-    const hasData = value > 0;
-    const barColor = '#3b82f6'; 
-    bar.style.cssText = `position: absolute; top: ${zeroLineTop - height}px; height: ${height}px; width: ${barWidth}px; left: ${barLeft}px; z-index: 2; background: ${barColor}; border-radius: 4px 4px 0 0; ${!hasData ? 'opacity: 0.5;' : ''} display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer;`;
-    
-    const tooltip = document.createElement('div');
-    tooltip.className = 'bar-tooltip';
-    tooltip.style.cssText = `position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 10; margin-bottom: 8px;`;
-    tooltip.textContent = `${value} attendance${value !== 1 ? 's' : ''}`;
-    
-    const tooltipArrow = document.createElement('div');
-    tooltipArrow.style.cssText = `position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1f2937;`;
-    tooltip.appendChild(tooltipArrow);
-    
-    bar.appendChild(tooltip);
-    
-    // Add hover event listeners
-    bar.addEventListener('mouseenter', function() {
-      tooltip.style.opacity = '1';
-      tooltip.style.visibility = 'visible';
-    });
-    
-    bar.addEventListener('mouseleave', function() {
-      tooltip.style.opacity = '0';
-      tooltip.style.visibility = 'hidden';
-    });
-    
-    if (hasData && value > 0) {
-      const percentage = totalUsers > 0 ? Math.round((value / totalUsers) * 100) : 0;
-      const percentageSpan = document.createElement('span');
-      percentageSpan.textContent = percentage + '%';
-      bar.appendChild(percentageSpan);
-    }
-    
-    chart.appendChild(bar);
-  });
-  
-  const weekLabelsContainer = document.createElement('div');
-  weekLabelsContainer.style.cssText = 'position: absolute; bottom: -50px; left: 25px; right: 25px; display: flex;';
-  
-  attendanceData.forEach((value, index) => {
-    let labelText = '';
-    let isToday = false;
-    
-    const chartWidth = chart.offsetWidth - 50;
-    const barSpacing = chartWidth / 7;
-    
-    const dayContainer = document.createElement('div');
-    dayContainer.style.cssText = `display: flex; flex-direction: column; align-items: center; width: ${barSpacing}px;`;
-    
-    if (trend === 'weekly') {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (3 - index));
-      const dayNumber = date.getDate();
-      const monthShort = date.toLocaleDateString('en-US', { month: 'short' });
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-      isToday = date.toDateString() === today.toDateString();
-      
-      const dayNumberSpan = document.createElement('span');
-      dayNumberSpan.style.cssText = `font-size: 12px; color: ${isToday ? '#000' : '#6b7280'}; font-weight: ${isToday ? 'bold' : '500'};`;
-      dayNumberSpan.textContent = `${monthShort} ${dayNumber}`;
-      
-      const dayNameSpan = document.createElement('span');
-      dayNameSpan.style.cssText = `font-size: 12px; color: ${isToday ? '#000' : '#6b7280'}; font-weight: ${isToday ? 'bold' : '500'};`;
-      dayNameSpan.textContent = dayName;
-      
-      dayContainer.appendChild(dayNumberSpan);
-      dayContainer.appendChild(dayNameSpan);
-    } else if (trend === 'monthly') {
-      const date = new Date(today.getFullYear(), today.getMonth() - (3 - index), 1);
-      const isCurrentMonth = date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-      isToday = isCurrentMonth;
-      labelText = date.toLocaleDateString('en-US', { month: 'short' });
-      
-      const label = document.createElement('span');
-      label.style.cssText = `font-size: 12px; color: ${isToday ? '#000' : '#6b7280'}; font-weight: ${isToday ? 'bold' : '500'};`;
-      label.textContent = labelText;
-      dayContainer.appendChild(label);
-    } else if (trend === 'yearly') {
-      const year = today.getFullYear() - (3 - index);
-      const isCurrentYear = year === today.getFullYear();
-      isToday = isCurrentYear;
-      labelText = year.toString();
-      
-      const label = document.createElement('span');
-      label.style.cssText = `font-size: 12px; color: ${isToday ? '#000' : '#6b7280'}; font-weight: ${isToday ? 'bold' : '500'};`;
-      label.textContent = labelText;
-      dayContainer.appendChild(label);
-    }
-    
-    weekLabelsContainer.appendChild(dayContainer);
-  });
-  
-  chart.appendChild(weekLabelsContainer);
 }
 
 function onTrendChange() {
   const select = document.getElementById('trendSelect');
+  
+  if (!select) {
+    console.log('Elements not found');
+    return;
+  }
+  
+  window.selectedDate = null;
   switchTrend(select.value);
+}
+
+function onDateSelected() {
+  const dateInput = document.getElementById('chartDate');
+  const trendSelect = document.getElementById('trendSelect');
+  const statsDateEl = document.getElementById('statsDate');
+  
+  window.selectedDate = dateInput.value;
+  if (statsDateEl && window.selectedDate) {
+    statsDateEl.value = window.selectedDate;
+  }
+  
+  if (window.selectedDate) {
+    if (trendSelect) {
+      trendSelect.value = 'weekly';
+    }
+    currentTrend = 'weekly';
+    updateChartForTrend('weekly');
+    
+    // Also update stats for the selected date
+    if (typeof calculateOverallStats === 'function') {
+      calculateOverallStats();
+    }
+  }
+}
+
+let attendanceChart = null;
+
+function updateChart(attendanceData, trend = 'weekly') {
+  const chartContainer = document.getElementById('attendanceChart');
+  
+  if (!chartContainer) return;
+  
+  let referenceDate;
+  if (window.selectedDate) {
+    const parts = window.selectedDate.split('-');
+    referenceDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  } else {
+    referenceDate = new Date();
+  }
+  
+  const today = referenceDate;
+  const labels = [];
+  const isTodayFlags = [];
+  
+  if (trend === 'daily' && typeof attendanceData === 'object' && attendanceData.date) {
+    const dateParts = attendanceData.date.split('-');
+    const selectedDateView = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+    const dateLabel = selectedDateView.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    labels.push(dateLabel);
+    isTodayFlags.push(selectedDateView.toDateString() === today.toDateString());
+    attendanceData = [attendanceData.count];
+  } else {
+    // Generate labels based on trend
+    // Show 7 weekdays ending with today, excluding weekends
+    const weekdays = [];
+    
+    // Go backwards from today, collecting only weekdays
+    let checkDate = new Date(referenceDate);
+    while (weekdays.length < 7) {
+      const dayOfWeek = checkDate.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip Sun (0) and Sat (6)
+        weekdays.unshift(new Date(checkDate));
+      }
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+    
+    for (let i = 0; i < 7; i++) {
+      if (trend === 'weekly') {
+        const date = weekdays[i];
+        labels.push(date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+        isTodayFlags.push(date.toDateString() === today.toDateString());
+      } else if (trend === 'monthly') {
+        const date = new Date(today.getFullYear(), today.getMonth() - (6 - i), 1);
+        labels.push(date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+        isTodayFlags.push(date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear());
+      } else if (trend === 'yearly') {
+        const year = today.getFullYear() - (6 - i);
+        labels.push(year.toString());
+        isTodayFlags.push(year === today.getFullYear());
+      }
+    }
+  }
+  
+  if (attendanceChart) {
+    attendanceChart.destroy();
+  }
+  
+  chartContainer.innerHTML = '<canvas id="chartCanvas"></canvas>';
+  const ctx = document.getElementById('chartCanvas').getContext('2d');
+  
+  let totalUsers = window.dashboardStats?.totalInstances || 0;
+  if (totalUsers === 0) {
+    const maxValue = Math.max(...attendanceData);
+    totalUsers = maxValue > 0 ? maxValue : 1;
+  }
+  
+  attendanceChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: attendanceData,
+        backgroundColor: '#3b82f6',
+        borderColor: '#2563eb',
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+        barPercentage: 0.6,
+        categoryPercentage: 0.7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 500,
+        easing: 'easeInOutQuart'
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          backgroundColor: '#1f2937',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          padding: 12,
+          cornerRadius: 6,
+          displayColors: false,
+          callbacks: {
+            title: function(context) {
+              return context[0].label;
+            },
+            label: function(context) {
+              const value = context.raw;
+              const percentage = totalUsers > 0 ? Math.round((value / totalUsers) * 100) : 0;
+              return `${value} attendance${value !== 1 ? 's' : ''} (${percentage}%)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: '#6b7280',
+            font: {
+              size: 11
+            },
+            callback: function(value, index) {
+              return isTodayFlags[index] ? this.getLabelForValue(value) : this.getLabelForValue(value);
+            }
+          },
+          border: {
+            display: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: '#e5e7eb',
+            drawBorder: false
+          },
+          ticks: {
+            color: '#6b7280',
+            font: {
+              size: 11
+            },
+            stepSize: 1,
+            padding: 8
+          },
+          border: {
+            display: false
+          }
+        }
+      }
+    }
+  });
 }
 
 function switchTrend(trend) {
@@ -194,19 +236,77 @@ async function updateChartForTrend(trend) {
     case 'yearly':
       data = await getYearlyAttendanceData();
       break;
+    case 'daily':
+      data = await getDailyAttendanceData(window.selectedDate);
+      break;
   }
   updateChart(data, trend);
 }
 
-async function getWeeklyAttendanceData() {
-  const weeklyData = [0, 0, 0, 0, 0, 0, 0];
-  const today = new Date();
+async function getDailyAttendanceData(dateString) {
   const records = window.allRecords || [];
   
+  if (!dateString) {
+    dateString = new Date().toISOString().split('T')[0];
+  }
+  
+  let count = 0;
+  const uniqueUsers = new Set();
+  const detailedRecords = [];
+  
+  for (const record of records) {
+    if (record.date === dateString) {
+      if (countType === 'total') {
+        count++;
+      }
+      uniqueUsers.add(record.userName);
+      detailedRecords.push(record);
+    }
+  }
+  
+  return {
+    date: dateString,
+    count: countType === 'total' ? count : uniqueUsers.size,
+    detailedRecords: detailedRecords
+  };
+}
+
+async function getWeeklyAttendanceData() {
+  const weeklyData = [];
+  
+  let referenceDate;
+  if (window.selectedDate) {
+    // Parse date properly - handle local timezone
+    const parts = window.selectedDate.split('-');
+    referenceDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  } else {
+    referenceDate = new Date();
+  }
+  
+  const records = window.allRecords || [];
+  
+  // Build list of 7 weekdays ending with today, excluding weekends
+  const weekdays = [];
+  
+  // Go backwards from today, collecting only weekdays
+  let checkDate = new Date(referenceDate);
+  while (weekdays.length < 7) {
+    const dayOfWeek = checkDate.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip Sun (0) and Sat (6)
+      weekdays.unshift(new Date(checkDate));
+    }
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+  
+  // Collect data for each weekday
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (3 - i));
-    const dateString = date.toISOString().split('T')[0];
+    const date = weekdays[i];
+    
+    // Format as YYYY-MM-DD manually to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
     
     if (countType === 'total') {
       let count = 0;
@@ -215,7 +315,7 @@ async function getWeeklyAttendanceData() {
           count++;
         }
       }
-      weeklyData[i] = count;
+      weeklyData.push(count);
     } else {
       const uniqueUsers = new Set();
       for (const record of records) {
@@ -223,7 +323,7 @@ async function getWeeklyAttendanceData() {
           uniqueUsers.add(record.userName);
         }
       }
-      weeklyData[i] = uniqueUsers.size;
+      weeklyData.push(uniqueUsers.size);
     }
   }
   
@@ -235,8 +335,9 @@ async function getMonthlyAttendanceData() {
   const today = new Date();
   const records = window.allRecords || [];
   
+  // Show last 7 months
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today.getFullYear(), today.getMonth() - (3 - i), 1);
+    const date = new Date(today.getFullYear(), today.getMonth() - (6 - i), 1);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     
@@ -267,8 +368,9 @@ async function getYearlyAttendanceData() {
   const currentYear = new Date().getFullYear();
   const records = window.allRecords || [];
   
+  // Show last 7 years
   for (let i = 0; i < 7; i++) {
-    const year = currentYear - (3 - i);
+    const year = currentYear - (6 - i);
     
     if (countType === 'total') {
       let count = 0;
