@@ -105,6 +105,8 @@ fun DashboardScreen(
     var currentSectionTitle by remember { mutableStateOf("Checking Schedule...") }
     var userName by remember { mutableStateOf("User") }
     var activeAttendanceId by remember { mutableStateOf<String?>(null) }
+    var isUpcomingClass by remember { mutableStateOf(false) }
+    var canClockInEarly by remember { mutableStateOf(false) }
 
     var currentAttendanceStatus by remember { mutableStateOf<String?>(null) }
 
@@ -153,7 +155,8 @@ fun DashboardScreen(
                     val now = Date()
                     val currentDay = dayFormat.format(now)
                     val currentDateStr = dateFormat.format(now)
-                    val currentTime = timeFormat.parse(timeFormat.format(now))
+                    val currentTimeStr = timeFormat.format(now)
+                    val currentTime = timeFormat.parse(currentTimeStr)
 
                     val allSchedules = SupabaseManager.client.from("schedule")
                         .select { filter { eq("employeeId", user.id) } }
@@ -182,17 +185,24 @@ fun DashboardScreen(
             }
 
             if (classInfo != null) {
+                isUpcomingClass = classInfo.isUpcoming
+                
+                if (isUpcomingClass) {
+                    val now = Date()
+                    val diff = classInfo.startTime.time - now.time
+                    canClockInEarly = diff <= 10 * 60 * 1000
+                } else {
+                    canClockInEarly = false
+                }
+
                 val isBreak = excludedSubjects.any { it.equals(classInfo.subject.trim(), ignoreCase = true) }
 
                 if (isBreak) {
-
                     currentSectionTitle = classInfo.subject
                     currentAttendanceStatus = "Break"
-
                     onTargetBleChanged("", 0L, "")
                     activeAttendanceId = null
                     onActiveAttendanceIdChanged(null)
-
                 } else {
                     currentSectionTitle = classInfo.sectionDisplay
 
@@ -205,7 +215,6 @@ fun DashboardScreen(
 
                     if (isAbsent || isIncomplete || isFinished) {
                         onTargetBleChanged("", 0L, "")
-
                         if (isFinished) {
                             activeAttendanceId = null
                             onActiveAttendanceIdChanged(null)
@@ -221,6 +230,8 @@ fun DashboardScreen(
             } else {
                 currentSectionTitle = "No Active Class"
                 currentAttendanceStatus = null
+                isUpcomingClass = false
+                canClockInEarly = false
                 onTargetBleChanged("", 0L, "")
                 activeAttendanceId = null
                 onActiveAttendanceIdChanged(null)
@@ -279,7 +290,11 @@ fun DashboardScreen(
                 ) {
                     SectionHeader(title = "Current Class", icon = Icons.Default.Schedule)
 
-                    val titleText = if (currentAttendanceStatus == "Break") "Current Schedule: $currentSectionTitle" else "Section: $currentSectionTitle"
+                    val titleText = when {
+                        currentAttendanceStatus == "Break" -> "Current Schedule: $currentSectionTitle"
+                        isUpcomingClass -> "Upcoming Class: $currentSectionTitle"
+                        else -> "Section: $currentSectionTitle"
+                    }
 
                     val displayText = when {
                         currentAttendanceStatus == "Break" -> "Take a well-deserved break! ☕"
@@ -287,6 +302,8 @@ fun DashboardScreen(
                         currentAttendanceStatus?.equals("Absent", true) == true -> "Status: ABSENT"
                         currentAttendanceStatus?.equals("Incomplete", true) == true -> "Status: INCOMPLETE"
                         currentAttendanceStatus != null && activeAttendanceId == null -> "Status: CLOCKED OUT"
+                        isUpcomingClass && canClockInEarly -> "You can clock in early for this class."
+                        isUpcomingClass -> "Scanning will be available 10 minutes before class."
                         currentSectionTitle.contains("No Active") -> "Relax! No classes scheduled."
                         else -> "Please scan QR to Clock In."
                     }

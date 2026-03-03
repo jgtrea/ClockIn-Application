@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import androidx.core.util.remove
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,6 +53,7 @@ class BeaconService : Service() {
     private val CHANNEL_ID = "AttendanceChannel"
     private val GRACE_PERIOD_MS = 15 * 60 * 1000
     private val PREFS_NAME = "BeaconPrefs"
+    private val EARLY_CLOCK_IN_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
 
     inner class LocalBinder : Binder() {
         fun getService(): BeaconService = this@BeaconService
@@ -132,7 +134,7 @@ class BeaconService : Service() {
 
         if (!isMarkedIncomplete && !isBeaconFound) {
             remainingTime = 300L
-            statusMessage = if (isClockedIn) "Monitoring: $beaconName" else "Searching for Beacon (Pre-Clock In)..."
+            statusMessage = if (isClockedIn) "Monitoring: $beaconName" else "Searching for Beacon..."
         }
 
         try {
@@ -207,42 +209,64 @@ class BeaconService : Service() {
                     val graceTimeStr = formatTime(graceMillisLeft / 1000)
 
                     if (isClockedIn) {
+                        val classEndTime = classStartTime + (60 * 60 * 1000) // Assumed 1hr
+                        val isOvertime = now > classEndTime
+
                         if (!isBeaconFound) {
-                            var deadline = prefs.getLong("deadline_$scheduleId", 0L)
-                            if (deadline == 0L) {
-                                deadline = now + 300000L
-                                prefs.edit().putLong("deadline_$scheduleId", deadline).apply()
-                            }
+                            if (isOvertime) {
+                                statusMessage = "Class Ended (Overtime). You can Clock Out anytime.\n(Dist: $distStr)"
+                                remainingTime = 300L
+                                prefs.edit().remove("deadline_$scheduleId").apply()
+                            } else {
+                                var deadline = prefs.getLong("deadline_$scheduleId", 0L)
+                                if (deadline == 0L) {
+                                    deadline = now + 300000L
+                                    prefs.edit().putLong("deadline_$scheduleId", deadline).apply()
+                                }
+                                val millisLeft = deadline - now
+                                remainingTime = millisLeft / 1000
+                                statusMessage = "OUT OF RANGE! ${formatTime(remainingTime)} (Dist: $distStr)"
 
-                            val millisLeft = deadline - now
-                            remainingTime = millisLeft / 1000
-
-                            statusMessage = "OUT OF RANGE! ${formatTime(remainingTime)} (Dist: $distStr)"
-
-                            if (remainingTime <= 0) {
-                                isMarkedIncomplete = true
-                                prefs.edit().putBoolean("incomplete_$scheduleId", true).apply()
-                                statusMessage = "Marked Incomplete"
-                                markIncompleteInDb()
+                                if (remainingTime <= 0) {
+                                    isMarkedIncomplete = true
+                                    prefs.edit().putBoolean("incomplete_$scheduleId", true).apply()
+                                    statusMessage = "Marked Incomplete"
+                                    markIncompleteInDb()
+                                }
                             }
                         } else {
                             prefs.edit().remove("deadline_$scheduleId").apply()
                             remainingTime = 300L
-
-                            statusMessage = "Connected (Dist: $distStr)"
+                            statusMessage = if (isOvertime) "Overtime: Connected (Dist: $distStr)" else "Connected (Dist: $distStr)"
                         }
                     } else {
-                        if (isPastGracePeriod) {
-                            statusMessage = if (isBeaconFound) {
-                                "Beacon Found (Dist: $distStr). Grace Period Ended (Late)"
-                            } else {
-                                "Searching (Dist: $distStr)... Grace Period Ended (Late)"
+                        // PRE-CLOCK IN LOGIC
+                        if (isBeaconFound) {
+                            statusMessage = when {
+                                now < (classStartTime - EARLY_CLOCK_IN_WINDOW_MS) -> {
+                                    "Waiting for 10-minute window...\n(Dist: $distStr)"
+                                }
+                                now < classStartTime -> {
+                                    "Ready for Class (Early). Beacon Found!\n(Dist: $distStr)"
+                                }
+                                !isPastGracePeriod -> {
+                                    "Beacon Found. Ready to Clock In.\n(Dist: $distStr)"
+                                }
+                                else -> {
+                                    "Beacon Found. You are Late!\n(Dist: $distStr)"
+                                }
                             }
                         } else {
-                            statusMessage = if (isBeaconFound) {
-                                "Beacon Found (Dist: $distStr). Grace Period: $graceTimeStr"
-                            } else {
-                                "Searching, Come Closer to the Beacon \n(Dist: $distStr)... Grace Period: $graceTimeStr"
+                            statusMessage = when {
+                                now < (classStartTime - EARLY_CLOCK_IN_WINDOW_MS) -> {
+                                    "Too early. Monitoring starts soon.\n(Dist: $distStr)"
+                                }
+                                now < classStartTime -> {
+                                    "Waiting for Class (Early). Come closer.\n(Dist: $distStr)"
+                                }
+                                else -> {
+                                    "Searching... Grace Period: $graceTimeStr\n(Dist: $distStr)"
+                                }
                             }
                         }
                     }

@@ -86,7 +86,8 @@ data class ClassSession(
     val sectionDisplay: String,
     val targetBeaconName: String,
     val startTime: Date,
-    val schedId: String
+    val schedId: String,
+    val isUpcoming: Boolean = false
 )
 
 @Serializable
@@ -269,6 +270,7 @@ object SupabaseManager {
                 val now = Date()
                 val currentTimeStr = timeFormat.format(now)
                 val currentDay = dayFormat.format(now)
+                val currentTime = timeFormat.parse(currentTimeStr)
 
                 val schedules = client.from("schedule")
                     .select(columns = Columns.list("*, sections(*)")) {
@@ -276,49 +278,97 @@ object SupabaseManager {
                     }
                     .decodeList<Schedule>()
 
-                val currentSchedule = schedules.firstOrNull { sched ->
-                    try {
-                        val dbDay = sched.weekday.trim()
-                        if (!dbDay.equals(currentDay, ignoreCase = true)) return@firstOrNull false
+                val todaySchedules = schedules.filter {
+                    it.weekday.trim().equals(currentDay, ignoreCase = true)
+                }.sortedBy { it.startTime }
 
+                val activeAttId = getActiveAttendanceId()
+                if (activeAttId != null) {
+                    val activeRecord = client.from("attendance")
+                        .select(columns = Columns.list("*, schedule(*, sections(*))")) {
+                            filter { eq("attendId", activeAttId) }
+                        }.decodeSingleOrNull<Attendance>()
+
+                    if (activeRecord?.schedule != null) {
+                        return@withContext createClassSessionFromSchedule(activeRecord.schedule, false)
+                    }
+                }
+
+                val ongoing = todaySchedules.firstOrNull { sched ->
+                    try {
                         val start = timeFormat.parse(sched.startTime)
                         val end = timeFormat.parse(sched.endTime)
-                        val current = timeFormat.parse(currentTimeStr)
-
-                        if (start != null && end != null && current != null) {
-                            return@firstOrNull current.after(start) && current.before(end)
+                        if (start != null && end != null && currentTime != null) {
+                            return@firstOrNull currentTime.after(start) && currentTime.before(end)
                         }
                         false
-                    } catch (e: Exception) {
-                        false
-                    }
-                } ?: return@withContext null
-
-                val displaySectionName = currentSchedule.sectionDetails?.sectionName ?: "Unknown"
-                val sectionDisplay = "${currentSchedule.sectionDetails?.yearLevel ?: "?"} - $displaySectionName"
-                val targetBeaconName = displaySectionName.trim()
-
-                val startOnlyTime = timeFormat.parse(currentSchedule.startTime)
-                val calendar = Calendar.getInstance()
-                calendar.time = Date()
-
-                if (startOnlyTime != null) {
-                    val timeCal = Calendar.getInstance()
-                    timeCal.time = startOnlyTime
-
-                    calendar.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY))
-                    calendar.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE))
-                    calendar.set(Calendar.SECOND, timeCal.get(Calendar.SECOND))
-                    calendar.set(Calendar.MILLISECOND, 0)
+                    } catch (e: Exception) { false }
                 }
-                val preciseStartTime = calendar.time
 
-                ClassSession(currentSchedule.subject, sectionDisplay, targetBeaconName, preciseStartTime, currentSchedule.id)
+                if (ongoing != null) {
+                    return@withContext createClassSessionFromSchedule(ongoing, false)
+                }
+
+                val upcoming = todaySchedules.firstOrNull { sched ->
+                    try {
+                        val start = timeFormat.parse(sched.startTime)
+                        if (start != null && currentTime != null) {
+                            val diff = start.time - currentTime.time
+                            // Show as upcoming if it starts within the next 60 minutes
+                            return@firstOrNull currentTime.before(start) && diff <= 60 * 60 * 1000
+                        }
+                        false
+                    } catch (e: Exception) { false }
+                }
+
+                if (upcoming != null) {
+                    return@withContext createClassSessionFromSchedule(upcoming, true)
+                }
+
+                val recentlyEnded = todaySchedules.lastOrNull { sched ->
+                    try {
+                        val end = timeFormat.parse(sched.endTime)
+                        if (end != null && currentTime != null) {
+                            return@lastOrNull currentTime.after(end)
+                        }
+                        false
+                    } catch (e: Exception) { false }
+                }
+
+                if (recentlyEnded != null) {
+                    return@withContext createClassSessionFromSchedule(recentlyEnded, false)
+                }
+
+                null
             } catch (e: Exception) {
                 Log.e("SupabaseManager", "Error in getCurrentClassBeacon", e)
                 null
             }
         }
+    }
+
+    private fun createClassSessionFromSchedule(schedule: Schedule, isUpcoming: Boolean): ClassSession {
+        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+        val displaySectionName = schedule.sectionDetails?.sectionName ?: schedule.sectionName.ifEmpty { "Unknown" }
+        val yearLevel = schedule.sectionDetails?.yearLevel ?: "?"
+        val sectionDisplay = "$yearLevel - $displaySectionName"
+        val targetBeaconName = displaySectionName.trim()
+
+        val startOnlyTime = try { timeFormat.parse(schedule.startTime) } catch (e: Exception) { null }
+        val calendar = Calendar.getInstance()
+        calendar.time = Date()
+
+        if (startOnlyTime != null) {
+            val timeCal = Calendar.getInstance()
+            timeCal.time = startOnlyTime
+            calendar.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY))
+            calendar.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE))
+            calendar.set(Calendar.SECOND, timeCal.get(Calendar.SECOND))
+            calendar.set(Calendar.MILLISECOND, 0)
+        }
+        val preciseStartTime = calendar.time
+
+        return ClassSession(schedule.subject, sectionDisplay, targetBeaconName, preciseStartTime, schedule.id, isUpcoming)
     }
 
     suspend fun getTodayAttendance(schedId: String): Attendance? {
@@ -365,7 +415,16 @@ object SupabaseManager {
                 }
 
                 val activeClass = getCurrentClassBeacon()
-                    ?: return@withContext Result.failure(Exception("You have no active class scheduled right now."))
+                    ?: return@withContext Result.failure(Exception("You have no active or upcoming class scheduled right now."))
+                
+                if (activeClass.isUpcoming) {
+                    val now = Date()
+                    val diff = activeClass.startTime.time - now.time
+                    if (diff > 10 * 60 * 1000) {
+                        return@withContext Result.failure(Exception("Too early! You can only clock in up to 10 minutes before class starts."))
+                    }
+                }
+
                 val actualScheduleId = activeClass.schedId
 
                 val myCurrentSchedule = client.from("schedule")
