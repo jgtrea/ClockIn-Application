@@ -490,7 +490,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${userName}_data.csv`;
+    a.download = `attendance_data_${userName}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -524,7 +524,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${userName}_data.json`;
+    a.download = `attendance_data_${userName}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

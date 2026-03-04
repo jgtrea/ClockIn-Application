@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = 'users_data.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = 'users_data.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -398,6 +398,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
     
     let filename = 'users_selected_data.csv';
+    if (selectedData.length === 1 && selectedData[0].name) {
+      const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      filename = `users_data_${safeName}.csv`;
+    }
     
     const headers = ['Name', 'Email', 'Employment', 'Date Created'];
     const rows = [headers.join(',')];
@@ -432,6 +436,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedData = users.filter(user => selectedIds.includes(user.employeeId));
     
     let filename = 'users_selected_data.json';
+    if (selectedData.length === 1 && selectedData[0].name) {
+      const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      filename = `users_data_${safeName}.json`;
+    }
     
     const exportData = selectedData.map(user => ({
       name: user.name || '',

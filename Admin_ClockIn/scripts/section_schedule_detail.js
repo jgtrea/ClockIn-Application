@@ -700,12 +700,14 @@ window.exportAllSchedulesCSV = function() {
     rows.push(`${weekday},${startTime},${endTime},${subject},${teacher}`);
   });
   
+  const safeSectionName = sectionName ? sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'section';
+  
   const csvContent = rows.join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_data_full.csv';
+  a.download = `sections_data_${safeSectionName}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -720,6 +722,8 @@ window.exportAllSchedulesJSON = function() {
     return;
   }
   
+  const safeSectionName = sectionName ? sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'section';
+  
   const exportData = window.currentSchedules.map(schedule => ({
     weekday: schedule.weekday || '',
     startTime: schedule.startTime || '',
@@ -733,7 +737,7 @@ window.exportAllSchedulesJSON = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_data_full.json';
+  a.download = `sections_data_${safeSectionName}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -752,6 +756,8 @@ window.exportSelectedSchedulesCSV = function() {
   const headers = ['Weekday', 'Start Time', 'End Time', 'Subject', 'Teacher'];
   const rows = [headers.join(',')];
   
+  const safeSectionName = sectionName ? sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'section';
+  
   selectedData.forEach(schedule => {
     const weekday = schedule.weekday || '';
     const startTime = schedule.startTime || '';
@@ -766,7 +772,7 @@ window.exportSelectedSchedulesCSV = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_selected_data.csv';
+  a.download = `sections_selected_${safeSectionName}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -781,6 +787,8 @@ window.exportSelectedSchedulesJSON = function() {
   }
   
   const selectedData = window.currentSchedules.filter(s => selectedSchedules.has(s.schedId));
+  const safeSectionName = sectionName ? sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'section';
+  
   const exportData = selectedData.map(schedule => ({
     weekday: schedule.weekday || '',
     startTime: schedule.startTime || '',
@@ -794,7 +802,7 @@ window.exportSelectedSchedulesJSON = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_selected_data.json';
+  a.download = `sections_selected_${safeSectionName}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -247,13 +247,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedItems = DataTableManager.getSelectedItems();
-    let filename = 'attendance_data_full.csv';
+    let filename = 'attendance_data.csv';
     
     // If only one item is selected, use the user's name in the filename
     if (selectedItems.length === 1) {
       const userName = selectedItems[0].name || 'user';
       const safeName = userName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `attendance_${safeName}.csv`;
+      filename = `attendance_data_${safeName}.csv`;
     } else if (selectedItems.length > 1) {
       filename = `attendance_selected_${selectedItems.length}.csv`;
     }
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'attendance_data_full.json';
+    a.download = 'attendance_data.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -346,7 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let filename = 'attendance_selected_data.csv';
     if (selectedData.length === 1 && selectedData[0].name) {
       const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `attendance_${safeName}.csv`;
+      filename = `attendance_data_${safeName}.csv`;
     }
     
     const headers = ['Name', 'Email', 'Employment', 'Date', 'Time In', 'Time Out', 'Status'];
@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'attendance_selected_data.csv';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -402,39 +402,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     let filename = 'attendance_selected_data.json';
     if (selectedData.length === 1 && selectedData[0].name) {
       const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `attendance_${safeName}.json`;
+      filename = `attendance_data_${safeName}.json`;
     }
     
     const exportData = selectedData.map(user => {
-      const userAttendance = attendance.filter(a => a.employeeId === user.employeeId);
-      const attendanceRecords = userAttendance.map(record => ({
-        date: record.timeIn ? new Date(record.timeIn).toISOString().split('T')[0] : null,
-        timeIn: record.timeIn ? new Date(record.timeIn).toISOString() : null,
-        timeOut: record.timeOut ? new Date(record.timeOut).toISOString() : null,
-        status: record.status || ''
-      }));
-      
-      return {
-        name: user.name || '',
-        email: user.email || '',
-        employment: user.employment || '',
-        attendanceRecords: attendanceRecords
-      };
-    });
-    
-    const jsonContent = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'attendance_selected_data.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  window.toggleFilterMenu = function() {
     const filterMenu = document.getElementById('filterMenu');
     const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
     const isOpen = filterMenu && filterMenu.style.display === 'block';

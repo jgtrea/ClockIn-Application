@@ -220,7 +220,7 @@ window.exportToCSV = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_data_full.csv';
+  a.download = 'sections_data.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -255,7 +255,7 @@ window.exportToJSON = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_data_full.json';
+  a.download = 'sections_data.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -276,6 +276,10 @@ window.exportSelectedRows = function() {
   const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
   
   let filename = 'sections_selected_data.csv';
+  if (selectedData.length === 1 && selectedData[0].sectionName) {
+    const safeName = selectedData[0].sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    filename = `sections_data_${safeName}.csv`;
+  }
   
   const headers = ['Section Name', 'Advisor', 'Year Level', 'Subject', 'Teacher', 'Weekday', 'Start Time', 'End Time', 'Room'];
   const rows = [headers.join(',')];
@@ -309,7 +313,7 @@ window.exportSelectedRows = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_selected_data.csv';
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -330,6 +334,10 @@ window.exportSelectedRowsJSON = function() {
   const selectedData = sections.filter(section => selectedIds.includes(String(section.sectId)));
   
   let filename = 'sections_selected_data.json';
+  if (selectedData.length === 1 && selectedData[0].sectionName) {
+    const safeName = selectedData[0].sectionName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    filename = `sections_data_${safeName}.json`;
+  }
   
   const exportData = selectedData.map(section => {
     const sectionSchedules = section.schedules || [];
@@ -355,7 +363,7 @@ window.exportSelectedRowsJSON = function() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sections_selected_data.json';
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

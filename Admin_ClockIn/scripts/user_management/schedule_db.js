@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_data_full.csv';
+    a.download = 'schedules_data.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -242,7 +242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_data_full.json';
+    a.download = 'schedules_data.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let filename = 'schedules_selected_data.csv';
     if (selectedData.length === 1 && selectedData[0].name) {
       const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `attendance_${safeName}.csv`;
+      filename = `schedules_data_${safeName}.csv`;
     }
     
     const headers = ['Name', 'Email', 'Employment', 'Subject', 'Weekday', 'Start Time', 'End Time', 'Room'];
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_selected_data.csv';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let filename = 'schedules_selected_data.json';
     if (selectedData.length === 1 && selectedData[0].name) {
       const safeName = selectedData[0].name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      filename = `attendance_${safeName}.json`;
+      filename = `schedules_data_${safeName}.json`;
     }
     
     const exportData = selectedData.map(user => {
@@ -348,14 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_selected_data.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  window.deleteSelectedRows = async function() {
+    a.download = filename;
     alert('Delete functionality not implemented for schedules');
   };
 
