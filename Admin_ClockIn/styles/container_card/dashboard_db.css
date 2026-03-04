@@ -37,6 +37,7 @@
 .stat-value.late-today { color: #ef4444; }
 .stat-value.absent-today { color: #f59e0b; }
 .stat-value.excused-today { color: #8b5cf6; }
+.stat-value.incomplete-today { color: #f97316; }
 
 .stat-label {
   font-size: 13px;
@@ -343,7 +344,7 @@
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -365,7 +366,7 @@
 }
 
 .stat-scroll-container .stat-card {
-  min-width: calc((100% - 48px) / 5);
+  min-width: calc((100% - 60px) / 6);
   scroll-snap-align: start;
   flex-shrink: 0;
 }

@@ -385,6 +385,7 @@ window.dashboardStats = {
   late: 0,
   absent: 0,
   excused: 0,
+  incomplete: 0,
   selectedTeacherId: null,
   teacherRecords: []
 };
@@ -396,11 +397,13 @@ function updateDashboardStats() {
   const lateTodayEl = document.getElementById('lateToday');
   const absentTodayEl = document.getElementById('absentToday');
   const excusedTodayEl = document.getElementById('excusedToday');
+  const incompleteTodayEl = document.getElementById('incompleteToday');
   
   const onSchedulePct = document.getElementById('onSchedulePct');
   const lateTodayPct = document.getElementById('lateTodayPct');
   const absentTodayPct = document.getElementById('absentTodayPct');
   const excusedTodayPct = document.getElementById('excusedTodayPct');
+  const incompleteTodayPct = document.getElementById('incompleteTodayPct');
   
   if (totalEmployeesEl) totalEmployeesEl.textContent = window.dashboardStats.totalEmployees;
   if (totalInstancesEl) totalInstancesEl.textContent = window.dashboardStats.totalInstances;
@@ -408,13 +411,15 @@ function updateDashboardStats() {
   if (lateTodayEl) lateTodayEl.textContent = window.dashboardStats.late;
   if (absentTodayEl) absentTodayEl.textContent = window.dashboardStats.absent;
   if (excusedTodayEl) excusedTodayEl.textContent = window.dashboardStats.excused;
+  if (incompleteTodayEl) incompleteTodayEl.textContent = window.dashboardStats.incomplete;
   
-  // Calculate percentages based on total instances (onSchedule + late + absent + excused)
+  // Calculate percentages based on total instances (onSchedule + late + absent + excused + incomplete)
   const total = window.dashboardStats.totalInstances || 1;
   if (onSchedulePct) onSchedulePct.textContent = total > 0 ? Math.round((window.dashboardStats.onSchedule / total) * 100) + '%' : '0%';
   if (lateTodayPct) lateTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.late / total) * 100) + '%' : '0%';
   if (absentTodayPct) absentTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.absent / total) * 100) + '%' : '0%';
   if (excusedTodayPct) excusedTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.excused / total) * 100) + '%' : '0%';
+  if (incompleteTodayPct) incompleteTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.incomplete / total) * 100) + '%' : '0%';
 }
 
 // Teacher search functionality
@@ -462,6 +467,7 @@ window.searchTeacher = function() {
     window.dashboardStats.late = teacherTodayRecords.filter(r => r.status === 'Late').length;
     window.dashboardStats.absent = teacherTodayRecords.filter(r => r.status === 'Absent').length;
     window.dashboardStats.excused = teacherTodayRecords.filter(r => r.status === 'Excused').length;
+    window.dashboardStats.incomplete = teacherTodayRecords.filter(r => r.status === 'Incomplete').length;
     
     updateDashboardStats();
     initStatsPagination();
@@ -475,6 +481,7 @@ window.searchTeacher = function() {
     window.dashboardStats.late = 0;
     window.dashboardStats.absent = 0;
     window.dashboardStats.excused = 0;
+    window.dashboardStats.incomplete = 0;
     
     updateDashboardStats();
     initStatsPagination();
@@ -547,6 +554,7 @@ function calculateOverallStats() {
   window.dashboardStats.late = filteredRecords.filter(r => r.status === 'Late').length;
   window.dashboardStats.absent = filteredRecords.filter(r => r.status === 'Absent').length;
   window.dashboardStats.excused = filteredRecords.filter(r => r.status === 'Excused').length;
+  window.dashboardStats.incomplete = filteredRecords.filter(r => r.status === 'Incomplete').length;
   
   updateDashboardStats();
 }
