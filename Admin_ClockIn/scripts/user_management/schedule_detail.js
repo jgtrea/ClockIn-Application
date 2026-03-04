@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const SCHEDULE_TABLE = 'schedule';
   const SECTIONS_TABLE = 'sections';
 
-  // Make constants available globally for modal functions
   window.SCHEDULE_TABLE = SCHEDULE_TABLE;
   window.SECTIONS_TABLE = SECTIONS_TABLE;
 
@@ -969,6 +968,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
+    // Get the username for the filename
+    const userNameElement = document.getElementById('userName');
+    const userName = userNameElement ? userNameElement.textContent.replace("'s Schedule", '').trim() : 'user';
+    const safeName = userName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    
     const headers = ['Weekday', 'Start Time', 'End Time', 'Subject', 'Section'];
     const rows = [headers.join(',')];
     
@@ -991,7 +995,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_data.csv';
+    a.download = `schedules_data_${safeName}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1004,6 +1008,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('No schedules to export');
       return;
     }
+    
+    // Get the username for the filename
+    const userNameElement = document.getElementById('userName');
+    const userName = userNameElement ? userNameElement.textContent.replace("'s Schedule", '').trim() : 'user';
+    const safeName = userName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
     
     const sectionsMap = {};
     allSections.forEach(section => {
@@ -1023,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'schedules_data.json';
+    a.download = `schedules_data_${safeName}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

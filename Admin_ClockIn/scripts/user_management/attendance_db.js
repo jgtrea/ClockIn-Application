@@ -406,21 +406,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const exportData = selectedData.map(user => {
-    const filterMenu = document.getElementById('filterMenu');
-    const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
-    const isOpen = filterMenu && filterMenu.style.display === 'block';
+      const userAttendance = attendance.filter(a => a.employeeId === user.employeeId);
+      const attendanceRecords = userAttendance.map(record => ({
+        date: record.timeIn ? getDateFromDB(record.timeIn) : null,
+        timeIn: record.timeIn ? formatTimeFromDB(record.timeIn) : null,
+        timeOut: record.timeOut ? formatTimeFromDB(record.timeOut) : null,
+        status: record.status || ''
+      }));
+      
+      return {
+        name: user.name || '',
+        email: user.email || '',
+        employment: user.employment || '',
+        attendanceRecords: attendanceRecords
+      };
+    });
     
-    if (filterMenu) {
-      filterMenu.style.display = isOpen ? 'none' : 'block';
-    }
-    const sortMenu = document.getElementById('sortMenu');
-    if (sortMenu) {
-      sortMenu.style.display = 'none';
-    }
-    
-    if (filterWrapper) {
-      filterWrapper.classList.toggle('active', !isOpen);
-    }
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   window.toggleSortMenu = function() {
