@@ -151,44 +151,6 @@ fun DashboardScreen(
 
             val excludedSubjects = listOf("Health Break", "Lunch Break")
 
-            try {
-                if (user != null) {
-                    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
-                    val dayFormat = SimpleDateFormat("EEEE", Locale.US)
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-
-                    val now = Date()
-                    val currentDay = dayFormat.format(now)
-                    val currentDateStr = dateFormat.format(now)
-                    val currentTimeStr = timeFormat.format(now)
-                    val currentTime = timeFormat.parse(currentTimeStr)
-
-                    val allSchedules = SupabaseManager.client.from("schedule")
-                        .select { filter { eq("employeeId", user.id) } }
-                        .decodeList<Schedule>()
-
-                    val todaysSchedules = allSchedules.filter {
-                        it.weekday.trim().equals(currentDay, ignoreCase = true)
-                    }
-
-                    for (sched in todaysSchedules) {
-                        val endTime = timeFormat.parse(sched.endTime)
-
-                        val isBreakSched = excludedSubjects.any { it.equals(sched.subject.trim(), ignoreCase = true) }
-
-                        if (!isBreakSched && currentTime != null && endTime != null && currentTime.after(endTime)) {
-                            val result = SupabaseManager.checkAndMarkAbsent(sched.id, user.id, currentDateStr)
-
-                            if (result.getOrNull() == true) {
-                                NotificationManager.show("Missed Class", "Marked ABSENT for ${sched.subject}")
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
             if (classInfo != null) {
                 isUpcomingClass = classInfo.isUpcoming
                 

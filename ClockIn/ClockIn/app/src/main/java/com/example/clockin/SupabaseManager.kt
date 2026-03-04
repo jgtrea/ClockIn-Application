@@ -608,10 +608,10 @@ object SupabaseManager {
         }
     }
 
-    suspend fun checkAndMarkAbsent(schedId: String, employeeId: String, datePrefix: String): Result<Boolean> {
+    suspend fun checkAndMarkAbsent(schedule: Schedule, employeeId: String, datePrefix: String): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
-                val cacheKey = "$schedId-$datePrefix"
+                val cacheKey = "${schedule.id}-$datePrefix"
                 if (processedAbsentCache.contains(cacheKey)) {
                     return@withContext Result.success(false)
                 }
@@ -619,36 +619,39 @@ object SupabaseManager {
                 val startOfDay = "${datePrefix}T00:00:00"
                 val endOfDay = "${datePrefix}T23:59:59"
 
-                val existingRecord = client.from("attendance")
+                // Fetch ANY record for this schedule today
+                val existingRecords = client.from("attendance")
                     .select {
                         filter {
-                            eq("schedId", schedId)
+                            eq("schedId", schedule.id)
                             eq("employeeId", employeeId)
                             gte("timeIn", startOfDay)
                             lte("timeIn", endOfDay)
                         }
                     }
-                    .decodeSingleOrNull<Attendance>()
+                    .decodeList<Attendance>()
 
-                if (existingRecord != null) {
+                if (existingRecords.isNotEmpty()) {
                     processedAbsentCache.add(cacheKey)
                     return@withContext Result.success(false)
                 }
 
                 val absentId = UUID.randomUUID().toString()
-                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                
+                // Set the record times to the schedule's intended start/end for cleaner history
+                val startStr = "${datePrefix}T${schedule.startTime}"
+                val endStr = "${datePrefix}T${schedule.endTime}"
 
                 val absentRecord = Attendance(
                     id = absentId,
                     status = "Absent",
-                    timeIn = nowStr,
-                    timeOut = nowStr,
-                    schedId = schedId,
+                    timeIn = startStr,
+                    timeOut = endStr,
+                    schedId = schedule.id,
                     employeeId = employeeId
                 )
 
                 client.from("attendance").insert(absentRecord)
-
                 processedAbsentCache.add(cacheKey)
 
                 Result.success(true)
