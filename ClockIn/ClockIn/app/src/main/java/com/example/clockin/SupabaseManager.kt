@@ -472,12 +472,30 @@ object SupabaseManager {
                 val nowStr = timeFormat.format(now)
 
                 if (activeSession != null) {
+                    // Check if clocking out too early (more than 30 mins before endTime)
+                    val timeFormatShort = SimpleDateFormat("HH:mm:ss", Locale.US)
+                    val endTime = try { timeFormatShort.parse(myCurrentSchedule.endTime) } catch (e: Exception) { null }
+                    val currentTimeOnly = try { timeFormatShort.parse(timeFormatShort.format(now)) } catch (e: Exception) { null }
+                    
+                    var newStatus: String? = null
+                    if (endTime != null && currentTimeOnly != null) {
+                        val remainingMillis = endTime.time - currentTimeOnly.time
+                        if (remainingMillis > 30 * 60 * 1000) {
+                            newStatus = "Incomplete"
+                        }
+                    }
+
                     client.from("attendance").update({
                         set("timeOut", nowStr)
+                        if (newStatus != null) {
+                            set("status", newStatus)
+                        }
                     }) {
                         filter { eq("attendId", activeSession.id) }
                     }
-                    return@withContext Result.success("Successfully Clocked Out")
+                    
+                    val msg = if (newStatus == "Incomplete") "Successfully Clocked Out: Incomplete" else "Successfully Clocked Out"
+                    return@withContext Result.success(msg)
                 }
 
                 val todayDatePrefix = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
@@ -519,6 +537,7 @@ object SupabaseManager {
 
             if (start != null && current != null) {
                 val diff = current.time - start.time
+                // Grace period: 15 minutes
                 if (diff > 15 * 60 * 1000) "Late" else "Present"
             } else {
                 "Present"
@@ -636,6 +655,36 @@ object SupabaseManager {
             } catch (e: Exception) {
                 Log.e(TAG, "Error marking absent", e)
                 Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun markIncompleteIfStillActive(schedId: String, employeeId: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val timeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                val nowStr = timeFormat.format(Date())
+
+                val activeSession = client.from("attendance")
+                    .select {
+                        filter {
+                            eq("schedId", schedId)
+                            eq("employeeId", employeeId)
+                            filter("timeOut", FilterOperator.IS, "null")
+                        }
+                    }
+                    .decodeSingleOrNull<Attendance>()
+
+                if (activeSession != null) {
+                    client.from("attendance").update({
+                        set("status", "Incomplete")
+                        set("timeOut", nowStr)
+                    }) {
+                        filter { eq("attendId", activeSession.id) }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in markIncompleteIfStillActive", e)
             }
         }
     }
