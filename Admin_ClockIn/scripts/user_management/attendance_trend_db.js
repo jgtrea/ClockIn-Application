@@ -2,7 +2,6 @@ let currentTrend = 'weekly';
 let countType = 'total';
 window.selectedDate = null;
 
-// Initialize chart view on page load
 document.addEventListener('DOMContentLoaded', function() {
 });
 
@@ -17,7 +16,6 @@ function showDatePicker() {
 function toggleCountType() {
   const select = document.getElementById('countTypeSelect');
   countType = select.value;
-  // Use selectedDate if available, otherwise use currentTrend
   updateChartForTrend(currentTrend);
 }
 
@@ -50,7 +48,6 @@ function onDateSelected() {
     currentTrend = 'weekly';
     updateChartForTrend('weekly');
     
-    // Also update stats for the selected date
     if (typeof calculateOverallStats === 'function') {
       calculateOverallStats();
     }
@@ -89,15 +86,12 @@ function updateChart(attendanceData, trend = 'weekly') {
     isTodayFlags.push(selectedDateView.toDateString() === today.toDateString());
     attendanceData = [attendanceData.count];
   } else {
-    // Generate labels based on trend
-    // Show 7 weekdays ending with today, excluding weekends
     const weekdays = [];
     
-    // Go backwards from today, collecting only weekdays
     let checkDate = new Date(referenceDate);
     while (weekdays.length < 7) {
       const dayOfWeek = checkDate.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip Sun (0) and Sat (6)
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { 
         weekdays.unshift(new Date(checkDate));
       }
       checkDate.setDate(checkDate.getDate() - 1);
@@ -173,7 +167,7 @@ function updateChart(attendanceData, trend = 'weekly') {
             label: function(context) {
               const value = context.raw;
               const percentage = totalUsers > 0 ? Math.round((value / totalUsers) * 100) : 0;
-              return `${value} attendance${value !== 1 ? 's' : ''} (${percentage}%)`;
+              return `${value} present teacher${value !== 1 ? 's' : ''} (${percentage}%)`;
             }
           }
         }
@@ -255,7 +249,7 @@ async function getDailyAttendanceData(dateString) {
   const detailedRecords = [];
   
   for (const record of records) {
-    if (record.date === dateString) {
+    if (record.date === dateString && record.status === 'Present') {
       if (countType === 'total') {
         count++;
       }
@@ -276,7 +270,6 @@ async function getWeeklyAttendanceData() {
   
   let referenceDate;
   if (window.selectedDate) {
-    // Parse date properly - handle local timezone
     const parts = window.selectedDate.split('-');
     referenceDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   } else {
@@ -285,24 +278,19 @@ async function getWeeklyAttendanceData() {
   
   const records = window.allRecords || [];
   
-  // Build list of 7 weekdays ending with today, excluding weekends
   const weekdays = [];
   
-  // Go backwards from today, collecting only weekdays
   let checkDate = new Date(referenceDate);
   while (weekdays.length < 7) {
     const dayOfWeek = checkDate.getDay();
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip Sun (0) and Sat (6)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) { 
       weekdays.unshift(new Date(checkDate));
     }
     checkDate.setDate(checkDate.getDate() - 1);
   }
   
-  // Collect data for each weekday
   for (let i = 0; i < 7; i++) {
     const date = weekdays[i];
-    
-    // Format as YYYY-MM-DD manually to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -311,7 +299,7 @@ async function getWeeklyAttendanceData() {
     if (countType === 'total') {
       let count = 0;
       for (const record of records) {
-        if (record.date === dateString) {
+        if (record.date === dateString && record.status === 'Present') {
           count++;
         }
       }
@@ -319,7 +307,7 @@ async function getWeeklyAttendanceData() {
     } else {
       const uniqueUsers = new Set();
       for (const record of records) {
-        if (record.date === dateString) {
+        if (record.date === dateString && record.status === 'Present') {
           uniqueUsers.add(record.userName);
         }
       }
@@ -344,7 +332,7 @@ async function getMonthlyAttendanceData() {
     if (countType === 'total') {
       let count = 0;
       for (const record of records) {
-        if (record.date && record.date.startsWith(`${year}-${month}`)) {
+        if (record.date && record.date.startsWith(`${year}-${month}`) && record.status === 'Present') {
           count++;
         }
       }
@@ -352,7 +340,7 @@ async function getMonthlyAttendanceData() {
     } else {
       const uniqueUsers = new Set();
       for (const record of records) {
-        if (record.date && record.date.startsWith(`${year}-${month}`)) {
+        if (record.date && record.date.startsWith(`${year}-${month}`) && record.status === 'Present') {
           uniqueUsers.add(record.userName);
         }
       }
@@ -375,7 +363,7 @@ async function getYearlyAttendanceData() {
     if (countType === 'total') {
       let count = 0;
       for (const record of records) {
-        if (record.date && record.date.startsWith(year.toString())) {
+        if (record.date && record.date.startsWith(year.toString()) && record.status === 'Present') {
           count++;
         }
       }
@@ -383,7 +371,7 @@ async function getYearlyAttendanceData() {
     } else {
       const uniqueUsers = new Set();
       for (const record of records) {
-        if (record.date && record.date.startsWith(year.toString())) {
+        if (record.date && record.date.startsWith(year.toString()) && record.status === 'Present') {
           uniqueUsers.add(record.userName);
         }
       }
