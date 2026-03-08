@@ -1,0 +1,257 @@
+/* style for schedule container card */
+
+.user-row {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.user-row.expanded {
+  padding: 30px;
+}
+
+.user-collapsed-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+}
+
+.user-row:not(.expanded) .user-text-details {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.user-row.expanded .user-text-details {
+  margin-bottom: 25px;
+}
+
+.user-expanded-content {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  width: 100%;
+}
+
+.attendance-main-section {
+  flex: 1;
+}
+
+.attendance-main-section .schedule-table-header {
+  grid-template-columns: 120px 1fr 1fr 80px 80px 100px 80px;
+}
+
+.attendance-main-section .slot-row {
+  grid-template-columns: 120px 1fr 1fr 80px 80px 100px 80px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.status-present {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-late {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.status-absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-excused {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-unattended {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.schedule-main-section {
+  flex: 1;
+}
+
+.user-text-details {
+  margin-bottom: 25px;
+}
+
+.user-text-details .user-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  display: block;
+}
+
+.user-text-details .user-subtitle {
+  font-size: 13px;
+  color: #9ca3af;
+  display: block;
+  margin-top: 2px;
+}
+
+.schedule-table-header {
+  display: grid;
+  grid-template-columns: 80px 80px 1fr 1fr 100px;
+  width: 100%;
+  border-bottom: 1px solid #d1d5db;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 10px;
+}
+
+.schedule-table-header span, .slot-row span {
+  text-align: center;
+}
+
+.schedule-table-header span:first-child, .slot-row span:first-child {
+  text-align: left;
+}
+
+.slot-row {
+  display: grid;
+  grid-template-columns: 80px 80px 1fr 1fr 100px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f9fafb;
+  font-size: 14px;
+  color: #374151;
+  align-items: center;
+  gap: 10px;
+}
+
+.slot-row.editing-row {
+  background-color: #f9fafb;
+  padding: 8px;
+  border: 1px solid #FF725E;
+  border-radius: 8px;
+}
+
+.slot-row input {
+  width: 90%;
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.action-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.action-icon-btn:hover {
+  color: #111827;
+}
+
+.action-icon-btn.delete:hover {
+  color: #ef4444;
+}
+
+.add-slot-ui {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  gap: 20px 30px;
+  align-items: center;
+}
+
+.edit-grid label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.edit-grid input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  background: #fff;
+  color: #374151;
+  outline: none;
+}
+
+.add-slot-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; 
+  min-width: 180px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn-outline {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #111827;
+  font-size: 14px;
+  min-width: 85px;
+  text-align: center;
+}
+
+.hidden { display: none !important; }
+
+.slots-list {
+  margin-bottom: 10px;
+}

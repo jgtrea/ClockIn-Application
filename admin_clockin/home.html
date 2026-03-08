@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Home — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/user_ui.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../db_config/supabase_config.js" defer></script>
+  <script src="../access/auth-guard.js"></script>
+  <script src="scripts/managers/clock_index.js" defer></script>
+  <script src="scripts/managers/schedule_overview.js" defer></script>
+</head>
+
+<body>
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div>
+          <h1 style="margin: 0 0 4px 0;">Section Overview</h1>
+          <span style="font-size: 14px; color: #6b7280;">Check which teachers are in which classroom</span>
+        </div>
+        <div style="text-align: right;">
+          <div id="currentTime" style="font-size: 24px; font-weight: 600; color: #111827; margin-bottom: 4px;"></div>
+          <div id="currentDate" style="font-size: 14px; color: #6b7280;"></div>
+        </div>
+      </div>
+      
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0 30px 0;">
+
+      <div style="margin-bottom: 20px; text-align: center;">
+        <input type="text" id="searchSection" placeholder="Search section..." oninput="filterSections(this.value)" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; width: 300px;">
+      </div>
+
+      <div id="sectionsContainer" style="margin-top: 32px;">
+        <p style="text-align: center; color: #9ca3af;">Loading sections...</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="scheduleModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 id="modalTitle" style="margin: 0; font-size: 20px; font-weight: 700;"></h2>
+      <button onclick="closeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const supabase = window.supabaseClient;
+  const clockManager = new ClockManager();
+  const scheduleOverview = new ScheduleOverview(supabase, clockManager);
+
+  window.scheduleOverview = scheduleOverview;
+
+  clockManager.init();
+  scheduleOverview.init();
+});
+
+function filterSections(searchTerm) {
+  const sections = document.querySelectorAll('.section-card');
+  const term = searchTerm.toLowerCase();
+  
+  sections.forEach(section => {
+    const sectionName = section.querySelector('h2').textContent.toLowerCase();
+    if (sectionName.includes(term)) {
+      section.style.display = 'flex';
+    } else {
+      section.style.display = 'none';
+    }
+  });
+}
+
+function showWeeklySchedule(sectionId, sectionName) {
+  if (window.scheduleOverview) {
+    window.scheduleOverview.showWeeklySchedule(sectionId, sectionName);
+  }
+}
+
+function loadDaySchedule(sectionId, day) {
+  if (window.scheduleOverview) {
+    window.scheduleOverview.loadDaySchedule(sectionId, day);
+  }
+}
+
+function closeModal() {
+  if (window.scheduleOverview) {
+    window.scheduleOverview.closeModal();
+  }
+}
+</script>
+
+</body>
+</html>

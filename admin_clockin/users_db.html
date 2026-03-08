@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Users — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/user_ui/components/users_table.css">
+  <link rel="stylesheet" href="styles/container_card/user_add_card.css">
+  <link rel="stylesheet" href="styles/components/alert_prompt.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+   
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../db_config/supabase_config.js" defer></script>
+  <script src="../access/auth-guard.js" defer></script>
+  <script src="scripts/managers/paginate.js" defer></script>
+  <script src="scripts/managers/data-table.js" defer></script>
+  <script src="scripts/export_data.js"></script>
+  <script src="scripts/import_data.js"></script>
+  <script src="scripts/user_management/users_db.js" defer></script>
+  <script src="scripts/filter/filter_user.js" defer></script>
+</head>
+
+<body data-page="users_db">
+
+<!-- Alert Prompt Container -->
+<div id="alertPromptContainer" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 120px; align-items: center;"></div>
+<div id="alertPrompt" class="alert-prompt">
+  <span class="alert-prompt-message"></span>
+  <button class="alert-prompt-close" onclick="closeAlertPrompt()">
+    <span class="material-symbols-outlined">close</span>
+  </button>
+</div>
+
+<script src="scripts/alert_prompt.js"></script>
+<script>
+  function togglePasswordVisibility(inputId, toggleIcon) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      toggleIcon.textContent = 'visibility_off';
+    } else {
+      input.type = 'password';
+      toggleIcon.textContent = 'visibility';
+    }
+  }
+</script>
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Users</h1>
+            <p class="tagline">Manage personnel profiles and access.</p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="dropdown-wrapper">
+              <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+                <span class="material-symbols-outlined">download</span>
+                Export
+              </button>
+              <div id="exportMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="exportToCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Export as CSV
+                </button>
+                <button class="action-dropdown-item" onclick="exportToJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Export as JSON
+                </button>
+              </div>
+            </div>
+            <div class="dropdown-wrapper">
+              <button class="add-user-btn" id="addUserBtn" onclick="toggleAddUserMenu()">
+                <span class="material-symbols-outlined">add</span>
+                Add User
+              </button>
+              <div id="addUserMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
+                <button class="action-dropdown-item" onclick="addNewUser()">
+                  <span class="material-symbols-outlined">person_add</span>
+                  Add New Data
+                </button>
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); showImportMenu()">
+                  <span class="material-symbols-outlined">upload</span>
+                  Import Data
+                </button>
+              </div>
+              <div id="importMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); importFromCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Import from CSV
+                </button>
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); importFromJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Import from JSON
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+        
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchUsernameInput" class="search-username-input" placeholder="Search Username" oninput="searchUsername(this.value)" autocomplete="off">
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleFilterMenu()">
+                <span class="material-symbols-outlined">filter_list</span>
+                Filter
+              </button>
+              <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeFilters"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Filter
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applyFilters()">Apply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleSortMenu()">
+                <span class="material-symbols-outlined">sort</span>
+                Sort
+              </button>
+              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeSorts"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Sort
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applySort()">Sort</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
+        </div>
+        <div id="selectionActionRow" class="selection-action-row" style="display: none;">
+          <div class="selection-info">
+            <span id="selectedCount">0</span> row(s) selected
+          </div>
+          <div class="selection-actions">
+            <button class="selection-action-btn export-btn" onclick="exportSelectedRows()">
+              <span class="material-symbols-outlined">download</span>
+              Export CSV
+            </button>
+            <button class="selection-action-btn export-btn" onclick="exportSelectedRowsJSON()">
+              <span class="material-symbols-outlined">code</span>
+              Export JSON
+            </button>
+            <button class="selection-action-btn" onclick="removeDeviceRecords()">
+              <span class="material-symbols-outlined">phonelink_erase</span>
+              Remove Devices
+            </button>
+            <button class="selection-action-btn" onclick="clearSelection()">
+              <span class="material-symbols-outlined">close</span>
+              Clear
+            </button>
+            <button class="selection-action-btn delete-btn" onclick="deleteSelectedRows()">
+              <span class="material-symbols-outlined">delete</span>
+              Delete
+            </button>
+          </div>
+        </div>
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllUsers" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Employment</th>
+              <th>Date Created</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="usersList">
+          </tbody>
+        </table>
+        <div class="pagination-container">
+          <div class="pagination-left">
+            <span>Show</span>
+            <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
+            <span>from <span id="totalUsersCount">0</span> data</span>
+          </div>
+          <div class="pagination-right">
+            <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
+              <span class="material-symbols-outlined">first_page</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
+            <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
+              <span class="material-symbols-outlined">last_page</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+</div>
+
+<div id="addUserModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+  <div class="modal-content" style="background: white; margin: 10% auto; padding: 24px; border-radius: 12px; width: 420px; max-width: 90%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">Add New User</h2>
+      <button onclick="closeAddUserModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Username</label>
+        <input type="text" id="addUserName" placeholder="Enter username" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+      </div>
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Email</label>
+        <input type="email" id="addUserEmail" placeholder="Enter email" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+      </div>
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Employment</label>
+        <select id="addUserEmployment" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff;">
+          <option value="Full-time">Full-time</option>
+          <option value="Part-time">Part-time</option>
+        </select>
+      </div>
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Password</label>
+        <div style="position: relative;">
+          <input type="password" id="addUserPassword" placeholder="Enter password" style="width: 100%; padding: 10px 40px 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+          <span class="material-symbols-outlined password-toggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;" onclick="togglePasswordVisibility('addUserPassword', this)">visibility</span>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+      <button onclick="closeAddUserModal()" class="btn-outline" style="padding: 10px 20px; border-radius: 8px;">Cancel</button>
+      <button onclick="confirmAddUser()" class="export-btn" style="padding: 10px 20px; border-radius: 8px; background: var(--accent); border: none; color: #fff; font-weight: 600; cursor: pointer;">Add User</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

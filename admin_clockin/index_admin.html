@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClockIn — Dashboard</title>
+  <link rel="stylesheet" href="styles/topbar.css">
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../access/authentication.js"></script>
+  <script src="../db_config/supabase_config.js" defer></script>
+  <script src="profile/profile_icon.js" defer></script>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar collapsed" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <img src="../resource/clockin-logo.svg" alt="ClockIn Logo" class="brand-logo">
+        <span class="brand-text">Clock In</span>
+      </div>
+      <button class="hamburger" id="hamburger">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
+    </div>
+
+    <nav class="menu">
+      <a href="home.html" target="contentFrame" data-page="home.html" class="active" onclick="setActive(this)">
+        <span class="material-symbols-outlined">home</span>
+        <span class="label">Home</span>
+      </a>
+      <a href="dashboard_db.html" target="contentFrame" data-page="dashboard_db.html" onclick="setActive(this)">
+        <span class="material-symbols-outlined">dashboard</span>
+        <span class="label">Dashboard</span>
+      </a>
+      <a href="users_db.html" target="contentFrame" data-page="users_db.html" onclick="setActive(this)">
+        <span class="material-symbols-outlined">group</span>
+        <span class="label">Users</span>
+      </a>      
+      <a href="schedule_db.html" target="contentFrame" data-page="schedule_db.html" onclick="setActive(this)">
+        <span class="material-symbols-outlined">calendar_month</span>
+        <span class="label">Schedule</span>
+      </a>
+      <a href="section_schedules.html" target="contentFrame" data-page="section_schedules.html" onclick="setActive(this)">
+        <span class="material-symbols-outlined">view_module</span>
+        <span class="label">Section</span>
+      </a>      
+      <a href="attendance_db.html" target="contentFrame" data-page="attendance_db.html" onclick="setActive(this)">
+        <span class="material-symbols-outlined">how_to_reg</span>
+        <span class="label">Attendance</span>
+      </a>
+      <a href="push_notification.html" target="contentFrame" data-page="push_notification.html" onclick="setActive(this)">
+        <span class="material-symbols-outlined">notifications_active</span>
+        <span class="label">Push Notification</span>
+      </a>
+      <a href="feedback.html" target="contentFrame" data-page="feedback.html" onclick="setActive(this)">
+        <span class="material-symbols-outlined">feedback</span>
+        <span class="label">Feedback</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="#" id="sidebarLogout">
+        <span class="material-symbols-outlined">logout</span>
+        <span class="label">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="search-bar-wrapper">
+        <span class="search-icon material-symbols-outlined">search</span>
+        <input type="text" id="sectionSearch" placeholder="Search..." autocomplete="off">
+        <div id="searchResults" class="search-results"></div>
+      </div>
+      <div class="profile-wrapper">
+        <div class="profile-circle" id="profileCircle">A</div>
+        <div class="profile-menu" id="profileMenu">
+          <div class="profile-header">
+            <div class="profile-circle" id="profileCircleMenu">A</div>
+            <div class="profile-text">
+              <div class="profile-name" id="profileName">User</div>
+              <div class="profile-email" id="profileEmail"></div>
+            </div>
+          </div>
+          <hr>
+          <a class="menu-item" href="#" onclick="navigateTo('user_profile.html'); return false;">Profile</a>
+          <button class="menu-item logout" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+    </header>
+    <iframe name="contentFrame" src="home.html" frameborder="0" id="contentFrame"></iframe>
+  </div>
+</div>
+
+<script>
+const interfaces = [
+  { name: 'Home', url: 'home.html', icon: 'home' },
+  { name: 'Dashboard', url: 'dashboard_db.html', icon: 'dashboard' },
+  { name: 'Users', url: 'users_db.html', icon: 'group' },
+  { name: 'Schedule', url: 'schedule_db.html', icon: 'calendar_month' },
+  { name: 'Section', url: 'section_schedules.html', icon: 'view_module' },
+  { name: 'Attendance', url: 'attendance_db.html', icon: 'how_to_reg' },
+  { name: 'Push Notification', url: 'push_notification.html', icon: 'notifications_active' },
+  { name: 'Feedback', url: 'feedback.html', icon: 'feedback' },
+];
+
+const searchInput = document.getElementById('sectionSearch');
+const searchResults = document.getElementById('searchResults');
+
+searchInput.addEventListener('input', function() {
+  const query = this.value.toLowerCase().trim();
+  
+  if (query.length === 0) {
+    searchResults.classList.remove('show');
+    return;
+  }
+  
+  const matches = interfaces.filter(iface => 
+    iface.name.toLowerCase().includes(query)
+  );
+  
+  if (matches.length === 0) {
+    searchResults.innerHTML = '<div class="search-no-result">No interfaces found</div>';
+  } else {
+    searchResults.innerHTML = matches.map(iface => `
+      <div class="search-result-item" onclick="navigateTo('${iface.url}')">
+        <span class="material-symbols-outlined">${iface.icon}</span>
+        ${iface.name}
+      </div>
+    `).join('');
+  }
+  
+  searchResults.classList.add('show');
+});
+
+function navigateTo(url) {
+  searchInput.value = '';
+  searchResults.classList.remove('show');
+  
+  const iframe = document.getElementById('contentFrame');
+  if (iframe) {
+    iframe.src = url;
+  }
+  
+  // Update active state in sidebar
+  document.querySelectorAll('#sidebar a').forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('data-page') === url || link.getAttribute('href') === url) {
+      link.classList.add('active');
+    }
+  });
+  
+  // Collapse sidebar
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.classList.add('collapsed');
+    sidebar.classList.remove('expanded');
+  }
+}
+
+function setActive(clickedLink) {
+  const url = clickedLink.getAttribute('href');
+  navigateToPage(url);
+}
+
+function navigateToPage(url) {
+  const iframe = document.getElementById('contentFrame');
+  if (iframe) {
+    iframe.src = url;
+  }
+  
+  // Update active state in sidebar
+  document.querySelectorAll('#sidebar a').forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('data-page') === url || link.getAttribute('href') === url) {
+      link.classList.add('active');
+    }
+  });
+  
+  // Collapse sidebar
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.classList.add('collapsed');
+    sidebar.classList.remove('expanded');
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const sidebar = document.getElementById('sidebar');
+  const hamburger = document.getElementById('hamburger');
+  const sidebarLogout = document.getElementById('sidebarLogout');
+  
+  if (hamburger && sidebar) {
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('expanded');
+      sidebar.classList.toggle('collapsed');
+    });
+  }
+  
+  if (sidebarLogout) {
+    sidebarLogout.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (window.authentification) {
+        window.authentication.signOut();
+      } else {
+        const supabase = window.supabaseClient;
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
+        window.location.href = '../index.html';
+      }
+    });
+  }
+});
+</script>
+
+</body>
+</html>

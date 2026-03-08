@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sections — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/pages/schedule_detail.css">
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/user_ui/components/users_table.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../db_config/supabase_config.js" defer></script>
+  <script src="../access/auth-guard.js"></script>
+  <script src="scripts/managers/paginate.js" defer></script>
+  <script src="scripts/managers/data-table.js" defer></script>
+  <script src="scripts/export_data.js"></script>
+  <script src="scripts/qr_code.js"></script>
+  <script src="scripts/import_data.js"></script>
+  <script src="scripts/section_schedules.js" defer></script>
+</head>
+
+<body data-page="section_schedules">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Sections</h1>
+            <p class="tagline">View schedules organized by section.</p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="dropdown-wrapper">
+              <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+                <span class="material-symbols-outlined">download</span>
+                Export
+              </button>
+              <div id="exportMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="exportToCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Export as CSV
+                </button>
+                <button class="action-dropdown-item" onclick="exportToJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Export as JSON
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+
+      <div class="add-schedule-form">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Section Name</label>
+            <input type="text" id="addSectionName" class="form-input" placeholder="Enter section name">
+          </div>
+          <div class="form-field">
+            <label>Advisor</label>
+            <input type="text" id="addAdvisor" class="form-input" list="advisorList" placeholder="Select or type advisor name">
+            <datalist id="advisorList"></datalist>
+          </div>
+          <div class="form-field">
+            <label>Year Level</label>
+            <input type="number" id="addYearLevel" class="form-input" placeholder="Enter year level">
+          </div>
+          <div class="form-field-button">
+            <button class="add-user-btn" onclick="saveSection()">
+              <span class="material-symbols-outlined">add</span>
+              Add Section
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchSectionInput" class="search-username-input" placeholder="Search Section" oninput="searchSection(this.value)" autocomplete="off">
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleFilterMenu()">
+                <span class="material-symbols-outlined">filter_list</span>
+                Filter
+              </button>
+              <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeFilters"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Filter
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applyFilters()">Apply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleSortMenu()">
+                <span class="material-symbols-outlined">sort</span>
+                Sort
+              </button>
+              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeSorts"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Sort
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applySort()">Sort</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
+        </div>
+        <div id="selectionActionRow" class="selection-action-row" style="display: none;">
+          <div class="selection-info">
+            <span id="selectedCount">0</span> row(s) selected
+          </div>
+          <div class="selection-actions">
+            <button class="selection-action-btn" onclick="removeAdvisorFromSelected()">
+              <span class="material-symbols-outlined">person_remove</span>
+              Remove Advisor
+            </button>
+            <button class="selection-action-btn export-btn" onclick="exportSelectedRows()">
+              <span class="material-symbols-outlined">download</span>
+              Export CSV
+            </button>
+            <button class="selection-action-btn export-btn" onclick="exportSelectedRowsJSON()">
+              <span class="material-symbols-outlined">code</span>
+              Export JSON
+            </button>
+            <button class="selection-action-btn" onclick="clearSelection()">
+              <span class="material-symbols-outlined">close</span>
+              Clear
+            </button>
+            <button class="selection-action-btn" onclick="deleteSelectedSections()">
+              <span class="material-symbols-outlined">delete</span>
+              Delete
+            </button>
+          </div>
+        </div>
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="checkbox-col"><div id="selectAllSections" class="select-all-checkbox" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
+              <th>Section Name</th>
+              <th>Advisor</th>
+              <th>Year Level</th>
+              <th>Total Schedules</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sectionsList">
+          </tbody>
+        </table>
+        <div class="pagination-container">
+          <div class="pagination-left">
+            <span>Show</span>
+            <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
+            <span>from <span id="totalSectionsCount">0</span> data</span>
+          </div>
+          <div class="pagination-right">
+            <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
+              <span class="material-symbols-outlined">first_page</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
+            <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
+              <span class="material-symbols-outlined">last_page</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Recent Clock-in — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/container_card/user_add_card.css">
+  <link rel="stylesheet" href="styles/user_ui/components/filters.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../db_config/supabase_config.js" defer></script>
+  <script src="../access/auth-guard.js"></script>
+  <script src="scripts/utils/timestamp_utils.js" defer></script>
+  <script src="scripts/user_management/attendance_trend_db.js" defer></script>
+  <script src="scripts/user_management/dashboard_db.js" defer></script>
+  <script src="scripts/filter/filter_user.js" defer></script>
+</head>
+
+<body data-page="recent_clockin">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+
+      <div class="dashboard-title-wrapper">
+        <div>
+          <h1>Recent Clock-in</h1>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+         
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchRecentClockins" class="search-username-input" placeholder="Search by name" oninput="searchByName(this.value)" autocomplete="off">
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleFilterMenu()">
+                <span class="material-symbols-outlined">filter_list</span>
+                Filter
+              </button>
+              <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeFilters"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Filter
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applyFilters()">Apply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleSortMenu()">
+                <span class="material-symbols-outlined">sort</span>
+                Sort
+              </button>
+              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeSorts"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Sort
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applySort()">Sort</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
+        </div>
+        <div id="activityFeed">
+          <p class="loading-text" style="text-align: center;">Loading...</p>
+        </div>
+        <div class="pagination-container">
+          <div class="pagination-left">
+            <span>Show</span>
+            <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
+            <span>from <span id="totalRecordsCount">0</span> data</span>
+          </div>
+          <div class="pagination-right">
+            <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
+              <span class="material-symbols-outlined">first_page</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
+            <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+            <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
+              <span class="material-symbols-outlined">last_page</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

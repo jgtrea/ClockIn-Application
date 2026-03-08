@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Section Schedule — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link rel="stylesheet" href="styles/pages/schedule_detail.css">
+  <link rel="stylesheet" href="styles/user_ui/components/users_table.css">
+  <link rel="stylesheet" href="styles/pages/confirm_dialog.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../db_config/supabase_config.js" defer></script>
+  <script src="../access/auth-guard.js"></script>
+  <script src="scripts/managers/paginate.js" defer></script>
+  <script src="scripts/export_data.js"></script>
+  <script src="scripts/qr_code.js"></script>
+  <script src="scripts/import_data.js"></script>
+  <script src="scripts/section_schedule_detail.js" defer></script>
+</head>
+
+<body data-page="section_schedule_detail">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <button class="btn-outline" onclick="window.location.href='section_schedules.html'" style="margin-bottom: 12px;">
+              <span class="material-symbols-outlined">arrow_back</span>
+              Back to Sections
+            </button>
+            <h1 id="sectionName">Section Schedule</h1>
+            <p class="tagline" id="sectionInfo"></p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="export-btn" id="qrCodeBtn" onclick="showQRPrompt(sectId, sectionName)">
+              <span class="material-symbols-outlined">qr_code</span>
+              QR Code
+            </button>
+            <div class="dropdown-wrapper">
+              <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+                <span class="material-symbols-outlined">download</span>
+                Export
+              </button>
+              <div id="exportMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="exportAllSchedulesCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Export as CSV
+                </button>
+                <button class="action-dropdown-item" onclick="exportAllSchedulesJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Export as JSON
+                </button>
+              </div>
+            </div>
+            <div class="dropdown-wrapper">
+              <button class="add-user-btn" id="importScheduleBtn" onclick="toggleImportScheduleMenu()">
+                <span class="material-symbols-outlined">upload</span>
+                Import
+              </button>
+              <div id="importScheduleMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Import from CSV
+                </button>
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Import from JSON
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+
+      <div class="add-schedule-form">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Employee</label>
+            <input type="text" id="addEmployee" class="form-input" list="employeeList" placeholder="Enter employee name">
+            <datalist id="employeeList"></datalist>
+          </div>
+          <div class="form-field">
+            <label>Weekday</label>
+            <select id="addWeekday" class="form-input">
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+              <option value="Sunday">Sunday</option>
+              <option value="AllWeekdays">All Weekdays (Mon-Fri)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Start Time</label>
+            <input type="time" id="addStartTime" class="form-input">
+          </div>
+          <div class="form-field">
+            <label>End Time</label>
+            <input type="time" id="addEndTime" class="form-input">
+          </div>
+          <div class="form-field">
+            <label>Subject</label>
+            <input type="text" id="addSubject" class="form-input" list="subjectList" placeholder="Select or type subject">
+            <datalist id="subjectList"></datalist>
+          </div>
+          <div class="form-field-button">
+            <button class="add-user-btn" onclick="saveSchedule()">
+              <span class="material-symbols-outlined">add</span>
+              Add
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section-divider"></div>
+      
+      <div class="selection-action-row" id="selectionActions" style="display: none;">
+        <div class="selection-info">
+          <span id="selectedCount">0</span> row(s) selected
+        </div>
+        <div class="selection-actions">
+          <button class="selection-action-btn" onclick="exportSelectedSchedulesCSV()">
+            <span class="material-symbols-outlined">download</span>
+            Export CSV
+          </button>
+          <button class="selection-action-btn" onclick="exportSelectedSchedulesJSON()">
+            <span class="material-symbols-outlined">code</span>
+            Export JSON
+          </button>
+          <button class="selection-action-btn" onclick="clearSelection()">
+            <span class="material-symbols-outlined">close</span>
+            Clear
+          </button>
+          <button class="selection-action-btn delete-btn" onclick="deleteSelectedSchedules()">
+            <span class="material-symbols-outlined">delete</span>
+            Delete
+          </button>
+        </div>
+      </div>
+      
+      <div class="select-all-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px;">
+        <div class="select-all-wrapper" style="display: flex; align-items: center; gap: 12px;">
+          <div class="select-all-checkbox" id="selectAllSchedules" onclick="toggleSelectAll()" style="display: flex;">
+            <span class="material-symbols-outlined">remove</span>
+          </div>
+          <span style="font-size: 14px; color: #64748b;">Select All</span>
+        </div>
+      </div>
+      
+      <div id="schedulesByDayContainer">
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Custom Delete Confirmation Dialog -->
+<div id="deleteConfirmDialog" class="confirm-dialog-overlay" style="display: none;">
+  <div class="confirm-dialog">
+    <div class="confirm-dialog-header">
+      <span class="material-symbols-outlined confirm-dialog-icon">delete_warning</span>
+      <h3>Delete Schedule</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>What would you like to do?</p>
+      <div class="confirm-dialog-options">
+        <button class="confirm-dialog-btn full-schedule-btn" onclick="confirmDeleteSchedule('full')">
+          <span class="material-symbols-outlined">delete_forever</span>
+          Remove Entire Schedule
+        </button>
+        <button class="confirm-dialog-btn teacher-only-btn" onclick="confirmDeleteSchedule('teacher')">
+          <span class="material-symbols-outlined">person_remove</span>
+          Remove Teacher Only
+        </button>
+      </div>
+      <p class="confirm-dialog-hint">The schedule will remain for other teachers.</p>
+    </div>
+    <div class="confirm-dialog-footer">
+      <button class="confirm-dialog-btn cancel-btn" onclick="closeDeleteDialog()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifications — ClockIn</title>
+  <link rel="stylesheet" href="styles/user_ui.css">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../db_config/supabase_config.js" defer></script>
+  <script src="../access/auth-guard.js"></script>
+  <script src="scripts/user_shared.js" defer></script>
+</head>
+<body data-page="notification_user" data-allow-employees="true">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Notifications</h1>
+            <p class="tagline">View your notifications.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+      
+      <div id="notificationsList"></div>
+    </main>
+  </div>
+</div>
+
+<script src="scripts/notification_user.js"></script>
+</body>
+</html>

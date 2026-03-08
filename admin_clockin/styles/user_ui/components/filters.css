@@ -1,0 +1,253 @@
+.table-filter-wrapper {
+  position: relative;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 30px;
+}
+
+.filter-btn:hover {
+  background: #f3f4f6;
+  border-color: #6b7280;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-btn:hover .material-symbols-outlined {
+  color: #374151;
+}
+
+.filter-btn.active,
+.filter-btn.active:hover {
+  background: #6b7280;
+  border-color: #6b7280;
+  color: #ffffff;
+}
+
+.filter-btn.active .material-symbols-outlined,
+.filter-btn.active:hover .material-symbols-outlined {
+  color: #ffffff;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  min-width: 280px;
+  max-width: 320px;
+  z-index: 100;
+  animation: dropdownSlide 0.2s ease-out;
+}
+
+.table-filter-wrapper.active .filter-btn.active,
+.table-filter-wrapper.active .filter-btn.active:hover {
+  background: #6b7280;
+  border-color: #6b7280;
+  color: #ffffff;
+}
+
+.table-filter-wrapper.active .filter-btn.active .material-symbols-outlined {
+  color: #ffffff;
+}
+
+#activeFilters,
+#activeSorts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.filter-group {
+  margin-bottom: 10px;
+}
+
+.filter-group:last-of-type {
+  margin-bottom: 12px;
+}
+
+.filter-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.filter-group select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #111827;
+  background: #fff;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-row select,
+.filter-row input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #111827;
+}
+
+.filter-row select:focus,
+.filter-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.filter-row span {
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.filter-separator {
+  border: 0;
+}
+
+.remove-filter-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.remove-filter-btn:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.remove-filter-btn .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.filter-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.add-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-filter-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.add-filter-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.filter-actions .btn-outline {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.filter-actions .export-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.filter-actions .export-btn.btn-secondary {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.filter-actions .export-btn.btn-secondary:hover {
+  background: #f9fafb;
+}
+
+.filter-group {
+  margin-bottom: 10px;
+}
+
+.filter-group:last-of-type {
+  margin-bottom: 12px;
+}
+
+.table-info {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+#filterStatus {
+  font-style: italic;
+}
+
+.date-filter-input {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #6b7280;
+  background: white;
+  cursor: pointer;
+  height: 30px;
+}
+
+.date-filter-input:focus {
+  outline: none;
+  border-color: #FF725E;
+}
+
