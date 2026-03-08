@@ -46,7 +46,7 @@ async function checkExistingSession() {
 function setupAuthListener() {
   const supabase = window.supabaseClient;
   
-  return supabase.auth.onAuthStateChanged(async (event, session) => {
+  return supabase.auth.onAuthStateChange(async (event, session) => {
     if (session && session.user) {
       try {
         const userInfo = await getUserIdByEmail(session.user.email);
