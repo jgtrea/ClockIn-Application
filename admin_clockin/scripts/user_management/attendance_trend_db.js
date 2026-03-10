@@ -1,5 +1,6 @@
 let currentTrend = 'weekly';
 let countType = 'total';
+let statusType = 'present';
 window.selectedDate = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -14,9 +15,16 @@ function showDatePicker() {
 }
 
 function toggleCountType() {
-  const select = document.getElementById('countTypeSelect');
-  countType = select.value;
+  countType = 'total';
   updateChartForTrend(currentTrend);
+}
+
+function toggleStatusType() {
+  const select = document.getElementById('statusTypeSelect');
+  if (select) {
+    statusType = select.value;
+    updateChartForTrend(currentTrend);
+  }
 }
 
 function onTrendChange() {
@@ -167,7 +175,8 @@ function updateChart(attendanceData, trend = 'weekly') {
             label: function(context) {
               const value = context.raw;
               const percentage = totalUsers > 0 ? Math.round((value / totalUsers) * 100) : 0;
-              return `${value} present teacher${value !== 1 ? 's' : ''} (${percentage}%)`;
+              const statusLabel = statusType.charAt(0).toUpperCase() + statusType.slice(1);
+              return `${value} ${statusLabel.toLowerCase()} teacher${value !== 1 ? 's' : ''} (${percentage}%)`;
             }
           }
         }
@@ -248,8 +257,17 @@ async function getDailyAttendanceData(dateString) {
   const uniqueUsers = new Set();
   const detailedRecords = [];
   
+  const statusMap = {
+    'present': 'Present',
+    'late': 'Late',
+    'absent': 'Absent',
+    'incomplete': 'Incomplete',
+    'excused': 'Excused'
+  };
+  const targetStatus = statusMap[statusType] || 'Present';
+  
   for (const record of records) {
-    if (record.date === dateString && record.status === 'Present') {
+    if (record.date === dateString && record.status === targetStatus) {
       if (countType === 'total') {
         count++;
       }
@@ -278,6 +296,15 @@ async function getWeeklyAttendanceData() {
   
   const records = window.allRecords || [];
   
+  const statusMap = {
+    'present': 'Present',
+    'late': 'Late',
+    'absent': 'Absent',
+    'incomplete': 'Incomplete',
+    'excused': 'Excused'
+  };
+  const targetStatus = statusMap[statusType] || 'Present';
+  
   const weekdays = [];
   
   let checkDate = new Date(referenceDate);
@@ -299,7 +326,7 @@ async function getWeeklyAttendanceData() {
     if (countType === 'total') {
       let count = 0;
       for (const record of records) {
-        if (record.date === dateString && record.status === 'Present') {
+        if (record.date === dateString && record.status === targetStatus) {
           count++;
         }
       }
@@ -307,7 +334,7 @@ async function getWeeklyAttendanceData() {
     } else {
       const uniqueUsers = new Set();
       for (const record of records) {
-        if (record.date === dateString && record.status === 'Present') {
+        if (record.date === dateString && record.status === targetStatus) {
           uniqueUsers.add(record.userName);
         }
       }
@@ -323,7 +350,15 @@ async function getMonthlyAttendanceData() {
   const today = new Date();
   const records = window.allRecords || [];
   
-  // Show last 7 months
+  const statusMap = {
+    'present': 'Present',
+    'late': 'Late',
+    'absent': 'Absent',
+    'incomplete': 'Incomplete',
+    'excused': 'Excused'
+  };
+  const targetStatus = statusMap[statusType] || 'Present';
+  
   for (let i = 0; i < 7; i++) {
     const date = new Date(today.getFullYear(), today.getMonth() - (6 - i), 1);
     const year = date.getFullYear();
@@ -332,7 +367,7 @@ async function getMonthlyAttendanceData() {
     if (countType === 'total') {
       let count = 0;
       for (const record of records) {
-        if (record.date && record.date.startsWith(`${year}-${month}`) && record.status === 'Present') {
+        if (record.date && record.date.startsWith(`${year}-${month}`) && record.status === targetStatus) {
           count++;
         }
       }
@@ -340,7 +375,7 @@ async function getMonthlyAttendanceData() {
     } else {
       const uniqueUsers = new Set();
       for (const record of records) {
-        if (record.date && record.date.startsWith(`${year}-${month}`) && record.status === 'Present') {
+        if (record.date && record.date.startsWith(`${year}-${month}`) && record.status === targetStatus) {
           uniqueUsers.add(record.userName);
         }
       }
@@ -356,14 +391,22 @@ async function getYearlyAttendanceData() {
   const currentYear = new Date().getFullYear();
   const records = window.allRecords || [];
   
-  // Show last 7 years
+  const statusMap = {
+    'present': 'Present',
+    'late': 'Late',
+    'absent': 'Absent',
+    'incomplete': 'Incomplete',
+    'excused': 'Excused'
+  };
+  const targetStatus = statusMap[statusType] || 'Present';
+  
   for (let i = 0; i < 7; i++) {
     const year = currentYear - (6 - i);
     
     if (countType === 'total') {
       let count = 0;
       for (const record of records) {
-        if (record.date && record.date.startsWith(year.toString()) && record.status === 'Present') {
+        if (record.date && record.date.startsWith(year.toString()) && record.status === targetStatus) {
           count++;
         }
       }
@@ -371,7 +414,7 @@ async function getYearlyAttendanceData() {
     } else {
       const uniqueUsers = new Set();
       for (const record of records) {
-        if (record.date && record.date.startsWith(year.toString()) && record.status === 'Present') {
+        if (record.date && record.date.startsWith(year.toString()) && record.status === targetStatus) {
           uniqueUsers.add(record.userName);
         }
       }

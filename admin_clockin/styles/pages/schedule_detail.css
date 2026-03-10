@@ -120,8 +120,8 @@
 
 /* Action Buttons */
 .btn-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   background: #fff;
@@ -137,7 +137,7 @@
 }
 
 .btn-icon .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .edit-btn:hover {
@@ -408,13 +408,24 @@
 .selection-actions {
   display: flex;
   gap: 8px;
+  order: 1;
+}
+
+.selection-info {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+  order: 2;
+  margin-left: auto;
 }
 
 .selection-action-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   background: #fff;
@@ -423,6 +434,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  height: 40px;
 }
 
 .selection-action-btn:hover {
@@ -434,7 +446,7 @@
 }
 
 .selection-action-btn .material-symbols-outlined {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .selection-action-btn.delete-btn {

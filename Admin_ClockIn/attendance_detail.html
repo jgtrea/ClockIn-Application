@@ -56,6 +56,36 @@
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
         
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchAttendanceInput" class="search-username-input" placeholder="Search Subject/Section" oninput="searchAttendance(this.value)" autocomplete="off">
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleStatusFilter()">
+                <span class="material-symbols-outlined">filter_list</span>
+                Status
+              </button>
+              <div id="statusFilterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <label style="display: block; padding: 8px 12px; font-size: 13px;">Filter by Status</label>
+                <div style="padding: 4px 12px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Present" onchange="filterByStatus()"> Present
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Absent" onchange="filterByStatus()"> Absent
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Late" onchange="filterByStatus()"> Late
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="attendance-detail-container">
         <div class="calendar-section">
           <div class="calendar-header">
@@ -118,4 +148,50 @@
 </div>
 
 </body>
+<script>
+function toggleStatusFilter() {
+  const menu = document.getElementById('statusFilterMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function filterByStatus() {
+  const checkboxes = document.querySelectorAll('#statusFilterMenu input[type="checkbox"]:checked');
+  const selectedStatuses = Array.from(checkboxes).map(cb => cb.value);
+  
+  const rows = document.querySelectorAll('#attendanceRecordsList tr');
+  rows.forEach(row => {
+    const statusCell = row.querySelector('td:nth-child(6)');
+    if (statusCell) {
+      const status = statusCell.textContent.trim();
+      if (selectedStatuses.length === 0 || selectedStatuses.includes(status)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    }
+  });
+}
+
+function searchAttendance(query) {
+  query = query.toLowerCase();
+  const rows = document.querySelectorAll('#attendanceRecordsList tr');
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(query)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+// Close filter menu when clicking outside
+document.addEventListener('click', function(e) {
+  const filterWrapper = document.querySelector('.table-filter-wrapper');
+  if (filterWrapper && !filterWrapper.contains(e.target)) {
+    const menu = document.getElementById('statusFilterMenu');
+    if (menu) menu.style.display = 'none';
+  }
+});
+</script>
 </html>

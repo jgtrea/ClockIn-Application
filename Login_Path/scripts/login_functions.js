@@ -58,7 +58,6 @@ function setupAuthListener() {
         }
       } catch (e) {
         console.error('Privilege check failed', e);
-        window.location.href = '../user_clockin/index_user.html';
       }
     }
   });

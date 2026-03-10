@@ -80,6 +80,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       renderSchedule(scheduleData, sectionsMap);
+      
+      // Populate filter dropdowns with subject and section options
+      if (typeof populateSubjectAndSectionFilters === 'function') {
+        populateSubjectAndSectionFilters(scheduleData, sectionsMap);
+      }
     } catch (err) {
       console.error('Error loading schedule details:', err);
     }

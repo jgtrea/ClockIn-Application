@@ -59,15 +59,15 @@
       <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <!-- Search by teacher name and date -->
         <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px;">
-          <input type="text" id="teacherSearchInput" list="teacherList" oninput="searchTeacher()" placeholder="Search username..." style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; width: 200px;">
+          <input type="text" id="teacherSearchInput" list="teacherList" oninput="searchTeacher()" placeholder="Search username..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; width: 200px; height: 40px;">
           <datalist id="teacherList"></datalist>
-          <button onclick="clearTeacherSearch()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">Clear</button>
-          <input type="date" id="statsDate" onchange="onStatsDateChanged()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
+          <button onclick="clearTeacherSearch()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">Clear</button>
+          <input type="date" id="statsDate" onchange="onStatsDateChanged()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
           <div style="margin-left: auto; display: flex; gap: 4px; align-items: center;">
-            <button onclick="changeStatsPage(-1)" id="statsPrevBtn" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center;">
+            <button onclick="changeStatsPage(-1)" id="statsPrevBtn" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center; height: 40px;">
               <span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span>
             </button>
-            <button onclick="changeStatsPage(1)" id="statsNextBtn" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center;">
+            <button onclick="changeStatsPage(1)" id="statsNextBtn" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center; height: 40px;">
               <span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
             </button>
           </div>
@@ -163,12 +163,15 @@
             <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
               <h3 class="chart-title">Attendance Trend</h3>
               <div class="chart-filters" style="display: flex; gap: 8px; align-items: center;">
-                <input type="date" id="chartDate" onchange="onDateSelected()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
-                <select id="countTypeSelect" onchange="toggleCountType()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
-                  <option value="total">Present Teachers</option>
-                  <option value="each">Individual Attendance</option>
+                <input type="date" id="chartDate" onchange="onDateSelected()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
+                <select id="statusTypeSelect" onchange="toggleStatusType()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
+                  <option value="present">Present</option>
+                  <option value="late">Late</option>
+                  <option value="absent">Absent</option>
+                  <option value="incomplete">Incomplete</option>
+                  <option value="excused">Excused</option>
                 </select>
-                <select id="trendSelect" onchange="onTrendChange()" style="padding: 6px 30px 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer;">
+                <select id="trendSelect" onchange="onTrendChange()" style="padding: 8px 30px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
                   <option value="weekly">This Week</option>
                   <option value="monthly">This Month</option>
                   <option value="yearly">This Year</option>

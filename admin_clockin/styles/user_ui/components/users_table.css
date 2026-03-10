@@ -73,8 +73,8 @@
   }
 
   .btn-icon {
-    width: 28px !important;
-    height: 28px !important;
+    width: 32px;
+    height: 32px;
   }
 
   .btn-icon .material-symbols-outlined {
@@ -91,9 +91,37 @@
   background: #f9fafb;
 }
 
+.select-all-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin: 16px 20px;
+}
+
+.select-all-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.select-all-wrapper span {
+  font-size: 14px;
+  color: #64748b;
+}
+
 .table-actions-left {
   display: flex;
   gap: 8px;
+}
+
+.table-actions-right {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .search-username-label {
@@ -110,15 +138,15 @@
 }
 
 .search-username-input {
-  padding: 6px 10px;
+  padding: 8px 10px;
   padding-left: 30px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   background: #fff;
   font-size: 13px;
   color: #374151;
-  width: 180px;
-  height: 30px;
+  width: 350px;
+  height: 40px;
   transition: all 0.2s ease;
 }
 
@@ -130,10 +158,10 @@
   content: 'search';
   font-family: 'Material Symbols Outlined';
   position: absolute;
-  left: 8px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 16px;
+  font-size: 18px;
   color: #9ca3af;
   pointer-events: none;
 }
@@ -142,7 +170,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 8px 16px;
   border: 2px solid var(--accent);
   border-radius: 6px;
   background: var(--accent);
@@ -151,7 +179,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  height: 30px;
+  height: 40px;
 }
 
 .add-user-btn:hover {
@@ -189,7 +217,7 @@
 .selection-actions {
   display: flex;
   gap: 8px;
-  order: 2;
+  order: 1;
 }
 
 .selection-info {
@@ -198,7 +226,7 @@
   font-size: 13px;
   color: #374151;
   font-weight: 500;
-  order: 1;
+  order: 2;
 }
 
 .selection-info #selectedCount {
@@ -209,7 +237,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   background: #fff;
@@ -218,6 +246,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  height: 40px;
 }
 
 .selection-action-btn:hover {
@@ -229,7 +258,7 @@
 }
 
 .selection-action-btn .material-symbols-outlined {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .selection-action-btn.delete-btn {
@@ -424,8 +453,8 @@
 }
 
 .btn-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 4px;
   border: 1px solid #e5e7eb;
   background: #fff;
@@ -447,7 +476,7 @@
 }
 
 .edit-btn .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 20px;
   color: #374151;
 }
 
@@ -457,7 +486,7 @@
 }
 
 .view-btn .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 20px;
   color: #374151;
 }
 
@@ -467,7 +496,7 @@
 }
 
 .delete-btn .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 20px;
   color: #dc2626;
 }
 

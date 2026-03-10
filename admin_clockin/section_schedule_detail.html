@@ -81,6 +81,48 @@
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
 
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchSectionScheduleInput" class="search-username-input" placeholder="Search Employee/Subject" oninput="searchSectionSchedule(this.value)" autocomplete="off">
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleSectionDayFilter()">
+                <span class="material-symbols-outlined">filter_list</span>
+                Day
+              </button>
+              <div id="sectionDayFilterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <label style="display: block; padding: 8px 12px; font-size: 13px;">Filter by Day</label>
+                <div style="padding: 4px 12px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Monday" onchange="filterSectionByDay()"> Monday
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Tuesday" onchange="filterSectionByDay()"> Tuesday
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Wednesday" onchange="filterSectionByDay()"> Wednesday
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Thursday" onchange="filterSectionByDay()"> Thursday
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Friday" onchange="filterSectionByDay()"> Friday
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Saturday" onchange="filterSectionByDay()"> Saturday
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" value="Sunday" onchange="filterSectionByDay()"> Sunday
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="add-schedule-form">
         <div class="form-row">
           <div class="form-field">
@@ -191,6 +233,56 @@
     </div>
   </div>
 </div>
+
+<script>
+function toggleSectionDayFilter() {
+  const menu = document.getElementById('sectionDayFilterMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function filterSectionByDay() {
+  const checkboxes = document.querySelectorAll('#sectionDayFilterMenu input[type="checkbox"]:checked');
+  const selectedDays = Array.from(checkboxes).map(cb => cb.value);
+  
+  const scheduleRows = document.querySelectorAll('.schedule-day-section');
+  scheduleRows.forEach(section => {
+    const dayName = section.getAttribute('data-day');
+    if (selectedDays.length === 0 || selectedDays.includes(dayName)) {
+      section.style.display = '';
+    } else {
+      section.style.display = 'none';
+    }
+  });
+}
+
+function searchSectionSchedule(query) {
+  query = query.toLowerCase();
+  const scheduleRows = document.querySelectorAll('.schedule-day-section');
+  scheduleRows.forEach(section => {
+    const employees = section.querySelectorAll('.schedule-item');
+    let hasMatch = false;
+    employees.forEach(item => {
+      const text = item.textContent.toLowerCase();
+      if (text.includes(query)) {
+        item.style.display = '';
+        hasMatch = true;
+      } else {
+        item.style.display = 'none';
+      }
+    });
+    section.style.display = hasMatch ? '' : 'none';
+  });
+}
+
+// Close filter menu when clicking outside
+document.addEventListener('click', function(e) {
+  const filterWrapper = document.querySelector('.table-filter-wrapper');
+  if (filterWrapper && !filterWrapper.contains(e.target)) {
+    const menu = document.getElementById('sectionDayFilterMenu');
+    if (menu) menu.style.display = 'none';
+  }
+});
+</script>
 
 </body>
 </html>

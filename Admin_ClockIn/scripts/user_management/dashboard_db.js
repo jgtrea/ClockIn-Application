@@ -422,25 +422,23 @@ function updateDashboardStats() {
   if (incompleteTodayPct) incompleteTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.incomplete / total) * 100) + '%' : '0%';
 }
 
-// Teacher search functionality
 window.searchTeacher = function() {
   const searchInput = document.getElementById('teacherSearchInput');
+  if (!searchInput) return;
+  
   const searchTerm = searchInput.value.toLowerCase();
   const records = window.allRecords || [];
   
   if (!searchTerm) {
-    // Clear search - show all stats
     window.dashboardStats.selectedTeacherId = null;
     calculateOverallStats();
     return;
   }
   
-  // Find teacher by exact name match first (for datalist selection)
   let teacherRecords = records.filter(r => 
     r.userName && r.userName.toLowerCase() === searchTerm
   );
   
-  // If no exact match, try partial match
   if (teacherRecords.length === 0) {
     teacherRecords = records.filter(r => 
       r.userName && r.userName.toLowerCase().includes(searchTerm)
@@ -448,20 +446,17 @@ window.searchTeacher = function() {
   }
   
   if (teacherRecords.length > 0) {
-    // Get the unique teacher name
     const teacherName = teacherRecords[0].userName;
     
     window.dashboardStats.selectedTeacherId = teacherName;
     window.dashboardStats.teacherRecords = teacherRecords;
     
-    // Get selected date from statsDate input
     const statsDateEl = document.getElementById('statsDate');
     const selectedDate = statsDateEl?.value || new Date().toISOString().split('T')[0];
     
-    // Calculate stats for this teacher for selected date
     const teacherTodayRecords = teacherRecords.filter(r => r.date === selectedDate);
     
-    window.dashboardStats.totalEmployees = 1; // Searching for one specific teacher
+    window.dashboardStats.totalEmployees = 1;
     window.dashboardStats.totalInstances = teacherTodayRecords.length;
     window.dashboardStats.onSchedule = teacherTodayRecords.filter(r => r.status === 'Present').length;
     window.dashboardStats.late = teacherTodayRecords.filter(r => r.status === 'Late').length;
@@ -472,7 +467,6 @@ window.searchTeacher = function() {
     updateDashboardStats();
     initStatsPagination();
   } else {
-    // No records found - show all zeros
     window.dashboardStats.selectedTeacherId = searchTerm;
     window.dashboardStats.teacherRecords = [];
     window.dashboardStats.totalEmployees = 0;
@@ -499,31 +493,25 @@ window.clearTeacherSearch = function() {
   initStatsPagination();
 };
 
-// Populate teacher datalist with all teacher names
 window.populateTeacherList = function(usersData) {
   const teacherList = document.getElementById('teacherList');
   
   if (!teacherList) return;
   
-  // Get unique teacher names from users data
   let teacherNames = [];
   if (usersData && Array.isArray(usersData)) {
     teacherNames = usersData.map(u => u.name).filter(name => name);
   }
   
-  // Also include any names from records that might not be in usersData
   const records = window.allRecords || [];
   records.forEach(r => {
     if (r.userName) teacherNames.push(r.userName);
   });
   
-  // Remove duplicates and sort alphabetically
   const uniqueNames = [...new Set(teacherNames)].sort();
   
-  // Clear existing options
   teacherList.innerHTML = '';
   
-  // Add options
   uniqueNames.forEach(name => {
     const option = document.createElement('option');
     option.value = name;
