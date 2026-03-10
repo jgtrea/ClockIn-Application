@@ -68,8 +68,7 @@ let sectionCurrentPage = 1;
 const sectionRecordsPerPage = 5;
 
 function searchByName(term) {
-  currentSearchTerm = term || '';
-  applyFilters();
+  window.searchUsername(term);
 }
 
 function filterByDate(date) {
@@ -167,7 +166,7 @@ window.addFilterRow = function() {
     </select>
     <span>:</span>
     <input type="text" class="filter-value-input" placeholder="Enter value...">
-    <button class="remove-filter-btn" onclick="this.parentElement.remove()">
+    <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
       <span class="material-symbols-outlined">close</span>
     </button>
   `;
@@ -194,7 +193,7 @@ window.addSortRow = function() {
       <option value="asc">Ascending</option>
       <option value="desc">Descending</option>
     </select>
-    <button class="remove-filter-btn" onclick="this.parentElement.remove()">
+    <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
       <span class="material-symbols-outlined">close</span>
     </button>
   `;
@@ -385,9 +384,7 @@ window.dashboardStats = {
   late: 0,
   absent: 0,
   excused: 0,
-  incomplete: 0,
-  selectedTeacherId: null,
-  teacherRecords: []
+  incomplete: 0
 };
 
 function updateDashboardStats() {
@@ -422,109 +419,25 @@ function updateDashboardStats() {
   if (incompleteTodayPct) incompleteTodayPct.textContent = total > 0 ? Math.round((window.dashboardStats.incomplete / total) * 100) + '%' : '0%';
 }
 
-window.searchTeacher = function() {
-  const searchInput = document.getElementById('teacherSearchInput');
-  if (!searchInput) return;
-  
-  const searchTerm = searchInput.value.toLowerCase();
-  const records = window.allRecords || [];
-  
-  if (!searchTerm) {
-    window.dashboardStats.selectedTeacherId = null;
-    calculateOverallStats();
-    return;
-  }
-  
-  let teacherRecords = records.filter(r => 
-    r.userName && r.userName.toLowerCase() === searchTerm
-  );
-  
-  if (teacherRecords.length === 0) {
-    teacherRecords = records.filter(r => 
-      r.userName && r.userName.toLowerCase().includes(searchTerm)
-    );
-  }
-  
-  if (teacherRecords.length > 0) {
-    const teacherName = teacherRecords[0].userName;
-    
-    window.dashboardStats.selectedTeacherId = teacherName;
-    window.dashboardStats.teacherRecords = teacherRecords;
-    
-    const statsDateEl = document.getElementById('statsDate');
-    const selectedDate = statsDateEl?.value || new Date().toISOString().split('T')[0];
-    
-    const teacherTodayRecords = teacherRecords.filter(r => r.date === selectedDate);
-    
-    window.dashboardStats.totalEmployees = 1;
-    window.dashboardStats.totalInstances = teacherTodayRecords.length;
-    window.dashboardStats.onSchedule = teacherTodayRecords.filter(r => r.status === 'Present').length;
-    window.dashboardStats.late = teacherTodayRecords.filter(r => r.status === 'Late').length;
-    window.dashboardStats.absent = teacherTodayRecords.filter(r => r.status === 'Absent').length;
-    window.dashboardStats.excused = teacherTodayRecords.filter(r => r.status === 'Excused').length;
-    window.dashboardStats.incomplete = teacherTodayRecords.filter(r => r.status === 'Incomplete').length;
-    
-    updateDashboardStats();
-    initStatsPagination();
-  } else {
-    window.dashboardStats.selectedTeacherId = searchTerm;
-    window.dashboardStats.teacherRecords = [];
-    window.dashboardStats.totalEmployees = 0;
-    window.dashboardStats.totalInstances = 0;
-    window.dashboardStats.onSchedule = 0;
-    window.dashboardStats.late = 0;
-    window.dashboardStats.absent = 0;
-    window.dashboardStats.excused = 0;
-    window.dashboardStats.incomplete = 0;
-    
-    updateDashboardStats();
-    initStatsPagination();
-  }
-};
-
-window.clearTeacherSearch = function() {
-  const searchInput = document.getElementById('teacherSearchInput');
-  if (searchInput) searchInput.value = '';
-  
-  window.dashboardStats.selectedTeacherId = null;
-  window.dashboardStats.teacherRecords = [];
-  
-  calculateOverallStats();
-  initStatsPagination();
-};
-
-window.populateTeacherList = function(usersData) {
-  const teacherList = document.getElementById('teacherList');
-  
-  if (!teacherList) return;
-  
-  let teacherNames = [];
-  if (usersData && Array.isArray(usersData)) {
-    teacherNames = usersData.map(u => u.name).filter(name => name);
-  }
-  
-  const records = window.allRecords || [];
-  records.forEach(r => {
-    if (r.userName) teacherNames.push(r.userName);
-  });
-  
-  const uniqueNames = [...new Set(teacherNames)].sort();
-  
-  teacherList.innerHTML = '';
-  
-  uniqueNames.forEach(name => {
-    const option = document.createElement('option');
-    option.value = name;
-    teacherList.appendChild(option);
-  });
-};
-
-function calculateOverallStats() {
+window.calculateOverallStats = function() {
   const records = window.allRecords || [];
   
   // Get selected date from statsDate input, or default to today
   const statsDateEl = document.getElementById('statsDate');
-  const selectedDate = statsDateEl?.value || new Date().toISOString().split('T')[0];
+  let selectedDate = statsDateEl?.value;
+  
+  // If no date is selected, default to today and set the input
+  if (!selectedDate) {
+    selectedDate = new Date().toISOString().split('T')[0];
+    if (statsDateEl) {
+      statsDateEl.value = selectedDate;
+    }
+    // Also sync the chart date
+    const chartDateEl = document.getElementById('chartDate');
+    if (chartDateEl) {
+      chartDateEl.value = selectedDate;
+    }
+  }
   
   // Get total employees from usersData if available, otherwise from records
   if (window.allUsers && Array.isArray(window.allUsers)) {
@@ -551,6 +464,8 @@ function calculateOverallStats() {
 window.onStatsDateChanged = function() {
   const statsDateEl = document.getElementById('statsDate');
   const chartDateEl = document.getElementById('chartDate');
+  const searchInput = document.getElementById('searchUsernameInput');
+  const selectedUser = searchInput?.value;
   
   if (statsDateEl && statsDateEl.value) {
     // Sync the chart date picker
@@ -560,16 +475,45 @@ window.onStatsDateChanged = function() {
     
     // Update the chart's selected date and refresh
     if (typeof updateChartForTrend === 'function') {
-      // Set the selectedDate in attendance_trend_db.js
       if (typeof window.selectedDate !== 'undefined') {
         window.selectedDate = statsDateEl.value;
       }
       updateChartForTrend('weekly');
     }
     
-    // Recalculate stats for the selected date
-    calculateOverallStats();
-    initStatsPagination();
+    // If a user is selected, recalculate their stats for the new date
+    if (selectedUser) {
+      window.onUserSelected(selectedUser);
+    } else {
+      // Otherwise calculate overall stats for the selected date
+      window.calculateOverallStats();
+      initStatsPagination();
+    }
+  } else {
+    // No date selected - default to today
+    const today = new Date().toISOString().split('T')[0];
+    statsDateEl.value = today;
+    
+    // Sync the chart date picker
+    if (chartDateEl) {
+      chartDateEl.value = today;
+    }
+    
+    // Update the chart
+    if (typeof updateChartForTrend === 'function') {
+      if (typeof window.selectedDate !== 'undefined') {
+        window.selectedDate = today;
+      }
+      updateChartForTrend('weekly');
+    }
+    
+    // Show today's overall stats
+    if (selectedUser) {
+      window.onUserSelected(selectedUser);
+    } else {
+      window.calculateOverallStats();
+      initStatsPagination();
+    }
   }
 };
 
@@ -655,14 +599,14 @@ async function loadRecentActivity() {
     window.allRecords = allRecords;
     window.allUsers = usersData;
     
+    // Populate user datalist with all employees
+    populateUserList();
+    
     // Calculate stats using instance-based calculation
     calculateOverallStats();
     
     // Initialize stats pagination
     initStatsPagination();
-    
-    // Populate teacher datalist with all users
-    populateTeacherList(usersData);
     
     // Sort by timestamp descending (latest clock-in first)
     const bodyPage = document.body.getAttribute('data-page');
@@ -1128,6 +1072,122 @@ window.addEventListener('message', function(event) {
 function performSearch() {
   const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
   window.postMessage({ type: 'search', term: searchTerm }, '*');
+}
+
+window.searchUsername = function(term) {
+  currentSearchTerm = term || '';
+  
+  // Check if term matches exactly a username (for dropdown selection)
+  const userList = document.getElementById('userList');
+  const matchingOption = userList?.querySelector(`option[value="${term}"]`);
+  
+  if (matchingOption) {
+    // User selected from dropdown - show individual stats
+    window.onUserSelected(term);
+  } else if (!term) {
+    // Clear user filter, show all
+    window.clearUserFilter();
+    window.applyFilters();
+  } else {
+    // Typing search - just filter the table
+    window.applyFilters();
+  }
+}
+
+// Handle user selection from datalist
+window.onUserSelected = function(userName) {
+  if (!userName) {
+    window.clearUserFilter();
+    window.calculateOverallStats();
+    return;
+  }
+  
+  // Get selected date - default to today if not set
+  const statsDateEl = document.getElementById('statsDate');
+  let selectedDate = statsDateEl?.value;
+  
+  // If no date is selected, default to today
+  if (!selectedDate) {
+    selectedDate = new Date().toISOString().split('T')[0];
+    if (statsDateEl) {
+      statsDateEl.value = selectedDate;
+    }
+    
+    // Also sync the chart date
+    const chartDateEl = document.getElementById('chartDate');
+    if (chartDateEl) {
+      chartDateEl.value = selectedDate;
+    }
+  }
+  
+  // Filter records for selected user AND date
+  let userRecords = allRecords.filter(record => record.userName === userName);
+  
+  if (selectedDate) {
+    userRecords = userRecords.filter(record => record.date === selectedDate);
+  }
+  
+  // Update dashboard stats for the selected user
+  window.dashboardStats = {
+    totalEmployees: 1,
+    totalInstances: userRecords.length,
+    onSchedule: userRecords.filter(r => r.status === 'Present').length,
+    late: userRecords.filter(r => r.status === 'Late').length,
+    absent: userRecords.filter(r => r.status === 'Absent').length,
+    excused: userRecords.filter(r => r.status === 'Excused').length,
+    incomplete: userRecords.filter(r => r.status === 'Incomplete').length
+  };
+  
+  // Calculate percentages
+  const total = window.dashboardStats.totalInstances || 1;
+  window.dashboardStats.onSchedulePct = Math.round((window.dashboardStats.onSchedule / total) * 100);
+  window.dashboardStats.latePct = Math.round((window.dashboardStats.late / total) * 100);
+  window.dashboardStats.absentPct = Math.round((window.dashboardStats.absent / total) * 100);
+  window.dashboardStats.incompletePct = Math.round((window.dashboardStats.incomplete / total) * 100);
+  window.dashboardStats.excusedPct = Math.round((window.dashboardStats.excused / total) * 100);
+  
+  window.updateDashboardStats();
+};
+
+// Clear user filter and show overall stats
+window.clearUserFilter = function() {
+  const searchInput = document.getElementById('searchUsernameInput');
+  if (searchInput) {
+    searchInput.value = '';
+  }
+  currentSearchTerm = '';
+  window.calculateOverallStats();
+};
+
+// Populate user datalist
+function populateUserList() {
+  const userList = document.getElementById('userList');
+  if (!userList) return;
+  
+  // Get unique usernames from records
+  const usernames = new Set();
+  allRecords.forEach(record => {
+    if (record.userName) {
+      usernames.add(record.userName);
+    }
+  });
+  
+  // Also add from allUsers if available
+  if (window.allUsers && Array.isArray(window.allUsers)) {
+    window.allUsers.forEach(user => {
+      if (user.name) {
+        usernames.add(user.name);
+      }
+    });
+  }
+  
+  // Clear and populate
+  userList.innerHTML = '';
+  usernames.forEach(username => {
+    const option = document.createElement('option');
+    option.value = username;
+    userList.appendChild(option);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

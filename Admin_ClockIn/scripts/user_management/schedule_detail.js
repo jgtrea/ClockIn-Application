@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.dayOrder = dayOrder;
   let allSections = [];
   let selectedSchedules = new Set();
+  let allSchedules = [];
+  let filteredSchedules = [];
+  let sectionsMap = {};
 
 
   async function loadScheduleDetails() {
@@ -53,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       sectionsData.forEach(section => {
         sectionsMap[section.sectId] = section.sectionName;
       });
+      window.sectionsMap = sectionsMap;
 
       // Populate section datalist
       const sectionDatalist = document.getElementById('sectionList');
@@ -79,7 +83,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         return a.startTime.localeCompare(b.startTime);
       });
 
-      renderSchedule(scheduleData, sectionsMap);
+      allSchedules = scheduleData.map(s => ({
+        ...s,
+        sectionName: sectionsMap[s.sectId] || ''
+      }));
+      filteredSchedules = [...allSchedules];
+      
+      renderSchedule(allSchedules, sectionsMap);
       
       // Populate filter dropdowns with subject and section options
       if (typeof populateSubjectAndSectionFilters === 'function') {
@@ -92,6 +102,261 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Expose loadScheduleDetails globally for modal functions
   window.loadScheduleDetails = loadScheduleDetails;
+
+  window.toggleFilterMenu = function() {
+    const filterMenu = document.getElementById('filterMenu');
+    const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+    const isOpen = filterMenu && filterMenu.style.display === 'block';
+    
+    if (filterMenu) {
+      filterMenu.style.display = isOpen ? 'none' : 'block';
+    }
+    const sortMenu = document.getElementById('sortMenu');
+    if (sortMenu) {
+      sortMenu.style.display = 'none';
+    }
+    
+    if (filterWrapper) {
+      filterWrapper.classList.toggle('active', !isOpen);
+    }
+  };
+
+  window.toggleSortMenu = function() {
+    const sortMenu = document.getElementById('sortMenu');
+    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+    const isOpen = sortMenu && sortMenu.style.display === 'block';
+    
+    if (sortMenu) {
+      sortMenu.style.display = isOpen ? 'none' : 'block';
+    }
+    const filterMenu = document.getElementById('filterMenu');
+    if (filterMenu) {
+      filterMenu.style.display = 'none';
+    }
+    
+    if (sortWrapper) {
+      sortWrapper.classList.toggle('active', !isOpen);
+    }
+  };
+
+  window.addFilterRow = function() {
+    const activeFilters = document.getElementById('activeFilters');
+    const filterRow = document.createElement('div');
+    filterRow.className = 'filter-row';
+    
+    filterRow.innerHTML = `
+      <select class="filter-column-select">
+        <option value="weekday">Weekday</option>
+        <option value="startTime">Start Time</option>
+        <option value="endTime">End Time</option>
+        <option value="subject">Subject</option>
+        <option value="section">Section</option>
+      </select>
+      <span>:</span>
+      <input type="text" class="filter-value-input" placeholder="Enter value...">
+      <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    `;
+    
+    activeFilters.appendChild(filterRow);
+  };
+
+  window.addSortRow = function() {
+    const activeSorts = document.getElementById('activeSorts');
+    const sortRow = document.createElement('div');
+    sortRow.className = 'filter-row';
+    
+    sortRow.innerHTML = `
+      <select class="filter-column-select">
+        <option value="weekday">Weekday</option>
+        <option value="startTime">Start Time</option>
+        <option value="endTime">End Time</option>
+        <option value="subject">Subject</option>
+        <option value="section">Section</option>
+      </select>
+      <span>:</span>
+      <select class="filter-column-select">
+        <option value="asc">Ascending</option>
+        <option value="desc">Descending</option>
+      </select>
+      <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    `;
+    
+    activeSorts.appendChild(sortRow);
+  };
+
+  window.applyFilters = function() {
+    const filterRows = document.querySelectorAll('#activeFilters .filter-row');
+    const filters = [];
+    
+    filterRows.forEach(row => {
+      const select = row.querySelector('select');
+      const input = row.querySelector('input');
+      if (select && input && input.value.trim()) {
+        filters.push({
+          column: select.value,
+          value: input.value.trim().toLowerCase()
+        });
+      }
+    });
+    
+    let sourceData = [...allSchedules];
+    
+    if (filters.length === 0) {
+      filteredSchedules = sourceData;
+      document.getElementById('filterStatus').textContent = '';
+    } else {
+      filteredSchedules = sourceData.filter(schedule => {
+        return filters.every(filter => {
+          let cellValue = '';
+          if (filter.column === 'weekday') {
+            cellValue = schedule.weekday || '';
+          } else if (filter.column === 'startTime') {
+            cellValue = schedule.startTime || '';
+          } else if (filter.column === 'endTime') {
+            cellValue = schedule.endTime || '';
+          } else if (filter.column === 'subject') {
+            cellValue = schedule.subject || '';
+          } else if (filter.column === 'section') {
+            cellValue = schedule.sectionName || '';
+          }
+          return String(cellValue).toLowerCase().includes(filter.value);
+        });
+      });
+      document.getElementById('filterStatus').textContent = `Filtered (${filters.length})`;
+    }
+    
+    toggleFilterMenu();
+    const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+    if (filterWrapper) filterWrapper.classList.remove('active');
+    
+    renderSchedule(filteredSchedules, sectionsMap);
+  };
+
+  window.applySort = function() {
+    const sortRows = document.querySelectorAll('#activeSorts .filter-row');
+    const sorts = [];
+    
+    sortRows.forEach(row => {
+      const selects = row.querySelectorAll('select');
+      if (selects.length >= 2) {
+        const column = selects[0].value;
+        const orderValue = selects[1].value;
+        sorts.push({
+          column: column,
+          ascending: orderValue === 'asc'
+        });
+      }
+    });
+    
+    if (sorts.length > 0) {
+      const sortedData = [...filteredSchedules].sort((a, b) => {
+        for (const sort of sorts) {
+          const { column, ascending } = sort;
+          let valueA, valueB;
+          
+          if (column === 'weekday') {
+            valueA = dayOrder.indexOf(a.weekday);
+            valueB = dayOrder.indexOf(b.weekday);
+          } else if (column === 'startTime') {
+            valueA = a.startTime || '';
+            valueB = b.startTime || '';
+          } else if (column === 'endTime') {
+            valueA = a.endTime || '';
+            valueB = b.endTime || '';
+          } else if (column === 'subject') {
+            valueA = (a.subject || '').toLowerCase();
+            valueB = (b.subject || '').toLowerCase();
+          } else if (column === 'section') {
+            valueA = (a.sectionName || '').toLowerCase();
+            valueB = (b.sectionName || '').toLowerCase();
+          }
+          
+          if (valueA !== valueB) {
+            return ascending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
+          }
+        }
+        return 0;
+      });
+      filteredSchedules = sortedData;
+    }
+    
+    toggleSortMenu();
+    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+    if (sortWrapper) sortWrapper.classList.remove('active');
+    
+    renderSchedule(filteredSchedules, sectionsMap);
+  };
+
+  window.searchSchedule = function(searchTerm) {
+    if (!searchTerm) {
+      filteredSchedules = [...allSchedules];
+    } else {
+      filteredSchedules = allSchedules.filter(schedule => {
+        const weekday = (schedule.weekday || '').toLowerCase();
+        const subject = (schedule.subject || '').toLowerCase();
+        const sectionName = (schedule.sectionName || '').toLowerCase();
+        const startTime = (schedule.startTime || '').toLowerCase();
+        const endTime = (schedule.endTime || '').toLowerCase();
+        const term = searchTerm.toLowerCase();
+        return weekday.includes(term) || subject.includes(term) || sectionName.includes(term) || startTime.includes(term) || endTime.includes(term);
+      });
+    }
+    renderSchedule(filteredSchedules, sectionsMap);
+  };
+
+  document.addEventListener('click', function(event) {
+    const filterWrapper = document.querySelector('.table-filter-wrapper');
+    const filterMenu = document.getElementById('filterMenu');
+    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
+    const sortMenu = document.getElementById('sortMenu');
+    const addScheduleBtn = document.getElementById('addScheduleBtn');
+    const addScheduleMenu = document.getElementById('addScheduleMenu');
+    const importMenu = document.getElementById('importMenu');
+    
+    if (filterMenu && filterMenu.contains(event.target)) {
+      return;
+    }
+    
+    if (filterWrapper && filterMenu && !filterWrapper.contains(event.target)) {
+      filterMenu.style.display = 'none';
+      if (filterWrapper) filterWrapper.classList.remove('active');
+    }
+    if (sortWrapper && sortMenu && !sortWrapper.contains(event.target)) {
+      sortMenu.style.display = 'none';
+      if (sortWrapper) sortWrapper.classList.remove('active');
+    }
+    if (addScheduleBtn && addScheduleMenu && !addScheduleBtn.contains(event.target) && !addScheduleMenu.contains(event.target)) {
+      addScheduleMenu.style.display = 'none';
+    }
+    if (importMenu && !importMenu.contains(event.target) && !addScheduleMenu?.contains(event.target)) {
+      importMenu.style.display = 'none';
+    }
+  });
+
+  window.toggleAddScheduleMenu = function() {
+    const menu = document.getElementById('addScheduleMenu');
+    if (menu) {
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+
+  window.showImportMenu = function() {
+    const importMenu = document.getElementById('importMenu');
+    if (importMenu) {
+      importMenu.style.display = importMenu.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+
+  window.toggleImportScheduleMenu = function() {
+    const menu = document.getElementById('importScheduleMenu');
+    if (menu) {
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+  };
 
   function renderSchedule(schedules, sectionsMap) {
     const container = document.getElementById('schedulesByDayContainer');
@@ -115,7 +380,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    // Create a table for each day
+    // Table for each day
     dayOrder.forEach(day => {
       const daySchedules = groupedByDay[day];
       if (daySchedules.length === 0) return;
@@ -157,7 +422,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td class="time-col" id="startTime-${schedule.schedId}">${schedule.startTime || '-'}</td>
           <td class="time-col" id="endTime-${schedule.schedId}">${schedule.endTime || '-'}</td>
           <td class="subject-col" id="subject-${schedule.schedId}">${schedule.subject || '-'}</td>
-          <td class="section-col" id="section-${schedule.schedId}">${sectionsMap[schedule.sectId] || '-'}</td>
+          <td class="section-col" id="section-${schedule.schedId}">${schedule.sectionName || sectionsMap[schedule.sectId] || '-'}</td>
           <td class="actions-col">
             <div class="action-buttons" id="actions-${schedule.schedId}">
               <button class="btn-icon edit-btn" onclick="window.editSchedule('${schedule.schedId}')" title="Edit Schedule">

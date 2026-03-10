@@ -55,13 +55,18 @@
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
 
+      <!-- Search and Filter -->
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px;">
+      </div>
+
       <!-- Search and Stats Container -->
       <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <!-- Search by teacher name and date -->
+        <!-- User search and date filter -->
         <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px;">
-          <input type="text" id="teacherSearchInput" list="teacherList" oninput="searchTeacher()" placeholder="Search username..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; width: 200px; height: 40px;">
-          <datalist id="teacherList"></datalist>
-          <button onclick="clearTeacherSearch()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">Clear</button>
+          <div class="search-username-wrapper" style="flex: 1; max-width: 250px;">
+            <input type="text" id="searchUsernameInput" list="userList" class="search-username-input" placeholder="Search Username" onchange="onUserSelected(this.value)" autocomplete="off" style="width: 100%; box-sizing: border-box;">
+            <datalist id="userList"></datalist>
+          </div>
           <input type="date" id="statsDate" onchange="onStatsDateChanged()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
           <div style="margin-left: auto; display: flex; gap: 4px; align-items: center;">
             <button onclick="changeStatsPage(-1)" id="statsPrevBtn" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center; height: 40px;">

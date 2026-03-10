@@ -466,7 +466,7 @@ window.addFilterRow = function() {
     </select>
     <span>:</span>
     <input type="text" class="filter-value-input" placeholder="Enter value...">
-    <button class="remove-filter-btn" onclick="this.parentElement.remove()">
+    <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
       <span class="material-symbols-outlined">close</span>
     </button>
   `;
@@ -489,7 +489,7 @@ window.addSortRow = function() {
       <option value="asc">Ascending</option>
       <option value="desc">Descending</option>
     </select>
-    <button class="remove-filter-btn" onclick="this.parentElement.remove()">
+    <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
       <span class="material-symbols-outlined">close</span>
     </button>
   `;

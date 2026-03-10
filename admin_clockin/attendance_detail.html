@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   <link rel="stylesheet" href="styles/user_ui.css">
   <link rel="stylesheet" href="styles/pages/attendance_detail.css">
+  <link rel="stylesheet" href="styles/user_ui/components/filters.css">
   <link rel="stylesheet" href="styles/responsive.css">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -56,37 +57,38 @@
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
         
-      <div class="users-table-container">
-        <div class="table-header">
-          <div class="table-actions-left">
-            <div class="search-username-wrapper">
-              <input type="text" id="searchAttendanceInput" class="search-username-input" placeholder="Search Subject/Section" oninput="searchAttendance(this.value)" autocomplete="off">
-            </div>
-            <div class="table-filter-wrapper">
-              <button class="filter-btn" onclick="toggleStatusFilter()">
-                <span class="material-symbols-outlined">filter_list</span>
-                Status
-              </button>
-              <div id="statusFilterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
-                <label style="display: block; padding: 8px 12px; font-size: 13px;">Filter by Status</label>
-                <div style="padding: 4px 12px;">
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Present" onchange="filterByStatus()"> Present
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Absent" onchange="filterByStatus()"> Absent
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Late" onchange="filterByStatus()"> Late
-                  </label>
+      <!-- Filter Section - Outside of users-table-container -->
+      <div class="filter-toolbar" style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <div class="search-username-wrapper">
+            <input type="text" id="searchAttendanceInput" class="search-username-input" placeholder="Search..." oninput="searchByName(this.value)" autocomplete="off">
+          </div>
+          <div class="table-filter-wrapper">
+            <button class="filter-btn" onclick="toggleFilterMenu()">
+              <span class="material-symbols-outlined">filter_list</span>
+              Filter
+            </button>
+            <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none; z-index: 10000;">
+              <div id="activeFilters"></div>
+              <hr class="filter-separator">
+              <div class="filter-footer">
+                <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
+                  <span class="material-symbols-outlined">add</span>
+                  Add Filter
+                </button>
+                <div class="filter-actions">
+                  <button class="export-btn" onclick="applyFilters()">Apply</button>
                 </div>
               </div>
             </div>
           </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
         </div>
       </div>
-
-      <div class="attendance-detail-container">
+      
+      <div class="attendance-detail-container" style="margin-top: 16px;">
         <div class="calendar-section">
           <div class="calendar-header">
             <button class="btn-icon" onclick="previousMonth()">
@@ -149,30 +151,151 @@
 
 </body>
 <script>
-function toggleStatusFilter() {
-  const menu = document.getElementById('statusFilterMenu');
-  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+// Filter columns for attendance detail
+const attendanceFilterColumns = [
+  { value: 'date', label: 'Date' },
+  { value: 'timeIn', label: 'Time In' },
+  { value: 'timeOut', label: 'Time Out' },
+  { value: 'subject', label: 'Subject' },
+  { value: 'section', label: 'Section' },
+  { value: 'status', label: 'Status' }
+];
+
+// Add filter row with column options
+window.addFilterRow = function() {
+  const activeFilters = document.getElementById('activeFilters');
+  const filterRow = document.createElement('div');
+  filterRow.className = 'filter-row';
+  
+  const optionsHtml = attendanceFilterColumns.map(col => 
+    `<option value="${col.value}">${col.label}</option>`
+  ).join('');
+  
+  filterRow.innerHTML = `
+    <select class="filter-column-select">
+      ${optionsHtml}
+    </select>
+    <span>:</span>
+    <input type="text" class="filter-value-input" placeholder="Enter value...">
+    <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  `;
+  
+  activeFilters.appendChild(filterRow);
+};
+
+// Toggle filter dropdown
+function toggleFilterMenu() {
+  const filterMenu = document.getElementById('filterMenu');
+  const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+  const isOpen = filterMenu && filterMenu.style.display === 'block';
+  
+  if (filterMenu) {
+    filterMenu.style.display = isOpen ? 'none' : 'block';
+  }
+  
+  const sortMenu = document.getElementById('sortMenu');
+  if (sortMenu) {
+    sortMenu.style.display = 'none';
+  }
+  
+  if (filterWrapper) {
+    filterWrapper.classList.toggle('active', !isOpen);
+  }
 }
 
-function filterByStatus() {
-  const checkboxes = document.querySelectorAll('#statusFilterMenu input[type="checkbox"]:checked');
-  const selectedStatuses = Array.from(checkboxes).map(cb => cb.value);
+// Apply filters
+window.applyFilters = function() {
+  const filterRows = document.querySelectorAll('#activeFilters .filter-row');
+  const filters = [];
+  
+  filterRows.forEach(row => {
+    const select = row.querySelector('select');
+    const input = row.querySelector('input');
+    if (select && input && input.value.trim()) {
+      filters.push({
+        column: select.value,
+        value: input.value.trim().toLowerCase()
+      });
+    }
+  });
+  
+  const searchQuery = document.getElementById('searchAttendanceInput')?.value.toLowerCase() || '';
   
   const rows = document.querySelectorAll('#attendanceRecordsList tr');
   rows.forEach(row => {
-    const statusCell = row.querySelector('td:nth-child(6)');
-    if (statusCell) {
-      const status = statusCell.textContent.trim();
-      if (selectedStatuses.length === 0 || selectedStatuses.includes(status)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
+    if (row.cells.length < 6) return;
+    
+    // Get cell values
+    const date = row.cells[0]?.textContent.trim() || '';
+    const timeIn = row.cells[1]?.textContent.trim() || '';
+    const timeOut = row.cells[2]?.textContent.trim() || '';
+    const subject = row.cells[3]?.textContent.trim() || '';
+    const section = row.cells[4]?.textContent.trim() || '';
+    const status = row.cells[5]?.textContent.trim() || '';
+    const rowText = row.textContent.toLowerCase();
+    
+    let showRow = true;
+    
+    // Apply search filter
+    if (searchQuery && !rowText.includes(searchQuery)) {
+      showRow = false;
     }
+    
+    // Apply column filters
+    if (showRow && filters.length > 0) {
+      showRow = filters.every(filter => {
+        let cellValue = '';
+        switch(filter.column) {
+          case 'date': cellValue = date; break;
+          case 'timeIn': cellValue = timeIn; break;
+          case 'timeOut': cellValue = timeOut; break;
+          case 'subject': cellValue = subject; break;
+          case 'section': cellValue = section; break;
+          case 'status': cellValue = status; break;
+        }
+        return String(cellValue).toLowerCase().includes(filter.value);
+      });
+    }
+    
+    row.style.display = showRow ? '' : 'none';
+  });
+  
+  // Update filter status
+  const filterStatus = document.getElementById('filterStatus');
+  if (filterStatus) {
+    filterStatus.textContent = filters.length > 0 ? `Filtered (${filters.length})` : '';
+  }
+  
+  toggleFilterMenu();
+  
+  const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+  if (filterWrapper) filterWrapper.classList.remove('active');
+}
+
+// Clear filters
+window.clearFilters = function() {
+  const activeFilters = document.getElementById('activeFilters');
+  if (activeFilters) activeFilters.innerHTML = '';
+  
+  // Clear search
+  const searchInput = document.getElementById('searchAttendanceInput');
+  if (searchInput) searchInput.value = '';
+  
+  // Update filter status
+  const filterStatus = document.getElementById('filterStatus');
+  if (filterStatus) filterStatus.textContent = '';
+  
+  // Show all rows
+  const rows = document.querySelectorAll('#attendanceRecordsList tr');
+  rows.forEach(row => {
+    row.style.display = '';
   });
 }
 
-function searchAttendance(query) {
+// Search function for backward compatibility
+function searchByName(query) {
   query = query.toLowerCase();
   const rows = document.querySelectorAll('#attendanceRecordsList tr');
   rows.forEach(row => {
@@ -185,12 +308,32 @@ function searchAttendance(query) {
   });
 }
 
+// Toggle status filter (for legacy compatibility)
+function toggleStatusFilter() {
+  const menu = document.getElementById('statusFilterMenu');
+  if (menu) {
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+// Filter by status (for legacy compatibility)
+function filterByStatus() {
+  applyFilters();
+}
+
+// Search attendance (for legacy compatibility)
+function searchAttendance(query) {
+  searchByName(query);
+}
+
 // Close filter menu when clicking outside
 document.addEventListener('click', function(e) {
   const filterWrapper = document.querySelector('.table-filter-wrapper');
   if (filterWrapper && !filterWrapper.contains(e.target)) {
-    const menu = document.getElementById('statusFilterMenu');
+    const menu = document.getElementById('filterMenu');
     if (menu) menu.style.display = 'none';
+    const filterBtn = filterWrapper.querySelector('.filter-btn');
+    if (filterBtn) filterBtn.classList.remove('active');
   }
 });
 </script>

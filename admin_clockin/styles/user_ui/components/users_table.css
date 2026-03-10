@@ -147,6 +147,7 @@
   color: #374151;
   width: 350px;
   height: 40px;
+  min-width: 200px;
   transition: all 0.2s ease;
 }
 

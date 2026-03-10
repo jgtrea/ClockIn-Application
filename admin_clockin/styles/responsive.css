@@ -154,7 +154,8 @@ html, body {
 
   .search-username-input {
     font-size: 12px !important;
-    height: 30px !important;
+    height: 36px !important;
+    width: 250px !important;
   }
 
   .stat-value {
