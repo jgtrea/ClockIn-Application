@@ -88,6 +88,9 @@
       <div class="users-table-container" style="overflow: visible;">
         <div class="table-header">
           <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchScheduleInput" class="search-username-input" placeholder="Search..." oninput="searchSchedule(this.value)" autocomplete="off">
+            </div>
             <div class="table-filter-wrapper">
               <button class="filter-btn" onclick="toggleFilterMenu()">
                 <span class="material-symbols-outlined">filter_list</span>

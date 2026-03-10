@@ -51,35 +51,37 @@
                 </button>
               </div>
             </div>
+            <div class="dropdown-wrapper">
+              <button class="add-user-btn" id="addSectionBtn" onclick="toggleAddSectionMenu()">
+                <span class="material-symbols-outlined">add</span>
+                Add Section
+              </button>
+              <div id="addSectionMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
+                <button class="action-dropdown-item" onclick="showAddSectionModal()">
+                  <span class="material-symbols-outlined">person_add</span>
+                  Add New Section
+                </button>
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); showImportMenu()">
+                  <span class="material-symbols-outlined">upload</span>
+                  Import Data
+                </button>
+              </div>
+              <div id="importMenu" class="action-dropdown" style="display: none;">
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); importSectionsFromCSV()">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Import from CSV
+                </button>
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); importSectionsFromJSON()">
+                  <span class="material-symbols-outlined">code</span>
+                  Import from JSON
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
-
-      <div class="add-schedule-form">
-        <div class="form-row">
-          <div class="form-field">
-            <label>Section Name</label>
-            <input type="text" id="addSectionName" class="form-input" placeholder="Enter section name">
-          </div>
-          <div class="form-field">
-            <label>Advisor</label>
-            <input type="text" id="addAdvisor" class="form-input" list="advisorList" placeholder="Select or type advisor name">
-            <datalist id="advisorList"></datalist>
-          </div>
-          <div class="form-field">
-            <label>Year Level</label>
-            <input type="number" id="addYearLevel" class="form-input" placeholder="Enter year level">
-          </div>
-          <div class="form-field-button">
-            <button class="add-user-btn" onclick="saveSection()">
-              <span class="material-symbols-outlined">add</span>
-              Add Section
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div class="users-table-container">
         <div class="table-header">
@@ -171,7 +173,7 @@
           <tbody id="sectionsList">
           </tbody>
         </table>
-        <div class="pagination-container">
+        <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center;">
           <div class="pagination-left">
             <span>Show</span>
             <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
@@ -198,6 +200,79 @@
     </main>
   </div>
 </div>
+
+<!-- Add Section Modal -->
+<div id="addSectionModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+  <div class="modal-content" style="background: white; margin: 5% auto; padding: 24px; border-radius: 12px; width: 420px; max-width: 90%;">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">Add New Section</h2>
+      <button onclick="closeAddSectionModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Section Name</label>
+        <input type="text" id="addSectionName" placeholder="Enter section name" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+      </div>
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Advisor</label>
+        <input type="text" id="addAdvisor" list="advisorList" placeholder="Select or type advisor name" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+        <datalist id="advisorList"></datalist>
+      </div>
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Year Level</label>
+        <input type="number" id="addYearLevel" placeholder="Enter year level" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
+        <button onclick="closeAddSectionModal()" class="btn-outline" style="padding: 10px 20px; border-radius: 8px;">Cancel</button>
+        <button onclick="saveSection()" class="export-btn" style="padding: 10px 20px; border-radius: 8px; background: #FF725E; border: none; color: #fff; font-weight: 600; cursor: pointer;">Add Section</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Toggle Add Section Menu
+function toggleAddSectionMenu() {
+  const menu = document.getElementById('addSectionMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  
+  // Close import menu if open
+  const importMenu = document.getElementById('importMenu');
+  if (importMenu) importMenu.style.display = 'none';
+}
+
+// Show Add Section Modal
+function showAddSectionModal() {
+  const modal = document.getElementById('addSectionModal');
+  const menu = document.getElementById('addSectionMenu');
+  if (menu) menu.style.display = 'none';
+  if (modal) modal.style.display = 'block';
+}
+
+// Close Add Section Modal
+function closeAddSectionModal() {
+  const modal = document.getElementById('addSectionModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// Show Import Menu
+function showImportMenu() {
+  const menu = document.getElementById('importMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function(e) {
+  const addSectionBtn = document.getElementById('addSectionBtn');
+  const addSectionMenu = document.getElementById('addSectionMenu');
+  const importMenu = document.getElementById('importMenu');
+  
+  if (addSectionBtn && !addSectionBtn.contains(e.target)) {
+    if (addSectionMenu) addSectionMenu.style.display = 'none';
+    if (importMenu) importMenu.style.display = 'none';
+  }
+});
+</script>
 
 </body>
 </html>

@@ -60,11 +60,21 @@
               </div>
             </div>
             <div class="dropdown-wrapper">
-              <button class="add-user-btn" id="importScheduleBtn" onclick="toggleImportScheduleMenu()">
-                <span class="material-symbols-outlined">upload</span>
-                Import
+              <button class="add-user-btn" id="addSubjectBtn" onclick="toggleAddSubjectMenu()">
+                <span class="material-symbols-outlined">add</span>
+                Add Subject
               </button>
-              <div id="importScheduleMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
+              <div id="addSubjectMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
+                <button class="action-dropdown-item" onclick="showAddSubjectModal()">
+                  <span class="material-symbols-outlined">playlist_add</span>
+                  Add New Subject
+                </button>
+                <button class="action-dropdown-item" onclick="event.stopPropagation(); toggleImportMenu()">
+                  <span class="material-symbols-outlined">upload</span>
+                  Import Data
+                </button>
+              </div>
+              <div id="importMenu" class="action-dropdown" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 4px;">
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromCSV()">
                   <span class="material-symbols-outlined">table_chart</span>
                   Import from CSV
@@ -81,49 +91,70 @@
 
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
 
-      <div class="users-table-container">
+      <div class="users-table-container" style="overflow: visible;">
         <div class="table-header">
           <div class="table-actions-left">
             <div class="search-username-wrapper">
-              <input type="text" id="searchSectionScheduleInput" class="search-username-input" placeholder="Search Employee/Subject" oninput="searchSectionSchedule(this.value)" autocomplete="off">
+              <input type="text" id="searchScheduleInput" class="search-username-input" placeholder="Search..." oninput="searchScheduleDetail(this.value)" autocomplete="off">
             </div>
             <div class="table-filter-wrapper">
-              <button class="filter-btn" onclick="toggleSectionDayFilter()">
+              <button class="filter-btn" onclick="toggleFilterMenu()">
                 <span class="material-symbols-outlined">filter_list</span>
-                Day
+                Filter
               </button>
-              <div id="sectionDayFilterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
-                <label style="display: block; padding: 8px 12px; font-size: 13px;">Filter by Day</label>
-                <div style="padding: 4px 12px;">
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Monday" onchange="filterSectionByDay()"> Monday
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Tuesday" onchange="filterSectionByDay()"> Tuesday
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Wednesday" onchange="filterSectionByDay()"> Wednesday
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Thursday" onchange="filterSectionByDay()"> Thursday
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Friday" onchange="filterSectionByDay()"> Friday
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Saturday" onchange="filterSectionByDay()"> Saturday
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                    <input type="checkbox" value="Sunday" onchange="filterSectionByDay()"> Sunday
-                  </label>
+              <div id="sectionDayFilterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none; z-index: 1000;">
+                <div id="activeFilters"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Filter
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applyFilters()">Apply</button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
+        </div>
+        
+        <div id="selectionActions" class="selection-action-row" style="display: none;">
+          <div class="selection-info">
+            <span id="selectedCount">0</span> row(s) selected
+          </div>
+          <div class="selection-actions">
+            <button class="selection-action-btn export-btn" onclick="exportSelectedSchedulesCSV()">
+              <span class="material-symbols-outlined">download</span>
+              Export CSV
+            </button>
+            <button class="selection-action-btn export-btn" onclick="exportSelectedSchedulesJSON()">
+              <span class="material-symbols-outlined">code</span>
+              Export JSON
+            </button>
+            <button class="selection-action-btn" onclick="clearSelection()">
+              <span class="material-symbols-outlined">close</span>
+              Clear
+            </button>
+            <button class="selection-action-btn delete-btn" onclick="deleteSelectedSchedules()">
+              <span class="material-symbols-outlined">delete</span>
+              Delete
+            </button>
+          </div>
+        </div>
+        
+        <div class="select-all-wrapper" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border-radius: 8px; margin: 0 16px;">
+          <div class="select-all-checkbox" id="selectAllSchedules" onclick="toggleSelectAll()">
+            <span class="material-symbols-outlined">remove</span>
+          </div>
+          <span style="font-size: 14px; color: #64748b; line-height: normal;">Select All</span>
         </div>
       </div>
 
-      <div class="add-schedule-form">
+      <div class="add-schedule-form" style="display: none;">
         <div class="form-row">
           <div class="form-field">
             <label>Employee</label>
@@ -164,50 +195,14 @@
           </div>
         </div>
       </div>
-      
-      <div class="section-divider"></div>
-      
-      <div class="selection-action-row" id="selectionActions" style="display: none;">
-        <div class="selection-info">
-          <span id="selectedCount">0</span> row(s) selected
-        </div>
-        <div class="selection-actions">
-          <button class="selection-action-btn" onclick="exportSelectedSchedulesCSV()">
-            <span class="material-symbols-outlined">download</span>
-            Export CSV
-          </button>
-          <button class="selection-action-btn" onclick="exportSelectedSchedulesJSON()">
-            <span class="material-symbols-outlined">code</span>
-            Export JSON
-          </button>
-          <button class="selection-action-btn" onclick="clearSelection()">
-            <span class="material-symbols-outlined">close</span>
-            Clear
-          </button>
-          <button class="selection-action-btn delete-btn" onclick="deleteSelectedSchedules()">
-            <span class="material-symbols-outlined">delete</span>
-            Delete
-          </button>
-        </div>
-      </div>
-      
-      <div class="select-all-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <div class="select-all-wrapper" style="display: flex; align-items: center; gap: 12px;">
-          <div class="select-all-checkbox" id="selectAllSchedules" onclick="toggleSelectAll()" style="display: flex;">
-            <span class="material-symbols-outlined">remove</span>
-          </div>
-          <span style="font-size: 14px; color: #64748b;">Select All</span>
-        </div>
-      </div>
-      
-      <div id="schedulesByDayContainer">
+
+      <div id="schedulesByDayContainer" style="margin-top: 20px;">
       </div>
 
     </main>
   </div>
 </div>
 
-<!-- Custom Delete Confirmation Dialog -->
 <div id="deleteConfirmDialog" class="confirm-dialog-overlay" style="display: none;">
   <div class="confirm-dialog">
     <div class="confirm-dialog-header">
@@ -234,11 +229,278 @@
   </div>
 </div>
 
+<div id="addSubjectModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+  <div class="modal-content" style="background: white; margin: 5% auto; padding: 24px; border-radius: 12px; width: 420px; max-width: 90%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0; font-size: 20px; color: #1e293b;">Add New Subject</h2>
+      <button onclick="closeAddSubjectModal()" style="background: none; border: none; cursor: pointer; padding: 4px; color: #64748b;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form id="addSubjectForm" onsubmit="event.preventDefault(); addNewSubject();">
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Subject Name</label>
+        <input type="text" id="newSubjectName" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Subject Code</label>
+        <input type="text" id="newSubjectCode" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Description</label>
+        <textarea id="newSubjectDesc" rows="3" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: vertical;"></textarea>
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="closeAddSubjectModal()" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; border-radius: 8px; cursor: pointer; font-size: 14px; color: #374151;">Cancel</button>
+        <button type="submit" style="padding: 10px 20px; background: #f97316; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">Add Subject</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
-function toggleSectionDayFilter() {
+function toggleFilterMenu() {
   const menu = document.getElementById('sectionDayFilterMenu');
-  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
+  const isOpen = menu && menu.style.display === 'block';
+  
+  if (menu) {
+    menu.style.display = isOpen ? 'none' : 'block';
+  }
+  
+  if (filterWrapper) {
+    filterWrapper.classList.toggle('active', !isOpen);
+  }
 }
+
+function addFilterRow() {
+  const activeFilters = document.getElementById('activeFilters');
+  const filterRow = document.createElement('div');
+  filterRow.className = 'filter-row';
+  
+  filterRow.innerHTML = `
+    <select class="filter-column-select">
+      <option value="weekday">Weekday</option>
+      <option value="startTime">Start Time</option>
+      <option value="endTime">End Time</option>
+      <option value="subject">Subject</option>
+      <option value="teacher">Teacher</option>
+    </select>
+    <span>:</span>
+    <input type="text" class="filter-value-input" placeholder="Enter value...">
+    <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  `;
+  
+  activeFilters.appendChild(filterRow);
+}
+
+function applyFilters() {
+  const filterRows = document.querySelectorAll('#activeFilters .filter-row');
+  const filters = [];
+  
+  filterRows.forEach(row => {
+    const select = row.querySelector('select');
+    const input = row.querySelector('input');
+    if (select && input && input.value.trim()) {
+      filters.push({
+        column: select.value,
+        value: input.value.trim().toLowerCase()
+      });
+    }
+  });
+  
+  const allSchedules = window.allSchedules || [];
+  
+  let filteredSchedules;
+  if (filters.length === 0) {
+    filteredSchedules = allSchedules;
+    const filterStatus = document.getElementById('filterStatus');
+    if (filterStatus) filterStatus.textContent = '';
+  } else {
+    filteredSchedules = allSchedules.filter(schedule => {
+      return filters.every(filter => {
+        let cellValue = '';
+        if (filter.column === 'weekday') {
+          cellValue = schedule.weekday || '';
+        } else if (filter.column === 'startTime') {
+          cellValue = schedule.startTime || '';
+        } else if (filter.column === 'endTime') {
+          cellValue = schedule.endTime || '';
+        } else if (filter.column === 'subject') {
+          cellValue = schedule.subject || '';
+        } else if (filter.column === 'teacher') {
+          cellValue = schedule.user_employee_data?.name || '';
+        }
+        return String(cellValue).toLowerCase().includes(filter.value);
+      });
+    });
+    const filterStatus = document.getElementById('filterStatus');
+    if (filterStatus) filterStatus.textContent = `Filtered (${filters.length})`;
+  }
+  
+  if (typeof renderSchedule === 'function') {
+    renderSchedule(filteredSchedules);
+  }
+  
+  toggleFilterMenu();
+}
+
+function toggleSectionDayFilter() {
+  toggleFilterMenu();
+}
+
+function filterSectionByDay() {
+  applyFilters();
+}
+
+// Dropdown menu functions
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  const addMenu = document.getElementById('addSubjectMenu');
+  const importMenu = document.getElementById('importMenu');
+  
+  // Close other menus first
+  if (addMenu) addMenu.style.display = 'none';
+  if (importMenu) importMenu.style.display = 'none';
+  
+  // Toggle export menu
+  if (menu) {
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function toggleAddSubjectMenu() {
+  const menu = document.getElementById('addSubjectMenu');
+  const exportMenu = document.getElementById('exportMenu');
+  const importMenu = document.getElementById('importMenu');
+  
+  // Close other menus first
+  if (exportMenu) exportMenu.style.display = 'none';
+  if (importMenu) importMenu.style.display = 'none';
+  
+  // Toggle add subject menu
+  if (menu) {
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function toggleImportMenu() {
+  const menu = document.getElementById('importMenu');
+  const exportMenu = document.getElementById('exportMenu');
+  const addMenu = document.getElementById('addSubjectMenu');
+  
+  // Close other menus first
+  if (exportMenu) exportMenu.style.display = 'none';
+  if (addMenu) addMenu.style.display = 'none';
+  
+  // Toggle import menu
+  if (menu) {
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function showAddSubjectModal() {
+  const menu = document.getElementById('addSubjectMenu');
+  if (menu) menu.style.display = 'none';
+  
+  const modal = document.getElementById('addSubjectModal');
+  if (modal) {
+    modal.style.display = 'block';
+    document.getElementById('newSubjectName').focus();
+  }
+}
+
+function closeAddSubjectModal() {
+  const modal = document.getElementById('addSubjectModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  // Clear form
+  const form = document.getElementById('addSubjectForm');
+  if (form) form.reset();
+}
+
+function addNewSubject() {
+  const subjectName = document.getElementById('newSubjectName').value.trim();
+  const subjectCode = document.getElementById('newSubjectCode').value.trim();
+  const subjectDesc = document.getElementById('newSubjectDesc').value.trim();
+  
+  if (!subjectName || !subjectCode) {
+    alert('Please fill in required fields');
+    return;
+  }
+  
+  // Get section ID from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const sectionId = urlParams.get('id');
+  
+  if (!sectionId) {
+    alert('Section ID not found');
+    return;
+  }
+  
+  // Save to database
+  if (typeof supabase !== 'undefined') {
+    supabase.from('subjects').insert({
+      section_id: sectionId,
+      name: subjectName,
+      code: subjectCode,
+      description: subjectDesc
+    }).then(({ data, error }) => {
+      if (error) {
+        console.error('Error adding subject:', error);
+        alert('Error adding subject: ' + error.message);
+      } else {
+        closeAddSubjectModal();
+        // Reload to show new subject
+        window.location.reload();
+      }
+    });
+  } else {
+    alert('Database not initialized');
+  }
+}
+
+// Close dropdowns and modal when clicking outside
+document.addEventListener('click', function(e) {
+  // Close export menu
+  const exportBtn = document.getElementById('exportBtn');
+  const exportMenu = document.getElementById('exportMenu');
+  if (exportBtn && exportMenu && !exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
+    exportMenu.style.display = 'none';
+  }
+  
+  // Close add subject menu
+  const addSubjectBtn = document.getElementById('addSubjectBtn');
+  const addSubjectMenu = document.getElementById('addSubjectMenu');
+  if (addSubjectBtn && addSubjectMenu && !addSubjectBtn.contains(e.target) && !addSubjectMenu.contains(e.target)) {
+    addSubjectMenu.style.display = 'none';
+  }
+  
+  // Close import menu
+  const importMenu = document.getElementById('importMenu');
+  if (importMenu && importMenu.style.display === 'block') {
+    const addSubjectBtn2 = document.getElementById('addSubjectBtn');
+    if (addSubjectBtn2 && !importMenu.contains(e.target) && !addSubjectBtn2.contains(e.target)) {
+      importMenu.style.display = 'none';
+    }
+  }
+  
+  // Close filter menu when clicking outside
+  const filterWrapper = document.querySelector('.table-filter-wrapper');
+  if (filterWrapper && !filterWrapper.contains(e.target)) {
+    const menu = document.getElementById('sectionDayFilterMenu');
+    if (menu) menu.style.display = 'none';
+  }
+  
+  // Close modal when clicking outside
+  const modal = document.getElementById('addSubjectModal');
+  if (modal && e.target === modal) {
+    closeAddSubjectModal();
+  }
+});
 
 function filterSectionByDay() {
   const checkboxes = document.querySelectorAll('#sectionDayFilterMenu input[type="checkbox"]:checked');
@@ -255,23 +517,31 @@ function filterSectionByDay() {
   });
 }
 
-function searchSectionSchedule(query) {
-  query = query.toLowerCase();
-  const scheduleRows = document.querySelectorAll('.schedule-day-section');
-  scheduleRows.forEach(section => {
-    const employees = section.querySelectorAll('.schedule-item');
-    let hasMatch = false;
-    employees.forEach(item => {
-      const text = item.textContent.toLowerCase();
-      if (text.includes(query)) {
-        item.style.display = '';
-        hasMatch = true;
-      } else {
-        item.style.display = 'none';
-      }
+function searchScheduleDetail(query) {
+  const allSchedules = window.allSchedules || [];
+  
+  let filteredSchedules;
+  if (!query) {
+    filteredSchedules = allSchedules;
+  } else {
+    const term = query.toLowerCase();
+    filteredSchedules = allSchedules.filter(schedule => {
+      const weekday = (schedule.weekday || '').toLowerCase();
+      const subject = (schedule.subject || '').toLowerCase();
+      const teacher = (schedule.user_employee_data?.name || '').toLowerCase();
+      const startTime = (schedule.startTime || '').toLowerCase();
+      const endTime = (schedule.endTime || '').toLowerCase();
+      return weekday.includes(term) || subject.includes(term) || teacher.includes(term) || startTime.includes(term) || endTime.includes(term);
     });
-    section.style.display = hasMatch ? '' : 'none';
-  });
+  }
+  
+  if (typeof renderSchedule === 'function') {
+    renderSchedule(filteredSchedules);
+  }
+}
+
+function searchSectionSchedule(query) {
+  searchScheduleDetail(query);
 }
 
 // Close filter menu when clicking outside

@@ -4,6 +4,7 @@ const sectionName = urlParams.get('sectionName');
 
 const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 let allEmployees = [];
+let allSchedules = [];
 let selectedSchedules = new Set();
 let editingScheduleId = null;
 
@@ -134,8 +135,9 @@ async function loadSectionSchedule() {
     console.error('Error loading schedules:', error);
     return;
   }
-
-  renderSchedule(schedules || []);
+  
+  allSchedules = schedules || [];
+  renderSchedule(allSchedules);
 }
 
 function renderSchedule(schedules) {
