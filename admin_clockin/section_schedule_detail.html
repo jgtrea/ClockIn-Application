@@ -230,7 +230,7 @@
 </div>
 
 <div id="addSubjectModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-  <div class="modal-content" style="background: white; margin: 5% auto; padding: 24px; border-radius: 12px; width: 420px; max-width: 90%;">
+  <div class="modal-content" style="background: white; margin: 5% auto; padding: 24px; border-radius: 12px; width: 400px; max-width: 90%;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0; font-size: 20px; color: #1e293b;">Add New Subject</h2>
       <button onclick="closeAddSubjectModal()" style="background: none; border: none; cursor: pointer; padding: 4px; color: #64748b;">
@@ -239,16 +239,36 @@
     </div>
     <form id="addSubjectForm" onsubmit="event.preventDefault(); addNewSubject();">
       <div style="margin-bottom: 16px;">
-        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Subject Name</label>
-        <input type="text" id="newSubjectName" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Subject</label>
+        <input type="text" id="newSubjectName" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
       </div>
       <div style="margin-bottom: 16px;">
-        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Subject Code</label>
-        <input type="text" id="newSubjectCode" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Weekday</label>
+        <select id="newScheduleWeekday" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box; background: white;">
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+          <option value="Saturday">Saturday</option>
+          <option value="Sunday">Sunday</option>
+          <option value="AllWeekdays">All Weekdays (Mon-Fri)</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+        <div style="flex: 1;">
+          <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Start Time</label>
+          <input type="time" id="newScheduleStartTime" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+        </div>
+        <div style="flex: 1;">
+          <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">End Time</label>
+          <input type="time" id="newScheduleEndTime" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+        </div>
       </div>
       <div style="margin-bottom: 20px;">
-        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Description</label>
-        <textarea id="newSubjectDesc" rows="3" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: vertical;"></textarea>
+        <label style="display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151;">Teacher</label>
+        <input type="text" id="newScheduleTeacher" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;" placeholder="Select or type teacher name" list="employeeListModal">
+        <datalist id="employeeListModal"></datalist>
       </div>
       <div style="display: flex; gap: 12px; justify-content: flex-end;">
         <button type="button" onclick="closeAddSubjectModal()" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; border-radius: 8px; cursor: pointer; font-size: 14px; color: #374151;">Cancel</button>
@@ -409,6 +429,17 @@ function showAddSubjectModal() {
   if (modal) {
     modal.style.display = 'block';
     document.getElementById('newSubjectName').focus();
+    
+    const employeeDatalist = document.getElementById('employeeListModal');
+    const existingEmployeeList = document.getElementById('employeeList');
+    
+    if (employeeDatalist) {
+      if (window.allEmployees && window.allEmployees.length > 0) {
+        employeeDatalist.innerHTML = window.allEmployees.map(e => `<option value="${e.name}">`).join('');
+      } else if (existingEmployeeList && existingEmployeeList.options.length > 0) {
+        employeeDatalist.innerHTML = existingEmployeeList.innerHTML;
+      }
+    }
   }
 }
 
@@ -417,44 +448,53 @@ function closeAddSubjectModal() {
   if (modal) {
     modal.style.display = 'none';
   }
-  // Clear form
   const form = document.getElementById('addSubjectForm');
   if (form) form.reset();
+  
+  document.getElementById('newScheduleWeekday').value = 'Monday';
+  document.getElementById('newScheduleStartTime').value = '';
+  document.getElementById('newScheduleEndTime').value = '';
+  document.getElementById('newScheduleTeacher').value = '';
 }
 
 function addNewSubject() {
-  const subjectName = document.getElementById('newSubjectName').value.trim();
-  const subjectCode = document.getElementById('newSubjectCode').value.trim();
-  const subjectDesc = document.getElementById('newSubjectDesc').value.trim();
+  const subject = document.getElementById('newSubjectName').value.trim();
+  const weekday = document.getElementById('newScheduleWeekday').value;
+  const startTime = document.getElementById('newScheduleStartTime').value;
+  const endTime = document.getElementById('newScheduleEndTime').value;
+  const teacherName = document.getElementById('newScheduleTeacher').value.trim();
   
-  if (!subjectName || !subjectCode) {
-    alert('Please fill in required fields');
-    return;
-  }
-  
-  // Get section ID from URL
   const urlParams = new URLSearchParams(window.location.search);
-  const sectionId = urlParams.get('id');
+  const sectionId = urlParams.get('sectId') || urlParams.get('id');
   
   if (!sectionId) {
     alert('Section ID not found');
     return;
   }
   
-  // Save to database
-  if (typeof supabase !== 'undefined') {
-    supabase.from('subjects').insert({
-      section_id: sectionId,
-      name: subjectName,
-      code: subjectCode,
-      description: subjectDesc
+  let employeeId = null;
+  if (teacherName) {
+    const employees = window.allEmployees || [];
+    const employee = employees.find(e => e.name.toLowerCase() === teacherName.toLowerCase());
+    employeeId = employee ? employee.employeeId : null;
+  }
+  
+  if (typeof supabase !== 'undefined' && typeof window.supabaseClient !== 'undefined') {
+    const supabase = window.supabaseClient;
+    
+    supabase.from('schedule').insert({
+      sectId: sectionId,
+      employeeId: employeeId,
+      weekday: weekday,
+      startTime: startTime,
+      endTime: endTime,
+      subject: subject
     }).then(({ data, error }) => {
       if (error) {
-        console.error('Error adding subject:', error);
-        alert('Error adding subject: ' + error.message);
+        console.error('Error adding schedule:', error);
+        alert('Error adding schedule: ' + error.message);
       } else {
         closeAddSubjectModal();
-        // Reload to show new subject
         window.location.reload();
       }
     });

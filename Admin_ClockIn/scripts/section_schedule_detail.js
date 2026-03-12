@@ -3,10 +3,10 @@ const sectId = urlParams.get('sectId');
 const sectionName = urlParams.get('sectionName');
 
 const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-let allEmployees = [];
+window.allEmployees = [];
 let allSchedules = [];
 let selectedSchedules = new Set();
-let editingScheduleId = null;
+editingScheduleId = null;
 
 // Get current day of the week
 function getCurrentDay() {
@@ -17,7 +17,7 @@ function getCurrentDay() {
 
 // Get employee ID from selected name
 function getEmployeeIdByName(name) {
-  const employee = allEmployees.find(e => e.name === name);
+  const employee = window.allEmployees.find(e => e.name === name);
   return employee ? employee.employeeId : null;
 }
 
@@ -92,7 +92,7 @@ async function loadSectionSchedule() {
     .order('name', { ascending: true });
 
   if (!empError && employees) {
-    allEmployees = employees;
+    window.allEmployees = employees;
     // Populate employee datalist
     const employeeDatalist = document.getElementById('employeeList');
     employeeDatalist.innerHTML = employees.map(e => `<option value="${e.name}" data-id="${e.employeeId}">`).join('');
@@ -281,7 +281,7 @@ function updateSelectAllState() {
         document.getElementById('addStartTime').value = schedule.startTime;
         document.getElementById('addEndTime').value = schedule.endTime;
         document.getElementById('addSubject').value = schedule.subject || '';
-        const employee = allEmployees.find(e => e.employeeId === schedule.employeeId);
+        const employee = window.allEmployees.find(e => e.employeeId === schedule.employeeId);
         document.getElementById('addEmployee').value = employee ? employee.name : '';
       }
     }
@@ -489,7 +489,7 @@ window.editSchedule = async function(schedId) {
   
   // Create employee input with datalist
   const teacherCell = document.getElementById(`teacher-${schedId}`);
-  const currentEmployee = allEmployees.find(e => e.employeeId === schedule.employeeId);
+  const currentEmployee = window.allEmployees.find(e => e.employeeId === schedule.employeeId);
   const currentEmployeeName = currentEmployee ? currentEmployee.name : '';
   
   teacherCell.innerHTML = `
@@ -499,7 +499,7 @@ window.editSchedule = async function(schedId) {
   
   // Populate employee datalist
   const employeeDatalist = document.getElementById(`edit-employee-list-${schedId}`);
-  employeeDatalist.innerHTML = allEmployees.map(e => `<option value="${e.name}">`).join('');
+  employeeDatalist.innerHTML = window.allEmployees.map(e => `<option value="${e.name}">`).join('');
   
   // Hide edit buttons, show save/cancel
   document.getElementById(`actions-${schedId}`).style.display = 'none';
@@ -548,7 +548,7 @@ window.cancelEditSchedule = function(schedId) {
   
   // Restore teacher - need to find the employee name
   const teacherCell = document.getElementById(`teacher-${schedId}`);
-  const employee = allEmployees.find(e => e.employeeId === originalEmployeeId);
+  const employee = window.allEmployees.find(e => e.employeeId === originalEmployeeId);
   teacherCell.textContent = employee ? employee.name : 'No Teacher Assigned';
   
   // Show edit buttons, hide save/cancel
@@ -565,7 +565,7 @@ window.saveEditSchedule = async function(schedId) {
   const endTime = document.getElementById(`edit-endTime-${schedId}`).value;
   const employeeName = document.getElementById(`edit-employee-${schedId}`).value;
   // Look up employee ID by name
-  const employee = allEmployees.find(e => e.name === employeeName);
+  const employee = window.allEmployees.find(e => e.name === employeeName);
   const employeeId = employee ? employee.employeeId : null;
   
   if (!startTime || !endTime) {
