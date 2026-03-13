@@ -4,9 +4,13 @@ const authentication = {
   client: null,
 
   init() {
-    const { createClient } = supabase;
-    this.client = createClient(this.supabaseUrl, this.supabaseKey);
-    window.supabaseClient = this.client;
+    if (window.supabaseClient) {
+      this.client = window.supabaseClient;
+    } else {
+      const { createClient } = supabase;
+      this.client = createClient(this.supabaseUrl, this.supabaseKey);
+      window.supabaseClient = this.client;
+    }
   },
 
   async checkAuth(options = {}) {

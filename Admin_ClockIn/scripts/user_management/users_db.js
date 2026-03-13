@@ -17,12 +17,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   let searchTerm = '';
   let userDevicesMap = {};
 
-  // Fetch device info for all users
   async function fetchUserDevices() {
     try {
-      const adminClient = window.supabaseAdmin || window.supabaseClient;
+      let client = window.supabaseClient;
       
-      const { data: devices, error } = await adminClient
+      if (window.initAdminClient) {
+        window.initAdminClient();
+      }
+      
+      if (window.supabaseAdmin) {
+        client = window.supabaseAdmin;
+      }
+      
+      const { data: devices, error } = await client
         .from(DEVICES_TABLE)
         .select('employeeId, deviceInfo');
       

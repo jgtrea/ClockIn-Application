@@ -27,7 +27,7 @@ if (window.parent && window.parent.window.supabaseClient) {
   supabaseClient = window.parent.window.supabaseClient;
 } else if (window.supabaseClient) {
   supabaseClient = window.supabaseClient;
-} else {
+} else if (typeof supabase !== 'undefined') {
   const { createClient } = supabase;
   supabaseClient = createClient(supabaseUrl, supabaseKey);
 }
