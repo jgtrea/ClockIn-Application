@@ -109,8 +109,15 @@ if (window.DataTableManager) {
     return data;
   }
 
-  async function create(item) {
-    if (!supabase || !tableName) return { error: 'Not initialized' };
+  function setData(newData) {
+    data = newData || [];
+    filteredData = [...data];
+    if (renderCallback) {
+      renderCallback();
+    }
+  }
+
+  async function create(item) {    if (!supabase || !tableName) return { error: 'Not initialized' };
 
     try {
       const { data: result, error } = await supabase
@@ -302,6 +309,7 @@ if (window.DataTableManager) {
     getFilteredData,
     setFilteredData,
     getAllData,
+    setData,
     create,
     update,
     remove,

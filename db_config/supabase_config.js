@@ -14,7 +14,7 @@ function initAdminClient() {
     const { createClient } = supabase;
     supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
     window.supabaseAdmin = supabaseAdmin;
-    console.log('Admin client initialized');
+    window.initAdminClient = initAdminClient;
   } else {
     console.error('Supabase library not available yet');
   }

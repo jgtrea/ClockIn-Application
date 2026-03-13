@@ -1,15 +1,45 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const { Paginate, DataTableManager } = window;
   
+  if (window.initAdminClient) {
+    window.initAdminClient();
+  }
+  
   const usersList = document.getElementById('usersList');
   const addUserBtn = document.getElementById('addUserBtn');
   
   const supabase = window.supabaseClient;
   const USERS_TABLE = 'user_employee_data';
+  const DEVICES_TABLE = 'user_devices';
   
   let users = [];
   let filteredUsers = [];
   let searchTerm = '';
+  let userDevicesMap = {};
+
+  // Fetch device info for all users
+  async function fetchUserDevices() {
+    try {
+      const adminClient = window.supabaseAdmin || window.supabaseClient;
+      
+      const { data: devices, error } = await adminClient
+        .from(DEVICES_TABLE)
+        .select('employeeId, deviceInfo');
+      
+      if (error) {
+        console.error('Error fetching user devices:', error);
+        return;
+      }
+      
+      if (devices) {
+        devices.forEach(device => {
+          userDevicesMap[device.employeeId] = device.deviceInfo;
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching devices:', err);
+    }
+  }
 
   Paginate.init({
     containerId: 'users_db',
@@ -57,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     usersList.innerHTML = '';
     
     if (!pageData || pageData.length === 0) {
-      usersList.innerHTML = '<tr><td colspan="6" class="no-records">No user records found.</td></tr>';
+      usersList.innerHTML = '<tr><td colspan="7" class="no-records">No user records found.</td></tr>';
       return;
     }
 
@@ -67,12 +97,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       row.className = 'user-table-row';
       row.id = `row-${user.employeeId}`;
       
+      // Get device info for this user
+      const deviceInfo = user.deviceInfo || '-';
+      
       row.innerHTML = `
         <td class="checkbox-col"><input type="checkbox" class="user-checkbox" value="${user.employeeId}" onchange="toggleUserSelection('${user.employeeId}')"></td>
         <td class="username-col" id="name-${user.employeeId}">${user.name || 'New User'}</td>
         <td class="email-col" id="email-${user.employeeId}">${user.email || '-'}</td>
         <td class="employment-col" id="employment-${user.employeeId}">${user.employment || '-'}</td>
         <td class="date-col">${createdDate}</td>
+        <td class="device-col" id="device-${user.employeeId}">${deviceInfo}</td>
         <td class="actions-col">
           <div class="action-buttons" id="actions-${user.employeeId}">
             <button class="btn-icon edit-btn" onclick="window.editUser('${user.employeeId}')" title="Edit">
@@ -155,6 +189,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   async function loadUsers() {
+    await fetchUserDevices();
+    
     users = await DataTableManager.loadData({
       orderBy: 'createdAt',
       orderAsc: false
@@ -165,8 +201,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       name: user.name || '',
       email: user.email || '',
       employment: user.employment || '',
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      deviceInfo: userDevicesMap[user.employeeId] || null
     }));
+    
+    DataTableManager.setData(users);
     
     filteredUsers = [...users];
     DataTableManager.setSearchTerm('');
@@ -336,7 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedItems = DataTableManager.getSelectedItems();
     let filename = 'users_selected_data.csv';
     
-    const headers = ['Name', 'Email', 'Employment', 'Date Created'];
+    const headers = ['Name', 'Email', 'Employment', 'Date Created', 'Device'];
     const rows = [headers.join(',')];
     
     dataToExport.forEach(user => {
@@ -344,7 +383,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email || '';
       const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment || '';
       const createdAt = DataTableManager.formatDate(user.createdAt);
-      rows.push(`${name},${email},${employment},${createdAt}`);
+      const device = String(user.deviceInfo || '-').includes(',') ? `"${user.deviceInfo}"` : user.deviceInfo || '-';
+      rows.push(`${name},${email},${employment},${createdAt},${device}`);
     });
     
     const csvContent = rows.join('\n');
@@ -373,7 +413,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       name: user.name || '',
       email: user.email || '',
       employment: user.employment || '',
-      createdAt: user.createdAt || ''
+      createdAt: user.createdAt || '',
+      device: user.deviceInfo || '-'
     }));
     
     const jsonContent = JSON.stringify(exportData, null, 2);
@@ -403,7 +444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       filename = `users_data_${safeName}.csv`;
     }
     
-    const headers = ['Name', 'Email', 'Employment', 'Date Created'];
+    const headers = ['Name', 'Email', 'Employment', 'Date Created', 'Device'];
     const rows = [headers.join(',')];
     
     selectedData.forEach(user => {
@@ -411,7 +452,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const email = String(user.email || '').includes(',') ? `"${user.email}"` : user.email;
       const employment = String(user.employment || '').includes(',') ? `"${user.employment}"` : user.employment;
       const createdAt = DataTableManager.formatDate(user.createdAt);
-      rows.push(`${name},${email},${employment},${createdAt}`);
+      const device = String(user.deviceInfo || '-').includes(',') ? `"${user.deviceInfo}"` : user.deviceInfo || '-';
+      rows.push(`${name},${email},${employment},${createdAt},${device}`);
     });
     
     const csvContent = rows.join('\n');
@@ -445,7 +487,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       name: user.name || '',
       email: user.email || '',
       employment: user.employment || '',
-      createdAt: user.createdAt || ''
+      createdAt: user.createdAt || '',
+      device: user.deviceInfo || '-'
     }));
     
     const jsonContent = JSON.stringify(exportData, null, 2);

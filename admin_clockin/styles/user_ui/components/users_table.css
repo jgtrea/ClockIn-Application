@@ -442,6 +442,11 @@
   font-size: 13px;
 }
 
+.device-col {
+  color: #6b7280;
+  font-size: 13px;
+}
+
 .actions-col {
   width: 100px;
   text-align: center;
