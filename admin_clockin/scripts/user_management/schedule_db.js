@@ -122,6 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.toggleUserSelection = function(employeeId) {
+    DataTableManager.toggleSelection(employeeId);
     updateSelectAllState();
   };
 
@@ -156,8 +157,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (selectAllBtn.classList.contains('has-selection')) {
       checkboxes.forEach(cb => cb.checked = false);
+      DataTableManager.deselectAll();
     } else {
       checkboxes.forEach(cb => cb.checked = true);
+      DataTableManager.selectAll();
     }
     
     updateSelectAllState();
@@ -166,6 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.clearSelection = function() {
     const checkboxes = document.querySelectorAll('.user-checkbox');
     checkboxes.forEach(cb => cb.checked = false);
+    DataTableManager.clearSelection();
     updateSelectAllState();
   };
 

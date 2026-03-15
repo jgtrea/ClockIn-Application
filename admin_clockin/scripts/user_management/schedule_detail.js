@@ -58,29 +58,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       window.sectionsMap = sectionsMap;
 
-      // Populate section datalist
+      
       const sectionDatalist = document.getElementById('sectionList');
       if (sectionDatalist) {
         sectionDatalist.innerHTML = sectionsData.map(s => `<option value="${s.sectionName}">`).join('');
       }
 
-      // Populate subject datalist with ALL unique subjects from entire schedule table
-      const { data: allScheduleData } = await supabase
-        .from(SCHEDULE_TABLE)
-        .select('subject');
       
-      const uniqueSubjects = [...new Set(allScheduleData?.map(s => s.subject).filter(s => s) || [])];
+      const teacherSubjects = scheduleData
+        .map(s => s.subject)
+        .filter(s => s);
+      const uniqueSubjects = [...new Set(teacherSubjects)];
       uniqueSubjects.sort();
       const subjectDatalist = document.getElementById('subjectList');
       if (subjectDatalist) {
-        subjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
+        subjectDatalist.innerHTML = uniqueSubjects.map(s => '<option value="' + s + '">').join('');
       }
 
       scheduleData.sort((a, b) => {
-        const dayA = dayOrder.indexOf(a.weekday);
-        const dayB = dayOrder.indexOf(b.weekday);
+        const dayA = dayOrder.indexOf(a.weekday) !== -1 ? dayOrder.indexOf(a.weekday) : 0;
+        const dayB = dayOrder.indexOf(b.weekday) !== -1 ? dayOrder.indexOf(b.weekday) : 0;
         if (dayA !== dayB) return dayA - dayB;
-        return a.startTime.localeCompare(b.startTime);
+        return (a.startTime || '').localeCompare(b.startTime || '');
       });
 
       allSchedules = scheduleData.map(s => ({
@@ -91,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       renderSchedule(allSchedules, sectionsMap);
       
-      // Populate filter dropdowns with subject and section options
+      
       if (typeof populateSubjectAndSectionFilters === 'function') {
         populateSubjectAndSectionFilters(scheduleData, sectionsMap);
       }
@@ -100,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Expose loadScheduleDetails globally for modal functions
+  
   window.loadScheduleDetails = loadScheduleDetails;
 
   window.toggleFilterMenu = function() {
@@ -370,22 +369,38 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Group by weekday
+    
     const groupedByDay = {};
     dayOrder.forEach(day => groupedByDay[day] = []);
-
+    
+    
+    const normalizedDays = {};
+    dayOrder.forEach(day => {
+      normalizedDays[day.toLowerCase()] = day;
+      normalizedDays[day.substring(0, 3).toLowerCase()] = day; 
+    });
+    
     schedules.forEach(schedule => {
-      if (groupedByDay[schedule.weekday]) {
-        groupedByDay[schedule.weekday].push(schedule);
+      const scheduleDay = schedule.weekday || '';
+      const normalizedDay = normalizedDays[scheduleDay.toLowerCase()] || scheduleDay;
+      
+      if (groupedByDay[normalizedDay]) {
+        groupedByDay[normalizedDay].push(schedule);
+      } else if (groupedByDay[scheduleDay]) {
+        
+        groupedByDay[scheduleDay].push(schedule);
+      } else {
+        
+        groupedByDay['Monday'].push(schedule);
       }
     });
 
-    // Table for each day
+    
     dayOrder.forEach(day => {
       const daySchedules = groupedByDay[day];
       if (daySchedules.length === 0) return;
 
-      // Sort by start time
+      
       daySchedules.sort((a, b) => a.startTime.localeCompare(b.startTime));
 
       const daySection = document.createElement('div');
@@ -471,7 +486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const hasSelection = checkedBoxes.length > 0;
     
-    // Show/hide selection action row
+    
     if (hasSelection) {
       if (selectionActionRow) {
         selectionActionRow.style.display = 'flex';
@@ -504,11 +519,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const checkboxes = document.querySelectorAll('.user-checkbox');
     
     if (selectAllBtn && selectAllBtn.classList.contains('has-selection')) {
-      // Deselect all
+      
       checkboxes.forEach(cb => cb.checked = false);
       selectedSchedules.clear();
     } else {
-      // Select all
+      
       checkboxes.forEach(cb => cb.checked = true);
       checkboxes.forEach(cb => selectedSchedules.add(cb.value));
     }
@@ -523,7 +538,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateSelectAllState();
   };
 
-  // Updated deleteSelectedSchedules to show custom delete dialog
+  
   window.deleteSelectedSchedules = async function() {
     const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
     
@@ -532,14 +547,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    // Store selected IDs for the dialog
-    const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
-    window.pendingDeleteScheduleIds = selectedIds;
     
-    // Show the custom delete confirmation dialog
-    const dialog = document.getElementById('deleteConfirmDialog');
-    if (dialog) {
-      dialog.style.display = 'flex';
+    const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    
+    const confirmMessage = `Are you sure you want to remove the teacher from ${selectedIds.length} schedule(s)?`;
+    if (confirm(confirmMessage)) {
+      try {
+        
+        const { error } = await supabase
+          .from('schedule')
+          .update({ employeeId: null })
+          .in('schedId', selectedIds);
+        
+        if (error) {
+          alert('Error removing teacher: ' + error.message);
+        } else {
+          alert('Successfully removed teacher from ' + selectedIds.length + ' schedule(s)!');
+          clearSelection();
+          loadScheduleDetails();
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
     }
   };
 
@@ -554,11 +584,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    // Store selected IDs for update
+    
     window.selectedScheduleIds = selectedIds;
     
     if (selectedIds.length === 1) {
-      // Single selection - populate form with that schedule's data
+      
       const schedule = window.currentSchedules.find(s => s.schedId === selectedIds[0]);
       if (!schedule) return;
       
@@ -574,12 +604,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (subjectEl) subjectEl.value = schedule.subject || '';
       if (sectionEl) sectionEl.value = schedule.sectId;
       
-      // Change button to Update
+      
       const saveBtn = document.querySelector('.add-user-btn');
       saveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Update';
       saveBtn.onclick = function() { window.updateSelectedSchedules(); };
     } else {
-      // Multiple selection - clear form but allow setting new values
+      
       const weekdayEl = document.getElementById('addWeekday');
       const startTimeEl = document.getElementById('addStartTime');
       const endTimeEl = document.getElementById('addEndTime');
@@ -590,7 +620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (endTimeEl) endTimeEl.value = '';
       if (subjectEl) subjectEl.value = '';
       
-      // Change button to Update Selected
+      
       const saveBtn = document.querySelector('.add-user-btn');
       saveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Update Selected';
       saveBtn.onclick = function() { window.updateSelectedSchedules(); };
@@ -598,7 +628,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert(`${selectedIds.length} schedules selected. Fill in the fields you want to update and click 'Update Selected'. Leave fields empty to keep existing values.`);
     }
     
-    // Scroll to form
+    
     document.querySelector('.add-schedule-form').scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -625,7 +655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const subject = subjectEl ? subjectEl.value : '';
     const sectId = sectionEl ? sectionEl.value : '';
 
-    // Build update object - only include non-empty fields
+    
     const updateData = {};
     if (weekday) updateData.weekday = weekday;
     if (startTime) updateData.startTime = startTime;
@@ -648,12 +678,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (error) throw error;
       }
 
-      // Reset form
+      
       document.getElementById('addStartTime').value = '';
       document.getElementById('addEndTime').value = '';
       document.getElementById('addSubject').value = '';
       
-      // Clear selection and reset button to Add
+      
       clearSelection();
       loadScheduleDetails();
     } catch (err) {
@@ -669,13 +699,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const row = document.getElementById(`row-${schedId}`);
     if (!row) return;
     
-    // Store original values
+    
     row.dataset.originalSubject = schedule.subject || '';
     row.dataset.originalStartTime = schedule.startTime || '';
     row.dataset.originalEndTime = schedule.endTime || '';
     row.dataset.originalSectId = schedule.sectId || '';
     
-    // Create time inputs
+    
     const startTimeCell = document.getElementById(`startTime-${schedId}`);
     startTimeCell.innerHTML = `
       <input type="time" class="edit-input" id="edit-startTime-${schedId}" value="${schedule.startTime || ''}">
@@ -686,23 +716,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       <input type="time" class="edit-input" id="edit-endTime-${schedId}" value="${schedule.endTime || ''}">
     `;
     
-    // Create subject input with datalist
+    
     const subjectCell = document.getElementById(`subject-${schedId}`);
     subjectCell.innerHTML = `
       <input type="text" class="edit-input" id="edit-subject-${schedId}" value="${schedule.subject || ''}" placeholder="Subject" list="edit-subject-list-${schedId}">
       <datalist id="edit-subject-list-${schedId}"></datalist>
     `;
     
-    // Populate subject datalist
+    
     const editSubjectDatalist = document.getElementById(`edit-subject-list-${schedId}`);
-    // Fetch ALL unique subjects from entire schedule table
+    
     const { data: allSchedulesForSubject } = await supabase
       .from(SCHEDULE_TABLE)
       .select('subject');
     const uniqueSubjects = [...new Set(allSchedulesForSubject?.map(s => s.subject).filter(s => s) || [])];
     editSubjectDatalist.innerHTML = uniqueSubjects.map(s => `<option value="${s}">`).join('');
     
-    // Create section input with datalist
+    
     const sectionCell = document.getElementById(`section-${schedId}`);
     const currentSection = allSections.find(s => s.sectId === schedule.sectId);
     const currentSectionName = currentSection ? currentSection.sectionName : '';
@@ -712,11 +742,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       <datalist id="edit-section-list-${schedId}"></datalist>
     `;
     
-    // Populate section datalist
+    
     const editSectionDatalist = document.getElementById(`edit-section-list-${schedId}`);
     editSectionDatalist.innerHTML = allSections.map(s => `<option value="${s.sectionName}">`).join('');
     
-    // Hide edit buttons, show save/cancel
+    
     document.getElementById(`actions-${schedId}`).style.display = 'none';
     document.getElementById(`edit-actions-${schedId}`).style.display = 'flex';
   };
@@ -733,7 +763,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       sectionsMap[section.sectId] = section.sectionName;
     });
     
-    // Restore values
+    
     const startTimeCell = document.getElementById(`startTime-${schedId}`);
     startTimeCell.textContent = schedule.startTime || '-';
     
@@ -746,7 +776,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sectionCell = document.getElementById(`section-${schedId}`);
     sectionCell.textContent = sectionsMap[schedule.sectId] || '-';
     
-    // Show edit buttons, hide save/cancel
+    
     document.getElementById(`actions-${schedId}`).style.display = 'flex';
     document.getElementById(`edit-actions-${schedId}`).style.display = 'none';
   };
@@ -760,7 +790,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const endTime = document.getElementById(`edit-endTime-${schedId}`).value;
     const sectionName = document.getElementById(`edit-sectId-${schedId}`).value;
     
-    // Look up sectId by section name
+    
     const section = allSections.find(s => s.sectionName === sectionName);
     const sectId = section ? section.sectId : null;
     
@@ -782,7 +812,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       if (error) throw error;
       
-      // Reload the schedule details
+      
       loadScheduleDetails();
     } catch (err) {
       console.error('Error updating schedule:', err);
@@ -790,7 +820,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // Variables to track pending delete operation
+  
   let pendingDeleteSchedId = null;
 
   window.showDeleteDialog = function(schedId) {
@@ -810,9 +840,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // Updated confirmDeleteSchedule to handle both single and bulk deletes
+  
   window.confirmDeleteSchedule = async function(deleteType) {
-    // Check if we have bulk delete (from selection) or single delete
+    
     const schedIds = window.pendingDeleteScheduleIds || (pendingDeleteSchedId ? [pendingDeleteSchedId] : []);
     
     if (schedIds.length === 0) {
@@ -822,7 +852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       if (deleteType === 'full') {
-        // Delete entire schedule record
+        
         for (const schedId of schedIds) {
           const { error } = await supabase
             .from(SCHEDULE_TABLE)
@@ -832,7 +862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (error) throw error;
         }
       } else if (deleteType === 'teacher') {
-        // Remove teacher only - keep the schedule but set employeeId to null
+        
         for (const schedId of schedIds) {
           const { error } = await supabase
             .from(SCHEDULE_TABLE)
@@ -852,29 +882,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeDeleteDialog();
     }
     
-    // Clear the pending IDs
+    
     window.pendingDeleteScheduleIds = null;
   };
 
-  // Delete single schedule
+  
   window.deleteSchedule = async function(schedId) {
-    if (!confirm('Are you sure you want to delete this schedule?')) return;
+    if (!confirm('Are you sure you want to remove this teacher from this schedule?')) return;
     
     const supabase = window.supabaseClient;
     
     try {
       const { error } = await supabase
         .from(SCHEDULE_TABLE)
-        .delete()
+        .update({ employeeId: null })
         .eq('schedId', schedId);
       
       if (error) throw error;
       
-      alert('Schedule deleted successfully');
+      alert('Teacher removed from schedule successfully');
       loadScheduleDetails();
     } catch (err) {
-      console.error('Error deleting schedule:', err);
-      alert('Failed to delete schedule');
+      console.error('Error removing teacher:', err);
+      alert('Failed to remove teacher');
     }
   };
 
@@ -890,7 +920,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const selectedData = window.currentSchedules.filter(s => selectedIds.includes(s.schedId));
-    const headers = ['Weekday', 'Start Time', 'End Time', 'Subject', 'Section'];
+    const headers = ['Weekday', 'Start Time', 'End Time', 'Subject', 'Section', 'sectId'];
     const rows = [headers.join(',')];
     
     const sectionsMap = {};
@@ -904,7 +934,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const endTime = schedule.endTime || '';
       const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
       const section = sectionsMap[schedule.sectId] || '';
-      rows.push(`${weekday},${startTime},${endTime},${subject},${section}`);
+      const sectId = schedule.sectId || '';
+      rows.push(`${weekday},${startTime},${endTime},${subject},${section},${sectId}`);
     });
     
     const csvContent = rows.join('\n');
@@ -941,7 +972,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       startTime: schedule.startTime || '',
       endTime: schedule.endTime || '',
       subject: schedule.subject || '',
-      section: sectionsMap[schedule.sectId] || ''
+      section: sectionsMap[schedule.sectId] || '',
+      sectId: schedule.sectId || ''
     }));
     
     const jsonContent = JSON.stringify(exportData, null, 2);
@@ -1043,42 +1075,76 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    const firstRowLower = rows[0].map(h => String(h).toLowerCase().trim());
-    const headerKeywords = ['weekday', 'start', 'end', 'time', 'subject', 'section'];
-    const hasHeaders = firstRowLower.some(cell => headerKeywords.some(keyword => cell.includes(keyword)));
     
-    let dataRows = rows;
-    let headers = [];
+    const isJsonFormat = typeof rows[0] === 'object' && !Array.isArray(rows[0]);
     
-    if (hasHeaders) {
-      headers = rows[0];
-      dataRows = rows.slice(1);
-    } else {
-      headers = ['weekday', 'startTime', 'endTime', 'subject', 'sectId'];
-    }
+    
+    const { data: sectionsData } = await supabase.from(SECTIONS_TABLE).select('*');
+    const sectionNameToId = {};
+    sectionsData?.forEach(s => {
+      sectionNameToId[s.sectionName] = s.sectId;
+    });
     
     const schedulesToInsert = [];
     
-    for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i];
-      if (row.length < 3) continue;
+    if (isJsonFormat) {
       
-      const schedule = {
-        employeeId: employeeId,
-        weekday: row[0] || 'Monday',
-        startTime: row[1] || '',
-        endTime: row[2] || '',
-        subject: row[3] || '',
-        sectId: row[4] || ''
-      };
+      for (const item of rows) {
+        
+        const sectId = item.section ? (sectionNameToId[item.section] || null) : (item.sectId || null);
+        
+        const schedule = {
+          employeeId: employeeId,
+          weekday: item.weekday || 'Monday',
+          startTime: item.startTime || '',
+          endTime: item.endTime || '',
+          subject: item.subject || '',
+          sectId: sectId
+        };
+        
+        if (schedule.startTime && schedule.endTime && schedule.subject) {
+          schedulesToInsert.push(schedule);
+        }
+      }
+    } else {
       
-      if (schedule.startTime && schedule.endTime && schedule.subject) {
-        schedulesToInsert.push(schedule);
+      const firstRowLower = rows[0].map(h => String(h).toLowerCase().trim());
+      const headerKeywords = ['weekday', 'start', 'end', 'time', 'subject', 'section'];
+      const hasHeaders = firstRowLower.some(cell => headerKeywords.some(keyword => cell.includes(keyword)));
+      
+      let dataRows = rows;
+      
+      if (hasHeaders) {
+        dataRows = rows.slice(1);
+      }
+      
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        if (row.length < 3) continue;
+        
+        
+        
+        
+        const sectionName = row[4] || '';
+        const sectId = sectionName ? (sectionNameToId[sectionName] || null) : null;
+        
+        const schedule = {
+          employeeId: employeeId,
+          weekday: row[0] || 'Monday',
+          startTime: row[1] || '',
+          endTime: row[2] || '',
+          subject: row[3] || '',
+          sectId: sectId
+        };
+        
+        if (schedule.startTime && schedule.endTime && schedule.subject) {
+          schedulesToInsert.push(schedule);
+        }
       }
     }
     
     if (schedulesToInsert.length === 0) {
-      alert('No valid schedules to import');
+      alert('No valid schedules to import. Data rows: ' + JSON.stringify(rows.slice(0, 3)));
       return;
     }
     
@@ -1087,13 +1153,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         .from(SCHEDULE_TABLE)
         .insert(schedulesToInsert);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       
       alert(`Successfully imported ${schedulesToInsert.length} schedule(s)`);
       loadScheduleDetails();
     } catch (err) {
       console.error('Error importing schedules:', err);
-      alert('Failed to import schedules');
+      const errorMsg = err.message || JSON.stringify(err);
+      alert('Failed to import schedules: ' + errorMsg);
     }
   }
 
@@ -1110,7 +1180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const subject = subjectEl ? subjectEl.value : '';
     const sectionName = sectionEl ? sectionEl.value : '';
     
-    // Look up sectId by section name
+    
     const section = allSections.find(s => s.sectionName === sectionName);
     const sectId = section ? section.sectId : null;
 
@@ -1119,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Handle "All Weekdays" option
+    
     const weekdays = weekday === 'AllWeekdays' 
       ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] 
       : [weekday];
@@ -1144,7 +1214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('addEndTime').value = '';
       document.getElementById('addSubject').value = '';
       
-      // Reset button to Add
+      
       const saveBtn = document.querySelector('.add-user-btn');
       saveBtn.innerHTML = '<span class="material-symbols-outlined">add</span> Add';
       saveBtn.onclick = window.saveSchedule;
@@ -1175,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-      // Check if subject exists in subjects table, if not add it
+      
       const { data: existingSubject } = await supabase
         .from('subjects')
         .select('subject_name')
@@ -1201,7 +1271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (error) throw error;
 
-      // Reset form and button
+      
       document.getElementById('addStartTime').value = '';
       document.getElementById('addEndTime').value = '';
       document.getElementById('addSubject').value = '';
@@ -1238,12 +1308,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    // Get the username for the filename
+    
     const userNameElement = document.getElementById('userName');
     const userName = userNameElement ? userNameElement.textContent.replace("'s Schedule", '').trim() : 'user';
     const safeName = userName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
     
-    const headers = ['Weekday', 'Start Time', 'End Time', 'Subject', 'Section'];
+    const headers = ['Weekday', 'Start Time', 'End Time', 'Subject', 'Section', 'sectId'];
     const rows = [headers.join(',')];
     
     const sectionsMap = {};
@@ -1257,7 +1327,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const endTime = schedule.endTime || '';
       const subject = String(schedule.subject || '').includes(',') ? `"${schedule.subject}"` : schedule.subject || '';
       const section = sectionsMap[schedule.sectId] || '';
-      rows.push(`${weekday},${startTime},${endTime},${subject},${section}`);
+      const sectId = schedule.sectId || '';
+      rows.push(`${weekday},${startTime},${endTime},${subject},${section},${sectId}`);
     });
     
     const csvContent = rows.join('\n');
@@ -1279,7 +1350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    // Get the username for the filename
+    
     const userNameElement = document.getElementById('userName');
     const userName = userNameElement ? userNameElement.textContent.replace("'s Schedule", '').trim() : 'user';
     const safeName = userName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -1294,7 +1365,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       startTime: schedule.startTime || '',
       endTime: schedule.endTime || '',
       subject: schedule.subject || '',
-      section: sectionsMap[schedule.sectId] || ''
+      section: sectionsMap[schedule.sectId] || '',
+      sectId: schedule.sectId || ''
     }));
     
     const jsonContent = JSON.stringify(exportData, null, 2);
@@ -1310,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     toggleExportMenu();
   };
 
-  // Close dropdown when clicking outside
+  
   document.addEventListener('click', function(event) {
     const importBtn = document.getElementById('importScheduleBtn');
     const importMenu = document.getElementById('importScheduleMenu');
@@ -1328,10 +1400,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadScheduleDetails();
 });
 
-// ==========================================
-// Add Existing Schedule Modal Functions - Table View with Filter & Sort
-// ==========================================
-
 let unassignedSchedulesData = [];
 let unassignedSectionsData = [];
 
@@ -1339,7 +1407,7 @@ window.showAddExistingScheduleModal = async function() {
   const modal = document.getElementById('addExistingScheduleModal');
   if (modal) {
     modal.style.display = 'flex';
-    // Reset filters
+    
     document.getElementById('filterSubject').value = '';
     document.getElementById('filterSection').value = '';
     document.getElementById('filterDay').value = '';
@@ -1368,7 +1436,7 @@ async function loadUnassignedSchedules() {
   tableBody.innerHTML = '';
   
   try {
-    // Fetch schedules where employeeId is null (unassigned)
+    
     const { data: schedules, error } = await supabase
       .from(window.SCHEDULE_TABLE)
       .select('*')
@@ -1376,7 +1444,7 @@ async function loadUnassignedSchedules() {
     
     if (error) throw error;
     
-    // Fetch sections for display
+    
     const { data: sectionsData, error: sectionsError } = await supabase
       .from(window.SECTIONS_TABLE)
       .select('*');
@@ -1386,7 +1454,7 @@ async function loadUnassignedSchedules() {
     unassignedSectionsData = sectionsData;
     unassignedSchedulesData = schedules || [];
     
-    // Populate section filter datalist
+    
     const sectionFilterDatalist = document.getElementById('filterSectionList');
     if (sectionFilterDatalist) {
       sectionFilterDatalist.innerHTML = sectionsData.map(s => '<option value="' + s.sectionName + '">').join('');
@@ -1394,7 +1462,7 @@ async function loadUnassignedSchedules() {
     
     loadingEl.style.display = 'none';
     
-    // Apply initial filter and render
+    
     filterUnassignedSchedules();
     
   } catch (err) {
@@ -1416,35 +1484,35 @@ window.filterUnassignedSchedules = function() {
   
   if (!tableBody) return;
   
-  // Build sections map
+  
   const sectionsMap = {};
   unassignedSectionsData.forEach(section => {
     sectionsMap[section.sectId] = section.sectionName;
   });
   
-  // Filter schedules
+  
   let filtered = unassignedSchedulesData.filter(schedule => {
-    // Subject filter
+    
     if (subjectFilter && !(schedule.subject || '').toLowerCase().includes(subjectFilter)) {
       return false;
     }
-    // Section filter
+    
     if (sectionFilter) {
-      // Get section name from sectId
+      
       const section = unassignedSectionsData?.find(s => s.sectId === schedule.sectId);
       const sectionName = section ? section.sectionName : '';
       if (!sectionName.toLowerCase().includes(sectionFilter.toLowerCase())) {
         return false;
       }
     }
-    // Day filter
+    
     if (dayFilter && schedule.weekday !== dayFilter) {
       return false;
     }
     return true;
   });
   
-  // Sort schedules
+  
   const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   filtered.sort((a, b) => {
     switch (sortBy) {
@@ -1461,7 +1529,7 @@ window.filterUnassignedSchedules = function() {
     }
   });
   
-  // Render table
+  
   if (filtered.length === 0) {
     tableBody.innerHTML = '';
     noResultsEl.style.display = 'block';
@@ -1486,7 +1554,7 @@ window.filterUnassignedSchedules = function() {
   
   tableBody.innerHTML = html;
   
-  // Reset select all checkbox
+  
   document.getElementById('selectAllUnassigned').checked = false;
   updateUnassignedSelectionCount();
 };
@@ -1547,7 +1615,7 @@ window.assignSelectedSchedules = async function() {
   }
 };
 
-// Close modal when clicking outside
+
 document.addEventListener('click', function(event) {
   const modal = document.getElementById('addExistingScheduleModal');
   if (modal && event.target === modal) {
