@@ -237,6 +237,10 @@ fun DashboardScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        homeViewModel.startNotificationPolling()
+    }
+
     val filteredNotifications = remember(notifications, searchQuery) {
         if (searchQuery.isBlank()) notifications else notifications.filter {
             it.header.contains(searchQuery, true) || it.message.contains(searchQuery, true)

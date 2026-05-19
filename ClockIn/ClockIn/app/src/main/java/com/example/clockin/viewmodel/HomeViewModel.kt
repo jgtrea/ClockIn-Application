@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -60,15 +61,16 @@ class HomeViewModel : ViewModel() {
                 val result = SupabaseManager.client.from("notification")
                     .select {
                         order("dataCreated", Order.DESCENDING)
-                        limit(10)
+                        limit(20)
                     }
                     .decodeList<NotificationItem>()
 
                 val userNotifications = result.filter {
                     val targets = it.target?.split(",")?.map { t -> t.trim() } ?: emptyList()
                     targets.any { t -> t.equals("everyone", true) || t.equals(userEmail, true) }
-                }.take(3)
-                
+                }
+
+                // Full list shown in home page
                 _uiState.update { it.copy(notifications = userNotifications) }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -79,6 +81,17 @@ class HomeViewModel : ViewModel() {
             // The rest of the dashboard logic relies heavily on SupabaseManager context.
             // For Phase 1, we provide methods to update the state from the View if needed,
             // or we can gradually move logic here.
+        }
+    }
+
+    fun startNotificationPolling() {
+        viewModelScope.launch(Dispatchers.IO) {
+            while (true) {
+                delay(10_000L)
+                if (SupabaseManager.isLoggedIn()) {
+                    refreshDashboard()
+                }
+            }
         }
     }
 }
