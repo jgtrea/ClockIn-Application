@@ -20,7 +20,7 @@ data class Notification(
     val header: String,
     val message: String,
     @SerialName("endNotif") val target: String = "everyone",
-    @SerialName("dateCreated") val dateCreated: String? = null
+    @SerialName("dataCreated") val dataCreated: String? = null
 )
 
 @Composable
@@ -36,7 +36,7 @@ fun RealtimeNotificationListener() {
 
                     val recentNotifications = SupabaseManager.client.from("notification")
                         .select {
-                            order("dateCreated", Order.DESCENDING)
+                            order("dataCreated", Order.DESCENDING)
                             limit(3)
                         }
                         .decodeList<Notification>()

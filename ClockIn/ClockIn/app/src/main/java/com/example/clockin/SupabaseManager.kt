@@ -102,7 +102,7 @@ object SupabaseManager {
     private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo"
 
     private var cachedUser: UserProfile? = null
-    private val processedAbsentCache = mutableSetOf<String>()
+    private val processedAbsentCache = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     @OptIn(SupabaseInternal::class)
     val client = createSupabaseClient(

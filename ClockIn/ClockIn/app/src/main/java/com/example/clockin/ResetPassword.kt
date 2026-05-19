@@ -97,6 +97,7 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
                                 onClick = {
                                     if (email.isEmpty() || otpToken.isEmpty() || newPassword.isEmpty()) { errorMessage = "Please fill all fields"; return@Button }
                                     if (newPassword != confirmPassword) { errorMessage = "Passwords do not match"; return@Button }
+                                    if (newPassword.length < 6) { errorMessage = "Password must be at least 6 characters"; return@Button }
 
                                     isLoading = true
                                     errorMessage = null

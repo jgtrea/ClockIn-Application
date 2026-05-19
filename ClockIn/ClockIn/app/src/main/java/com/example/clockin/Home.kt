@@ -127,7 +127,7 @@ fun DashboardScreen(
                 val userNotifications = result.filter {
                     val targets = it.target?.split(",")?.map { t -> t.trim() } ?: emptyList()
                     targets.any { t -> t.equals("everyone", true) || t.equals(userEmail, true) }
-                }
+                }.take(3)
                 notifications = userNotifications
 
                 val newNotifications = NotificationTracker.filterNewNotifications(userNotifications)

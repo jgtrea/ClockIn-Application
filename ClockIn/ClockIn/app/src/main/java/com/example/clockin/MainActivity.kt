@@ -98,24 +98,25 @@ class MainActivity : ComponentActivity() {
     private var uiStatusMessage by mutableStateOf("Initializing...")
     private var uiActiveAttendanceId by mutableStateOf<String?>(null)
 
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as BeaconService.LocalBinder
-            beaconService = binder.getService()
-            isBound = true
+    private val connection =
+            object : ServiceConnection {
+                override fun onServiceConnected(className: ComponentName, service: IBinder) {
+                    val binder = service as BeaconService.LocalBinder
+                    beaconService = binder.getService()
+                    isBound = true
 
-            beaconService?.onUpdate = { distance, found, _, statusMsg ->
-                uiBeaconDistance = distance
-                uiIsBeaconFound = found
-                uiStatusMessage = statusMsg
+                    beaconService?.onUpdate = { distance, found, _, statusMsg ->
+                        uiBeaconDistance = distance
+                        uiIsBeaconFound = found
+                        uiStatusMessage = statusMsg
+                    }
+                }
+
+                override fun onServiceDisconnected(arg0: ComponentName) {
+                    isBound = false
+                    beaconService = null
+                }
             }
-        }
-
-        override fun onServiceDisconnected(arg0: ComponentName) {
-            isBound = false
-            beaconService = null
-        }
-    }
 
     private fun startAndBindBeaconService() {
         try {
@@ -146,52 +147,62 @@ class MainActivity : ComponentActivity() {
             var isCheckingSession by remember { mutableStateOf(true) }
             var startDestination by remember { mutableStateOf("login") }
 
-            val permissionsLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestMultiplePermissions()
-            ) { permissions ->
-                val allGranted = permissions.values.all { it }
-                if (!allGranted) {
-                    NotificationManager.show(
-                        header = "Permissions Required",
-                        message = "Bluetooth and Location are needed for attendance."
-                    )
-                } else {
-                    startAndBindBeaconService()
-                }
-            }
+            val permissionsLauncher =
+                    rememberLauncherForActivityResult(
+                            ActivityResultContracts.RequestMultiplePermissions()
+                    ) { permissions ->
+                        val allGranted = permissions.values.all { it }
+                        if (!allGranted) {
+                            NotificationManager.show(
+                                    header = "Permissions Required",
+                                    message = "Bluetooth and Location are needed for attendance."
+                            )
+                        } else {
+                            startAndBindBeaconService()
+                        }
+                    }
 
-            val enableBluetoothLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.StartActivityForResult()
-            ) { }
+            val enableBluetoothLauncher =
+                    rememberLauncherForActivityResult(
+                            ActivityResultContracts.StartActivityForResult()
+                    ) {}
 
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
                         try {
-                            val hasConnectPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-                            } else {
-                                true
-                            }
+                            val hasConnectPermission =
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        ContextCompat.checkSelfPermission(
+                                                context,
+                                                Manifest.permission.BLUETOOTH_CONNECT
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                    } else {
+                                        true
+                                    }
 
                             if (hasConnectPermission) {
-                                val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+                                val bluetoothManager = context.getSystemService(android.bluetooth.BluetoothManager::class.java)
+                                val bluetoothAdapter = bluetoothManager?.adapter
                                 if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled) {
-                                    val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                                    val enableBtIntent =
+                                            Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
                                     enableBluetoothLauncher.launch(enableBtIntent)
                                 }
                             }
                         } catch (e: SecurityException) {
-                            Log.e("MainActivity", "Bluetooth permission denied, skipping BT check", e)
+                            Log.e(
+                                    "MainActivity",
+                                    "Bluetooth permission denied, skipping BT check",
+                                    e
+                            )
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose {
-                    lifecycleOwner.lifecycle.removeObserver(observer)
-                }
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
             LaunchedEffect(Unit) {
@@ -204,11 +215,12 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val permissionsToRequest = mutableListOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.FOREGROUND_SERVICE
-                )
+                val permissionsToRequest =
+                        mutableListOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.FOREGROUND_SERVICE
+                        )
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
@@ -220,8 +232,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (permissionsToRequest.any {
-                        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-                    }) {
+                            ContextCompat.checkSelfPermission(context, it) !=
+                                    PackageManager.PERMISSION_GRANTED
+                        }
+                ) {
                     permissionsLauncher.launch(permissionsToRequest.toTypedArray())
                 } else {
                     startAndBindBeaconService()
@@ -237,7 +251,13 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(uiTargetBleName, uiTargetStartTime, uiActiveAttendanceId) {
                 if (uiTargetBleName.isNotEmpty() && isBound) {
                     val isClockedInNow = (uiActiveAttendanceId != null)
-                    beaconService?.startMonitoring(uiTargetBleName, uiTargetStartTime, uiSchedId, uiEmpId, isClockedInNow)
+                    beaconService?.startMonitoring(
+                            uiTargetBleName,
+                            uiTargetStartTime,
+                            uiSchedId,
+                            uiEmpId,
+                            isClockedInNow
+                    )
                 } else if (isBound) {
                     beaconService?.stopMonitoring()
                 }
@@ -245,11 +265,9 @@ class MainActivity : ComponentActivity() {
 
             if (isCheckingSession) {
                 Box(
-                    modifier = Modifier.fillMaxSize().background(Color.White),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = ButtonOrange)
-                }
+                        modifier = Modifier.fillMaxSize().background(Color.White),
+                        contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator(color = ButtonOrange) }
             } else {
                 RealtimeNotificationListener()
 
@@ -257,70 +275,74 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = startDestination) {
                         composable("login") {
                             LoginScreen(
-                                onLoginSuccess = {
-                                    navController.navigate("home") {
-                                        popUpTo("login") { inclusive = true }
-                                    }
-                                },
-                                onForgotPassword = {
-                                    navController.navigate("forgotPassword")
-                                },
-                                onNavigateToReset = {
-                                    navController.navigate("resetPassword")
-                                }
+                                    onLoginSuccess = {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    },
+                                    onForgotPassword = { navController.navigate("forgotPassword") },
+                                    onNavigateToReset = { navController.navigate("resetPassword") }
                             )
                         }
                         composable("forgotPassword") {
                             ForgotPasswordScreen(
-                                onBack = {
-                                    navController.popBackStack()
-                                },
-                                onNavigateToReset = {
-                                    navController.navigate("resetPassword")
-                                }
+                                    onBack = { navController.popBackStack() },
+                                    onNavigateToReset = { navController.navigate("resetPassword") }
                             )
                         }
                         composable("resetPassword") {
                             ResetPasswordScreen(
-                                onNavigateToLogin = {
-                                    navController.navigate("login") {
-                                        popUpTo("login") { inclusive = true }
+                                    onNavigateToLogin = {
+                                        navController.navigate("login") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
                                     }
-                                }
                             )
                         }
                         composable("home") {
                             DashboardScreen(
-                                navController = navController,
-                                beaconDistance = uiBeaconDistance,
-                                deviceName = uiTargetBleName,
-                                statusMessage = uiStatusMessage,
-                                onActiveAttendanceIdChanged = { id -> uiActiveAttendanceId = id },
-                                onTargetBleChanged = { newBleName, newStartTime, schedId ->
-                                    uiTargetBleName = newBleName
-                                    uiTargetStartTime = newStartTime
-                                    uiSchedId = schedId
+                                    navController = navController,
+                                    beaconDistance = uiBeaconDistance,
+                                    deviceName = uiTargetBleName,
+                                    statusMessage = uiStatusMessage,
+                                    onActiveAttendanceIdChanged = { id ->
+                                        uiActiveAttendanceId = id
+                                    },
+                                    onTargetBleChanged = { newBleName, newStartTime, schedId ->
+                                        uiTargetBleName = newBleName
+                                        uiTargetStartTime = newStartTime
+                                        uiSchedId = schedId
 
-                                    val user = kotlinx.coroutines.runBlocking { SupabaseManager.getCurrentUser() }
-                                    if (user != null) {
-                                        uiEmpId = user.id
-                                    }
 
-                                    if (isBound) {
-                                        val isClockedInNow = (uiActiveAttendanceId != null)
-                                        beaconService?.startMonitoring(newBleName, newStartTime, schedId, uiEmpId, isClockedInNow)
-                                    }
-                                },
-                                isBeaconFound = uiIsBeaconFound,
-                                onLogout = {
-                                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
-                                    scope.launch {
-                                        if (isBound) beaconService?.stopMonitoring()
-                                        SupabaseManager.signOut()
-                                        navController.navigate("login") { popUpTo("home") { inclusive = true } }
-                                    }
-                                },
-                                onProfileClick = { navController.navigate("profile") }
+                                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                            val user = SupabaseManager.getCurrentUser()
+                                            if (user != null) {
+                                                uiEmpId = user.id
+                                            }
+
+                                            if (isBound) {
+                                                val isClockedInNow = (uiActiveAttendanceId != null)
+                                                beaconService?.startMonitoring(
+                                                        newBleName,
+                                                        newStartTime,
+                                                        schedId,
+                                                        uiEmpId,
+                                                        isClockedInNow
+                                                )
+                                            }
+                                        }
+                                    },
+                                    isBeaconFound = uiIsBeaconFound,
+                                    onLogout = {
+                                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                            if (isBound) beaconService?.stopMonitoring()
+                                            SupabaseManager.signOut()
+                                            navController.navigate("login") {
+                                                popUpTo("home") { inclusive = true }
+                                            }
+                                        }
+                                    },
+                                    onProfileClick = { navController.navigate("profile") }
                             )
                         }
                         composable("profile") {
@@ -328,16 +350,12 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("scan_qr") {
                             ScannerScreen(
-                                navController = navController,
-                                isBeaconFound = uiIsBeaconFound
+                                    navController = navController,
+                                    isBeaconFound = uiIsBeaconFound
                             )
                         }
-                        composable("schedule") {
-                            ScheduleScreen(navController = navController)
-                        }
-                        composable("attendance") {
-                            AttendanceScreen(navController = navController)
-                        }
+                        composable("schedule") { ScheduleScreen(navController = navController) }
+                        composable("attendance") { AttendanceScreen(navController = navController) }
                     }
                 }
             }
@@ -356,9 +374,9 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onForgotPassword: () -> Unit,
-    onNavigateToReset: () -> Unit
+        onLoginSuccess: () -> Unit,
+        onForgotPassword: () -> Unit,
+        onNavigateToReset: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -388,87 +406,105 @@ fun LoginScreen(
         }
     }
 
-    val filteredEmails = savedAccounts.keys.filter {
-        it.contains(emailInput, ignoreCase = true)
-    }
+    val filteredEmails = savedAccounts.keys.filter { it.contains(emailInput, ignoreCase = true) }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .imePadding()
+            modifier =
+                    Modifier.fillMaxSize()
+                            .background(Color.White)
+                            .statusBarsPadding()
+                            .verticalScroll(rememberScrollState())
+                            .imePadding()
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(240.dp)
-                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
-                .background(BrownHeader),
-            contentAlignment = Alignment.Center
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .height(240.dp)
+                                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
+                                .background(BrownHeader),
+                contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "CLOCK IN",
-                style = TextStyle(fontSize = 42.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    text = "CLOCK IN",
+                    style =
+                            TextStyle(
+                                    fontSize = 42.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                            )
             )
         }
 
         Column(
-            modifier = Modifier
-                .padding(24.dp)
-                .navigationBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.padding(24.dp).navigationBarsPadding(),
+                horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(20.dp))
-            Text("Login to your Account", color = TextOrange, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            Text("Enter Credentials", color = LightOrangeText, modifier = Modifier.padding(vertical = 8.dp))
+            Text(
+                    "Login to your Account",
+                    color = TextOrange,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold
+            )
+            Text(
+                    "Enter Credentials",
+                    color = LightOrangeText,
+                    modifier = Modifier.padding(vertical = 8.dp)
+            )
 
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                    modifier =
+                            Modifier.fillMaxWidth()
+                                    .border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-
+                Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                     Column {
-                        Text("Email", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
+                        Text(
+                                "Email",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.DarkGray
+                        )
 
                         ExposedDropdownMenuBox(
-                            expanded = expanded && filteredEmails.isNotEmpty(),
-                            onExpandedChange = { }
+                                expanded = expanded && filteredEmails.isNotEmpty(),
+                                onExpandedChange = {}
                         ) {
                             OutlinedTextField(
-                                value = emailInput,
-                                onValueChange = { emailInput = it },
-                                placeholder = { Text("Enter Email") },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                                shape = RoundedCornerShape(8.dp),
-                                singleLine = true,
-                                trailingIcon = {
-                                    IconButton(onClick = { expanded = !expanded }) {
-                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                                    }
-                                },
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                                    value = emailInput,
+                                    onValueChange = { emailInput = it },
+                                    placeholder = { Text("Enter Email") },
+                                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                    keyboardOptions =
+                                            KeyboardOptions(keyboardType = KeyboardType.Email),
+                                    shape = RoundedCornerShape(8.dp),
+                                    singleLine = true,
+                                    trailingIcon = {
+                                        IconButton(onClick = { expanded = !expanded }) {
+                                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                                    expanded = expanded
+                                            )
+                                        }
+                                    },
+                                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                             )
 
                             ExposedDropdownMenu(
-                                expanded = expanded && filteredEmails.isNotEmpty(),
-                                onDismissRequest = { expanded = false }
+                                    expanded = expanded && filteredEmails.isNotEmpty(),
+                                    onDismissRequest = { expanded = false }
                             ) {
                                 filteredEmails.forEach { email ->
                                     DropdownMenuItem(
-                                        text = { Text(email) },
-                                        onClick = {
-                                            emailInput = email
-                                            passwordInput = savedAccounts[email] ?: ""
-                                            expanded = false
-                                        }
+                                            text = { Text(email) },
+                                            onClick = {
+                                                emailInput = email
+                                                passwordInput = savedAccounts[email] ?: ""
+                                                expanded = false
+                                            }
                                     )
                                 }
                             }
@@ -476,74 +512,84 @@ fun LoginScreen(
                     }
 
                     LabeledInput(
-                        label = "Password",
-                        placeholder = "Enter Password",
-                        value = passwordInput,
-                        onValueChange = { passwordInput = it },
-                        isPassword = true
+                            label = "Password",
+                            placeholder = "Enter Password",
+                            value = passwordInput,
+                            onValueChange = { passwordInput = it },
+                            isPassword = true
                     )
 
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                            color = ButtonOrange
+                                modifier = Modifier.align(Alignment.CenterHorizontally),
+                                color = ButtonOrange
                         )
                     } else {
                         Button(
-                            onClick = {
-                                if (emailInput.isEmpty() || passwordInput.isEmpty()) {
-                                    NotificationManager.show("Input Error", "Please fill all fields")
-                                    return@Button
-                                }
-                                isLoading = true
+                                onClick = {
+                                    if (emailInput.isEmpty() || passwordInput.isEmpty()) {
+                                        NotificationManager.show(
+                                                "Input Error",
+                                                "Please fill all fields"
+                                        )
+                                        return@Button
+                                    }
+                                    isLoading = true
 
-                                scope.launch {
-                                    val result = SupabaseManager.signInWithDeviceCheck(context, emailInput, passwordInput)
-                                    isLoading = false
+                                    scope.launch {
+                                        val result =
+                                                SupabaseManager.signInWithDeviceCheck(
+                                                        context,
+                                                        emailInput,
+                                                        passwordInput
+                                                )
+                                        isLoading = false
 
-                                    if (result.isSuccess) {
-                                        val newMap = savedAccounts.toMutableMap()
-                                        newMap[emailInput] = passwordInput
-                                        val saveString = newMap.entries.joinToString(",") { "${it.key}|${it.value}" }
-                                        prefs.edit().putString("saved_accounts", saveString).apply()
-
-                                        NotificationManager.show("Success", "Login Successful")
-                                        onLoginSuccess()
-                                    } else {
-                                        val errorMsg = result.exceptionOrNull()?.message ?: "Unknown Error"
-
-                                        if (errorMsg.contains("already registered on another device")) {
-                                            registeredDeviceInfo = errorMsg.substringAfter("another device: ")
-                                            showDeviceConflict = true
+                                        if (result.isSuccess) {
+                                            NotificationManager.show("Success", "Login Successful")
+                                            onLoginSuccess()
                                         } else {
-                                            NotificationManager.show("Login Failed", errorMsg)
+                                            val errorMsg =
+                                                    result.exceptionOrNull()?.message
+                                                            ?: "Unknown Error"
+
+                                            if (errorMsg.contains(
+                                                            "already registered on another device"
+                                                    )
+                                            ) {
+                                                registeredDeviceInfo =
+                                                        errorMsg.substringAfter("another device: ")
+                                                showDeviceConflict = true
+                                            } else {
+                                                NotificationManager.show("Login Failed", errorMsg)
+                                            }
                                         }
                                     }
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = ButtonOrange),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Login", color = Color.White)
-                        }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(50.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = ButtonOrange),
+                                shape = RoundedCornerShape(8.dp)
+                        ) { Text("Login", color = Color.White) }
                     }
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        TextButton(
-                            onClick = onForgotPassword,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Forgot Password?", color = ButtonOrange, fontWeight = FontWeight.Medium)
+                        TextButton(onClick = onForgotPassword, modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                    "Forgot Password?",
+                                    color = ButtonOrange,
+                                    fontWeight = FontWeight.Medium
+                            )
                         }
 
                         TextButton(
-                            onClick = onNavigateToReset,
-                            modifier = Modifier.fillMaxWidth()
+                                onClick = onNavigateToReset,
+                                modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Have a Code? Reset Password", color = Color.Gray, fontSize = 12.sp)
+                            Text(
+                                    "Have a Code? Reset Password",
+                                    color = Color.Gray,
+                                    fontSize = 12.sp
+                            )
                         }
                     }
                 }
@@ -553,86 +599,74 @@ fun LoginScreen(
 
     if (showDeviceConflict) {
         DeviceConflictDialog(
-            registeredDevice = registeredDeviceInfo,
-            currentDevice = "${Build.MANUFACTURER} ${Build.MODEL}",
-            onDismiss = { showDeviceConflict = false }
+                registeredDevice = registeredDeviceInfo,
+                currentDevice = "${Build.MANUFACTURER} ${Build.MODEL}",
+                onDismiss = { showDeviceConflict = false }
         )
     }
 }
 
 @Composable
-fun DeviceConflictDialog(
-    registeredDevice: String,
-    currentDevice: String,
-    onDismiss: () -> Unit
-) {
+fun DeviceConflictDialog(registeredDevice: String, currentDevice: String, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White,
+                modifier = Modifier.fillMaxWidth().padding(16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
-                    modifier = Modifier
-                        .height(64.dp)
-                        .fillMaxWidth()
-                        .background(
-                            Color(0xFFFF7F66).copy(alpha = 0.1f),
-                            RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "⚠",
-                        fontSize = 40.sp,
-                        color = Color(0xFFFF7F66)
-                    )
-                }
+                        modifier =
+                                Modifier.height(64.dp)
+                                        .fillMaxWidth()
+                                        .background(
+                                                Color(0xFFFF7F66).copy(alpha = 0.1f),
+                                                RoundedCornerShape(12.dp)
+                                        ),
+                        contentAlignment = Alignment.Center
+                ) { Text("⚠", fontSize = 40.sp, color = Color(0xFFFF7F66)) }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "Account Already Active",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
+                        "Account Already Active",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    "This account is already registered on another device.",
-                    fontSize = 14.sp,
-                    color = Color.Gray,
-                    textAlign = TextAlign.Center
+                        "This account is already registered on another device.",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFE8F5E9)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                        shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "Registered Device:",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF4CAF50)
+                                "Registered Device:",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4CAF50)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            registeredDevice,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
+                                registeredDevice,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
                         )
                     }
                 }
@@ -640,25 +674,23 @@ fun DeviceConflictDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFFFF3E0)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+                        shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "Current Device:",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFF9800)
+                                "Current Device:",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF9800)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            currentDevice,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
+                                currentDevice,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
                         )
                     }
                 }
@@ -666,22 +698,20 @@ fun DeviceConflictDialog(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    "To switch devices, please contact IT support.",
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    textAlign = TextAlign.Center
+                        "To switch devices, please contact IT support.",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("OK", modifier = Modifier.padding(vertical = 4.dp))
-                }
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66)),
+                        shape = RoundedCornerShape(12.dp)
+                ) { Text("OK", modifier = Modifier.padding(vertical = 4.dp)) }
             }
         }
     }
