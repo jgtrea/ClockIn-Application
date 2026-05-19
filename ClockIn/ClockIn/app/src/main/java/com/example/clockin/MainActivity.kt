@@ -2,6 +2,7 @@ package com.example.clockin
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
+import com.example.clockin.model.*
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -12,6 +13,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -50,9 +52,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,10 +73,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.clockin.viewmodel.MainViewModel
 import io.github.jan.supabase.gotrue.handleDeeplinks
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 val BrownHeader = Color(0xFFAF8373)
@@ -88,15 +92,7 @@ class MainActivity : ComponentActivity() {
 
     private var beaconService: BeaconService? = null
     private var isBound = false
-
-    private var uiBeaconDistance by mutableDoubleStateOf(0.0)
-    private var uiIsBeaconFound by mutableStateOf(false)
-    private var uiTargetBleName by mutableStateOf("")
-    private var uiTargetStartTime by mutableLongStateOf(0L)
-    private var uiSchedId by mutableStateOf("")
-    private var uiEmpId by mutableStateOf("")
-    private var uiStatusMessage by mutableStateOf("Initializing...")
-    private var uiActiveAttendanceId by mutableStateOf<String?>(null)
+    private val viewModel: MainViewModel by viewModels()
 
     private val connection =
             object : ServiceConnection {
@@ -106,9 +102,9 @@ class MainActivity : ComponentActivity() {
                     isBound = true
 
                     beaconService?.onUpdate = { distance, found, _, statusMsg ->
-                        uiBeaconDistance = distance
-                        uiIsBeaconFound = found
-                        uiStatusMessage = statusMsg
+                        viewModel.updateBeaconDistance(distance)
+                        viewModel.setBeaconFound(found)
+                        viewModel.setStatusMessage(statusMsg)
                     }
                 }
 
@@ -248,14 +244,17 @@ class MainActivity : ComponentActivity() {
                 isCheckingSession = false
             }
 
-            LaunchedEffect(uiTargetBleName, uiTargetStartTime, uiActiveAttendanceId) {
-                if (uiTargetBleName.isNotEmpty() && isBound) {
-                    val isClockedInNow = (uiActiveAttendanceId != null)
+            val uiState by viewModel.uiState.collectAsState()
+
+            LaunchedEffect(uiState.uiTargetBleName, uiState.uiTargetStartTime, uiState.activeAttendanceId) {
+                val state = uiState
+                if (state.uiTargetBleName.isNotEmpty() && isBound) {
+                    val isClockedInNow = (state.activeAttendanceId != null)
                     beaconService?.startMonitoring(
-                            uiTargetBleName,
-                            uiTargetStartTime,
-                            uiSchedId,
-                            uiEmpId,
+                            state.uiTargetBleName,
+                            state.uiTargetStartTime,
+                            state.uiSchedId,
+                            state.empId,
                             isClockedInNow
                     )
                 } else if (isBound) {
@@ -300,41 +299,35 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("home") {
+                            val scope = rememberCoroutineScope()
                             DashboardScreen(
                                     navController = navController,
-                                    beaconDistance = uiBeaconDistance,
-                                    deviceName = uiTargetBleName,
-                                    statusMessage = uiStatusMessage,
+                                    beaconDistance = uiState.beaconDistance,
+                                    deviceName = uiState.uiTargetBleName,
+                                    statusMessage = uiState.statusMessage,
                                     onActiveAttendanceIdChanged = { id ->
-                                        uiActiveAttendanceId = id
+                                        viewModel.updateActiveAttendance(id)
                                     },
                                     onTargetBleChanged = { newBleName, newStartTime, schedId ->
-                                        uiTargetBleName = newBleName
-                                        uiTargetStartTime = newStartTime
-                                        uiSchedId = schedId
-
-
-                                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                        viewModel.setTargetBle(newBleName, newStartTime, schedId)
+                                        scope.launch(Dispatchers.Main) {
                                             val user = SupabaseManager.getCurrentUser()
-                                            if (user != null) {
-                                                uiEmpId = user.id
-                                            }
-
+                                            if (user != null) viewModel.setEmpId(user.id)
                                             if (isBound) {
-                                                val isClockedInNow = (uiActiveAttendanceId != null)
+                                                val isClockedInNow = (uiState.activeAttendanceId != null)
                                                 beaconService?.startMonitoring(
                                                         newBleName,
                                                         newStartTime,
                                                         schedId,
-                                                        uiEmpId,
+                                                        uiState.empId,
                                                         isClockedInNow
                                                 )
                                             }
                                         }
                                     },
-                                    isBeaconFound = uiIsBeaconFound,
+                                    isBeaconFound = uiState.isBeaconFound,
                                     onLogout = {
-                                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                        scope.launch(Dispatchers.Main) {
                                             if (isBound) beaconService?.stopMonitoring()
                                             SupabaseManager.signOut()
                                             navController.navigate("login") {
@@ -351,7 +344,7 @@ class MainActivity : ComponentActivity() {
                         composable("scan_qr") {
                             ScannerScreen(
                                     navController = navController,
-                                    isBeaconFound = uiIsBeaconFound
+                                    isBeaconFound = uiState.isBeaconFound
                             )
                         }
                         composable("schedule") { ScheduleScreen(navController = navController) }

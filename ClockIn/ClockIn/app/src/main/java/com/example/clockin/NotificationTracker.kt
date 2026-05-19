@@ -1,6 +1,7 @@
 package com.example.clockin
 
 import android.content.Context
+import com.example.clockin.model.*
 
 object NotificationTracker {
     private const val PREFS_NAME = "notification_tracker"

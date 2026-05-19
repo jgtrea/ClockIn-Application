@@ -1,6 +1,7 @@
 package com.example.clockin
 
 import androidx.compose.foundation.BorderStroke
+import com.example.clockin.model.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,10 +70,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.clockin.viewmodel.HomeViewModel
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.collectAsState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -89,18 +93,22 @@ fun DashboardScreen(
     onTargetBleChanged: (String, Long, String) -> Unit,
     isBeaconFound: Boolean,
     onLogout: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    homeViewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    val homeUiState by homeViewModel.uiState.collectAsState()
 
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
-    var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
-    var isLoadingNotifs by remember { mutableStateOf(true) }
+    // Notifications now come from ViewModel state
+    val notifications = homeUiState.notifications
+    val isLoadingNotifs = homeUiState.isLoadingNotifs
 
     var currentSectionTitle by remember { mutableStateOf("Checking Schedule...") }
     var userName by remember { mutableStateOf("User") }
@@ -116,28 +124,8 @@ fun DashboardScreen(
             val userEmail = user?.email ?: ""
             userName = user?.name ?: "User"
 
-            try {
-                val result = SupabaseManager.client.from("notification")
-                    .select {
-                        order("dataCreated", Order.DESCENDING)
-                        limit(10)
-                    }
-                    .decodeList<NotificationItem>()
-
-                val userNotifications = result.filter {
-                    val targets = it.target?.split(",")?.map { t -> t.trim() } ?: emptyList()
-                    targets.any { t -> t.equals("everyone", true) || t.equals(userEmail, true) }
-                }.take(3)
-                notifications = userNotifications
-
-                val newNotifications = NotificationTracker.filterNewNotifications(userNotifications)
-                newNotifications.forEach { notif ->
-                    NotificationManager.show(notif.header, notif.message, 5000L)
-                    NotificationTracker.markAsShown(context, notif.notifId)
-                }
-                NotificationTracker.cleanup(context)
-
-            } catch (e: Exception) { e.printStackTrace() } finally { isLoadingNotifs = false }
+            // Delegate notification fetch to ViewModel
+            homeViewModel.refreshDashboard()
 
             val classInfo = SupabaseManager.getCurrentClassBeacon()
             val attId = SupabaseManager.getActiveAttendanceId()

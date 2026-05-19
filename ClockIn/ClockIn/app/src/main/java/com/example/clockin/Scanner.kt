@@ -2,6 +2,7 @@ package com.example.clockin
 
 import android.Manifest
 import android.content.pm.PackageManager
+import com.example.clockin.model.*
 import android.graphics.Rect
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts

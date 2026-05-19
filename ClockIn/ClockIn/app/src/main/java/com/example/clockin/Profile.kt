@@ -1,6 +1,7 @@
 package com.example.clockin
 
 import androidx.compose.foundation.background
+import com.example.clockin.model.*
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

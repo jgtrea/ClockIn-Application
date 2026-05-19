@@ -14,14 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class Notification(
-    @SerialName("notifId") val id: String,
-    val header: String,
-    val message: String,
-    @SerialName("endNotif") val target: String = "everyone",
-    @SerialName("dataCreated") val dataCreated: String? = null
-)
+import com.example.clockin.model.*
 
 @Composable
 fun RealtimeNotificationListener() {
