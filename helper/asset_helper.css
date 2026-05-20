@@ -1,0 +1,16 @@
+/*
+  asset_helper.css
+  Single import for all shared styles. Link this in every HTML page instead of
+  individual CSS files. For page-specific styles (dashboard, users table, profile,
+  etc.) add a second <link> pointing to assets/css/pages/<page>.css.
+*/
+
+@import url("../assets/css/styles/fonts.css");
+@import url("../assets/css/styles/colors.css");
+@import url("../assets/css/styles/reset.css");
+@import url("../assets/css/styles/layout.css");
+@import url("../assets/css/styles/sidebar.css");
+@import url("../assets/css/styles/topbar.css");
+@import url("../assets/css/styles/table.css");
+@import url("../assets/css/styles/components.css");
+@import url("../assets/css/styles/responsive.css");

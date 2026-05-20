@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../helper/asset_helper.css">
+  <link rel="stylesheet" href="../../assets/css/pages/profile.css">
+  <meta charset="utf-8">
+  <title>Profile — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../assets/js/scripts/core/supabase_config.js" defer></script>
+  <script src="../../assets/js/scripts/core/auth-guard.js"></script>
+  <script src="../../assets/js/scripts/user/profile/user_profile.js" defer></script>  
+</head>
+
+<body data-allow-employees="true">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+      <div class="profile-banner"></div>
+
+      <div class="profile-card">
+        <div class="avatar" id="avatar"></div>
+
+        <h2 id="name"></h2>
+        <p id="email"></p>
+
+        <div class="info-grid">
+          <div class="label">Username</div>
+          <div class="value" id="username"></div>
+          <span class="material-symbols-outlined edit edit-disabled" aria-hidden="true">edit</span>
+  
+          <div class="label">Email</div>
+          <div class="value" id="emailField"></div>
+          <span class="material-symbols-outlined edit email-edit edit-disabled" aria-hidden="true">edit</span>
+  
+          <div class="label">Employment</div>
+          <div class="value" id="employmentField">N/A</div>
+          <span class="material-symbols-outlined edit edit-disabled" aria-hidden="true">edit</span>
+        </div>
+
+        <a href="home_user.html" class="back-btn" id="backBtn">Back</a>
+      </div>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>
