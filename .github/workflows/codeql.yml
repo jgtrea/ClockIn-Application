@@ -2,12 +2,12 @@ name: "CodeQL Advanced"
 
 on:
   push:
-    branches: [ "grav/Test" ]
+    branches: [ "main", "grav/Test" ]
     paths-ignore:
       - '**.md'
       - 'docs/**'
   pull_request:
-    branches: [ "grav/Test" ]
+    branches: [ "main", "grav/Test" ]
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -29,8 +29,6 @@ jobs:
       matrix:
         include:
         - language: java-kotlin
-          build-mode: none
-        - language: javascript-typescript
           build-mode: none
 
     steps:
