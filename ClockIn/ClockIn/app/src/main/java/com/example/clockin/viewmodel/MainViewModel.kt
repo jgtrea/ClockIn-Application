@@ -12,13 +12,12 @@ data class MainUiState(
     val statusMessage: String = "Scanning...",
     val deviceName: String = "Unknown Device",
     val deviceId: String = "Fetching...",
-    
     val uiTargetBleName: String = "",
     val uiTargetStartTime: Long = 0L,
     val uiSchedId: String = "",
     val empId: String = "",
     val activeAttendanceId: String? = null,
-    val isBinding: Boolean = false
+    val isBinding: Boolean = false,
 )
 
 class MainViewModel : ViewModel() {
@@ -37,7 +36,10 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(statusMessage = message) }
     }
 
-    fun setDeviceInfo(name: String, id: String) {
+    fun setDeviceInfo(
+        name: String,
+        id: String,
+    ) {
         _uiState.update { it.copy(deviceName = name, deviceId = id) }
     }
 
@@ -49,12 +51,16 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(activeAttendanceId = id) }
     }
 
-    fun setTargetBle(name: String, startTime: Long, schedId: String) {
-        _uiState.update { 
+    fun setTargetBle(
+        name: String,
+        startTime: Long,
+        schedId: String,
+    ) {
+        _uiState.update {
             it.copy(
                 uiTargetBleName = name,
                 uiTargetStartTime = startTime,
-                uiSchedId = schedId
+                uiSchedId = schedId,
             )
         }
     }

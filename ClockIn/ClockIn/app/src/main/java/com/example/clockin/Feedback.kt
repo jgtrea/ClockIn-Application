@@ -54,28 +54,30 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = Color.White,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         ) {
             Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState())
+                modifier =
+                    Modifier
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState()),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         "Submit Feedback",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = 20.sp,
                     )
                     IconButton(
                         onClick = { if (!isSubmitting) onDismiss() },
-                        enabled = !isSubmitting
+                        enabled = !isSubmitting,
                     ) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
@@ -87,7 +89,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     "Title",
                     color = Color.DarkGray,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedTextField(
@@ -98,10 +100,11 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     enabled = !isSubmitting,
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryOrange,
-                        unfocusedBorderColor = Color(0xFFE0E0E0)
-                    )
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryOrange,
+                            unfocusedBorderColor = Color(0xFFE0E0E0),
+                        ),
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -110,41 +113,43 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     "Description",
                     color = Color.DarkGray,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedTextField(
                     value = message,
                     onValueChange = { message = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(150.dp),
                     placeholder = { Text("Describe your feedback in detail", color = Color.Gray) },
                     enabled = !isSubmitting,
                     maxLines = 8,
                     shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryOrange,
-                        unfocusedBorderColor = Color(0xFFE0E0E0)
-                    )
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryOrange,
+                            unfocusedBorderColor = Color(0xFFE0E0E0),
+                        ),
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(
                         checked = isAnonymous,
                         onCheckedChange = { if (!isSubmitting) isAnonymous = it },
                         colors = CheckboxDefaults.colors(checkedColor = PrimaryOrange),
-                        enabled = !isSubmitting
+                        enabled = !isSubmitting,
                     )
                     Text(
                         text = "Send as Anonymous",
                         fontSize = 14.sp,
-                        color = Color.DarkGray
+                        color = Color.DarkGray,
                     )
                 }
 
@@ -153,7 +158,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     Text(
                         text = errorMessage!!,
                         color = Color.Red,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
                     )
                 }
 
@@ -162,11 +167,11 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                 if (isSubmitting) {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
                             color = PrimaryOrange,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(40.dp),
                         )
                     }
                 } else {
@@ -186,11 +191,12 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                                     isSubmitting = true
 
                                     scope.launch {
-                                        val result = SupabaseManager.submitFeedback(
-                                            title = title.trim(),
-                                            message = message.trim(),
-                                            isAnonymous = isAnonymous
-                                        )
+                                        val result =
+                                            SupabaseManager.submitFeedback(
+                                                title = title.trim(),
+                                                message = message.trim(),
+                                                isAnonymous = isAnonymous,
+                                            )
 
                                         isSubmitting = false
 
@@ -198,7 +204,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                                             NotificationManager.show(
                                                 header = "Feedback Submitted",
                                                 message = "Thank you for your feedback!",
-                                                duration = 3000L
+                                                duration = 3000L,
                                             )
                                             onDismiss()
                                         } else {
@@ -211,7 +217,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
                         shape = RoundedCornerShape(20.dp),
-                        enabled = !isSubmitting
+                        enabled = !isSubmitting,
                     ) {
                         Text("Submit", color = Color.White, modifier = Modifier.padding(vertical = 4.dp))
                     }

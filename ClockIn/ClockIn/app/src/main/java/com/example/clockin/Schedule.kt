@@ -56,7 +56,7 @@ data class ScheduleItem(
     val day: String,
     val rawStartTime: String,
     val isUpcoming: Boolean = false,
-    val isHappeningNow: Boolean = false
+    val isHappeningNow: Boolean = false,
 )
 
 @Composable
@@ -95,66 +95,72 @@ fun ScheduleScreen(navController: NavController) {
         val currentTime = timeFormat.format(now)
 
         if (records.isNotEmpty()) {
-            val items = records.map { record ->
-                val displayRoom = if (record.sectionDetails != null) {
-                    "${record.sectionDetails.yearLevel} - ${record.sectionDetails.sectionName}"
-                } else {
-                    record.sectionName
+            val items =
+                records.map { record ->
+                    val displayRoom =
+                        if (record.sectionDetails != null) {
+                            "${record.sectionDetails.yearLevel} - ${record.sectionDetails.sectionName}"
+                        } else {
+                            record.sectionName
+                        }
+
+                    val isToday = record.weekday.equals(currentDay, ignoreCase = true)
+                    val isHappening = isToday && currentTime >= record.startTime && currentTime <= record.endTime
+                    val isUpcoming = isToday && record.startTime > currentTime
+
+                    ScheduleItem(
+                        title = record.subject,
+                        details = formatScheduleTime(record.startTime, record.endTime),
+                        sectionHeader = record.sectionName,
+                        displaySection = displayRoom,
+                        day = record.weekday,
+                        rawStartTime = record.startTime,
+                        isUpcoming = isUpcoming,
+                        isHappeningNow = isHappening,
+                    )
                 }
-
-                val isToday = record.weekday.equals(currentDay, ignoreCase = true)
-                val isHappening = isToday && currentTime >= record.startTime && currentTime <= record.endTime
-                val isUpcoming = isToday && record.startTime > currentTime
-
-                ScheduleItem(
-                    title = record.subject,
-                    details = formatScheduleTime(record.startTime, record.endTime),
-                    sectionHeader = record.sectionName,
-                    displaySection = displayRoom,
-                    day = record.weekday,
-                    rawStartTime = record.startTime,
-                    isUpcoming = isUpcoming,
-                    isHappeningNow = isHappening
-                )
-            }
             happeningNowItem = items.find { it.isHappeningNow }
             allScheduleItems = items
         }
         isLoading = false
     }
 
-    val groupedSchedule = remember(allScheduleItems, searchQuery, selectedDay, happeningNowItem) {
-        var list = allScheduleItems.filter {
-            val matchesSearch = it.title.contains(searchQuery, true) || it.details.contains(searchQuery, true)
-            val matchesDay = selectedDay == "All Days" || it.day.equals(selectedDay, ignoreCase = true)
-            val isNotDuplicate = it != happeningNowItem
-            matchesSearch && matchesDay && isNotDuplicate
-        }
+    val groupedSchedule =
+        remember(allScheduleItems, searchQuery, selectedDay, happeningNowItem) {
+            var list =
+                allScheduleItems.filter {
+                    val matchesSearch = it.title.contains(searchQuery, true) || it.details.contains(searchQuery, true)
+                    val matchesDay = selectedDay == "All Days" || it.day.equals(selectedDay, ignoreCase = true)
+                    val isNotDuplicate = it != happeningNowItem
+                    matchesSearch && matchesDay && isNotDuplicate
+                }
 
-        if (selectedDay == "All Days") {
-            list = list.sortedWith(
-                compareBy<ScheduleItem> { daySortOrder.indexOf(it.day) }
-                    .thenBy { it.rawStartTime }
-            )
-            list.groupBy { it.day }
-        } else {
-            list = list.sortedBy { it.rawStartTime }
-            list.groupBy { it.sectionHeader }
+            if (selectedDay == "All Days") {
+                list =
+                    list.sortedWith(
+                        compareBy<ScheduleItem> { daySortOrder.indexOf(it.day) }
+                            .thenBy { it.rawStartTime },
+                    )
+                list.groupBy { it.day }
+            } else {
+                list = list.sortedBy { it.rawStartTime }
+                list.groupBy { it.sectionHeader }
+            }
         }
-    }
 
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
     }
 
     Scaffold(
-        bottomBar = { CustomBottomNavigation(navController, "schedule") }
+        bottomBar = { CustomBottomNavigation(navController, "schedule") },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color.White)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color.White),
         ) {
             DashboardHeader(
                 userName = userName,
@@ -170,7 +176,7 @@ fun ScheduleScreen(navController: NavController) {
                     }
                 },
                 searchQuery = searchQuery,
-                onSearchChange = { searchQuery = it }
+                onSearchChange = { searchQuery = it },
             )
 
             HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
@@ -181,10 +187,11 @@ fun ScheduleScreen(navController: NavController) {
                 FAQView(onBack = { showFAQ = false })
             } else {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
                 ) {
                     Text("Schedules", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text("View and track class schedules.", color = Color.Gray, fontSize = 14.sp)
@@ -196,12 +203,12 @@ fun ScheduleScreen(navController: NavController) {
                             onClick = { isDayDropdownExpanded = true },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(text = "Filter by Day: $selectedDay")
                                 Icon(Icons.Default.ArrowDropDown, contentDescription = null)
@@ -211,12 +218,15 @@ fun ScheduleScreen(navController: NavController) {
                         DropdownMenu(
                             expanded = isDayDropdownExpanded,
                             onDismissRequest = { isDayDropdownExpanded = false },
-                            modifier = Modifier.fillMaxWidth(0.9f).background(Color.White)
+                            modifier = Modifier.fillMaxWidth(0.9f).background(Color.White),
                         ) {
                             daysOfWeek.forEach { day ->
                                 DropdownMenuItem(
                                     text = { Text(day) },
-                                    onClick = { selectedDay = day; isDayDropdownExpanded = false }
+                                    onClick = {
+                                        selectedDay = day
+                                        isDayDropdownExpanded = false
+                                    },
                                 )
                             }
                         }
@@ -252,13 +262,19 @@ fun ScheduleScreen(navController: NavController) {
     }
 }
 
-fun formatScheduleTime(start: String, end: String): String {
+fun formatScheduleTime(
+    start: String,
+    end: String,
+): String {
     fun cleanTime(t: String) = if (t.count { it == ':' } == 2) t.substringBeforeLast(':') else t
     return "${cleanTime(start)} - ${cleanTime(end)}"
 }
 
 @Composable
-fun ScheduleDateGroup(headerTitle: String, items: List<ScheduleItem>) {
+fun ScheduleDateGroup(
+    headerTitle: String,
+    items: List<ScheduleItem>,
+) {
     Column(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) {
         if (headerTitle.isNotEmpty()) {
             Text(text = headerTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
@@ -276,24 +292,26 @@ fun ScheduleCard(item: ScheduleItem) {
     val borderColor = if (item.isHappeningNow || item.isUpcoming) ButtonOrange else Color(0xFFEEEEEE)
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(45.dp)
-                    .background(ButtonOrange, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(45.dp)
+                        .background(ButtonOrange, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = item.title.take(1).uppercase(),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
+                    fontSize = 20.sp,
                 )
             }
 
@@ -306,14 +324,14 @@ fun ScheduleCard(item: ScheduleItem) {
                     if (item.isHappeningNow || item.isUpcoming) {
                         Surface(
                             color = ButtonOrange.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(4.dp)
+                            shape = RoundedCornerShape(4.dp),
                         ) {
                             Text(
                                 text = if (item.isHappeningNow) "HAPPENING NOW" else "UPCOMING",
                                 color = ButtonOrange,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
                     }
@@ -322,7 +340,7 @@ fun ScheduleCard(item: ScheduleItem) {
                     text = "Grade ${item.displaySection}",
                     color = Color.DarkGray,
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Text(text = item.details, color = Color.Gray, fontSize = 12.sp)
                 if (item.day.isNotEmpty()) {
@@ -330,7 +348,7 @@ fun ScheduleCard(item: ScheduleItem) {
                         text = item.day,
                         color = ButtonOrange,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                 }
             }

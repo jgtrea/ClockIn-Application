@@ -10,13 +10,13 @@ data class UserProfile(
     val name: String = "",
     val email: String = "",
     val department: String? = null,
-    val employment: String? = null
+    val employment: String? = null,
 )
 
 @Serializable
 data class SectionInfo(
     @SerialName("sectionName") val sectionName: String = "",
-    @SerialName("yearLevel") val yearLevel: String = ""
+    @SerialName("yearLevel") val yearLevel: String = "",
 )
 
 @Serializable
@@ -29,7 +29,7 @@ data class Schedule(
     @SerialName("endTime") val endTime: String = "",
     @SerialName("weekday") val weekday: String = "",
     @SerialName("employeeId") val employeeId: String = "",
-    @SerialName("sections") val sectionDetails: SectionInfo? = null
+    @SerialName("sections") val sectionDetails: SectionInfo? = null,
 )
 
 @Serializable
@@ -40,7 +40,7 @@ data class Attendance(
     @SerialName("timeOut") val timeOut: String? = null,
     @SerialName("schedId") val schedId: String = "",
     @SerialName("employeeId") val employeeId: String? = null,
-    val schedule: Schedule? = null
+    val schedule: Schedule? = null,
 )
 
 @Serializable
@@ -49,7 +49,7 @@ data class NotificationItem(
     val header: String = "",
     val message: String = "",
     @SerialName("dataCreated") val dateCreated: String? = null,
-    @SerialName("endNotif") val target: String? = "everyone"
+    @SerialName("endNotif") val target: String? = "everyone",
 )
 
 data class ClassSession(
@@ -58,13 +58,13 @@ data class ClassSession(
     val targetBeaconName: String,
     val startTime: Date,
     val schedId: String,
-    val isUpcoming: Boolean = false
+    val isUpcoming: Boolean = false,
 )
 
 @Serializable
 data class QrRecord(
     val sectId: String? = null,
-    val scanCount: Int = 0
+    val scanCount: Int = 0,
 )
 
 @Serializable
@@ -73,5 +73,5 @@ data class Notification(
     val header: String,
     val message: String,
     @SerialName("endNotif") val target: String = "everyone",
-    @SerialName("dataCreated") val dataCreated: String? = null
+    @SerialName("dataCreated") val dataCreated: String? = null,
 )

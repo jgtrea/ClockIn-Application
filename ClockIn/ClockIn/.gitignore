@@ -1,15 +1,38 @@
+# Build outputs
+build/
+/*/build/
+app/build/
+
+# Gradle caches & logs
+.gradle/
+buildCache/
+
+# Kotlin / compiler
+.kotlin/
+.kotlin-dsl/
+
+# IDE config (Android Studio / IntelliJ)
+.idea/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+*.ipr
+*.iws
+out/
+
+# Local/User specific configs
 local.properties
+.navigation/
+captures/
+
+# Signing / secrets
+*.jks
+*.keystore
+*.p12
+*.pkcs12
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# AI Agent Skills
+.agents/

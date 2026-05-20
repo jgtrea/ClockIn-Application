@@ -19,7 +19,10 @@ object NotificationTracker {
         return shownNotificationIds.contains(notifId)
     }
 
-    fun markAsShown(context: Context, notifId: String) {
+    fun markAsShown(
+        context: Context,
+        notifId: String,
+    ) {
         shownNotificationIds.add(notifId)
         saveToPreferences(context)
     }

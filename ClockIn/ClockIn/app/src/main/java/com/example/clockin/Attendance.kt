@@ -45,7 +45,7 @@ data class AttendanceItem(
     val status: String,
     val timeIn: String,
     val timeOut: String,
-    val date: String
+    val date: String,
 )
 
 @Composable
@@ -71,76 +71,82 @@ fun AttendanceScreen(navController: NavController) {
             val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
             val displayDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
-            val items = attendanceRecords.mapNotNull { record ->
-                val schedule = record.schedule
-                val subject = schedule?.subject ?: "Unknown"
-                val section = schedule?.sectionDetails?.sectionName
-                    ?: schedule?.sectionName
-                    ?: "Unknown"
+            val items =
+                attendanceRecords.mapNotNull { record ->
+                    val schedule = record.schedule
+                    val subject = schedule?.subject ?: "Unknown"
+                    val section =
+                        schedule?.sectionDetails?.sectionName
+                            ?: schedule?.sectionName
+                            ?: "Unknown"
 
-                val formattedTitle = "$subject - $section"
+                    val formattedTitle = "$subject - $section"
 
-                val isAbsent = record.status.equals("Absent", true)
-                val displayTimeIn = if (isAbsent) "--:--" else formatTime(record.timeIn)
-                val displayTimeOut = if (isAbsent) "--:--" else formatTime(record.timeOut)
+                    val isAbsent = record.status.equals("Absent", true)
+                    val displayTimeIn = if (isAbsent) "--:--" else formatTime(record.timeIn)
+                    val displayTimeOut = if (isAbsent) "--:--" else formatTime(record.timeOut)
 
-                val rawLabel = if (isAbsent) {
-                    displayDateFormat.format(Date())
-                } else if (record.timeIn != null) {
-                    try {
-                        val dateObj = isoFormat.parse(record.timeIn)
-                        if (dateObj != null) displayDateFormat.format(dateObj) else "Recent"
-                    } catch (e: Exception) {
-                        "Recent"
-                    }
-                } else {
-                    "Recent"
+                    val rawLabel =
+                        if (isAbsent) {
+                            displayDateFormat.format(Date())
+                        } else if (record.timeIn != null) {
+                            try {
+                                val dateObj = isoFormat.parse(record.timeIn)
+                                if (dateObj != null) displayDateFormat.format(dateObj) else "Recent"
+                            } catch (e: Exception) {
+                                "Recent"
+                            }
+                        } else {
+                            "Recent"
+                        }
+
+                    AttendanceItem(
+                        title = formattedTitle,
+                        status = record.status,
+                        timeIn = displayTimeIn,
+                        timeOut = displayTimeOut,
+                        date = rawLabel,
+                    )
                 }
 
-                AttendanceItem(
-                    title = formattedTitle,
-                    status = record.status,
-                    timeIn = displayTimeIn,
-                    timeOut = displayTimeOut,
-                    date = rawLabel
-                )
-            }
-
-            attendanceMap = items
-                .groupBy { it.date }
-                .toSortedMap(compareByDescending { it })
+            attendanceMap =
+                items
+                    .groupBy { it.date }
+                    .toSortedMap(compareByDescending { it })
         } else {
             attendanceMap = emptyMap()
         }
         isLoading = false
     }
 
-    val filteredAttendance = remember(attendanceMap, searchQuery) {
-        if (searchQuery.isBlank()) {
-            attendanceMap
-        } else {
-            attendanceMap.mapValues { (_, items) ->
-                items.filter {
-                    it.title.contains(searchQuery, true) ||
+    val filteredAttendance =
+        remember(attendanceMap, searchQuery) {
+            if (searchQuery.isBlank()) {
+                attendanceMap
+            } else {
+                attendanceMap.mapValues { (_, items) ->
+                    items.filter {
+                        it.title.contains(searchQuery, true) ||
                             it.status.contains(searchQuery, true) ||
                             it.timeIn.contains(searchQuery, true)
-                }
-            }.filterValues { it.isNotEmpty() }
+                    }
+                }.filterValues { it.isNotEmpty() }
+            }
         }
-    }
 
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
     }
 
     Scaffold(
-        bottomBar = { CustomBottomNavigation(navController, "attendance") }
+        bottomBar = { CustomBottomNavigation(navController, "attendance") },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color.White)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color.White),
         ) {
             DashboardHeader(
                 userName = userName,
@@ -158,7 +164,7 @@ fun AttendanceScreen(navController: NavController) {
                     }
                 },
                 searchQuery = searchQuery,
-                onSearchChange = { searchQuery = it }
+                onSearchChange = { searchQuery = it },
             )
 
             HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
@@ -169,10 +175,11 @@ fun AttendanceScreen(navController: NavController) {
                 FAQView(onBack = { showFAQ = false })
             } else {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
                 ) {
                     Text("Attendance History", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text("View your past clock-ins", color = Color.Gray, fontSize = 14.sp)
@@ -191,7 +198,10 @@ fun AttendanceScreen(navController: NavController) {
                         }
                     } else if (filteredAttendance.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                            Text(text = if(searchQuery.isNotEmpty()) "No matching records found." else "No attendance records yet.", color = Color.Gray)
+                            Text(
+                                text = if (searchQuery.isNotEmpty()) "No matching records found." else "No attendance records yet.",
+                                color = Color.Gray,
+                            )
                         }
                     } else {
                         filteredAttendance.forEach { (date, items) ->
@@ -217,13 +227,16 @@ fun formatTime(isoString: String?): String {
 }
 
 @Composable
-fun AttendanceDateGroup(date: String, items: List<AttendanceItem>) {
+fun AttendanceDateGroup(
+    date: String,
+    items: List<AttendanceItem>,
+) {
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
         Text(
             text = date,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
+            modifier = Modifier.padding(bottom = 12.dp),
         )
 
         items.forEach { item ->
@@ -236,27 +249,29 @@ fun AttendanceDateGroup(date: String, items: List<AttendanceItem>) {
 @Composable
 fun AttendanceCard(item: AttendanceItem) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp)),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier
-                    .size(45.dp)
-                    .background(PrimaryOrange, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(45.dp)
+                        .background(PrimaryOrange, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = item.title.take(1).uppercase(),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
+                    fontSize = 20.sp,
                 )
             }
 
@@ -290,23 +305,24 @@ fun AttendanceCard(item: AttendanceItem) {
 
 @Composable
 fun StatusChip(status: String) {
-    val color = when(status.lowercase()) {
-        "late" -> Color.Red
-        "present" -> Color(0xFF4CAF50)
-        "incomplete" -> Color.Gray
-        "absent" -> Color.Gray
-        else -> Color.DarkGray
-    }
+    val color =
+        when (status.lowercase()) {
+            "late" -> Color.Red
+            "present" -> Color(0xFF4CAF50)
+            "incomplete" -> Color.Gray
+            "absent" -> Color.Gray
+            else -> Color.DarkGray
+        }
     Surface(
         color = color,
-        shape = RoundedCornerShape(4.dp)
+        shape = RoundedCornerShape(4.dp),
     ) {
         Text(
             text = status,
             color = Color.White,
             fontSize = 10.sp,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
         )
     }
 }

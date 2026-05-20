@@ -7,7 +7,6 @@ import android.net.wifi.WifiManager
 import android.os.Build
 
 object WifiChecker {
-
     // REPLACE WIFI WITH CORRECT SSID
     private const val ALLOWED_WIFI_SSID = "YOUR_WIFI_NAME_HERE"
 
@@ -29,7 +28,7 @@ object WifiChecker {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             val network = connectivityManager.activeNetwork ?: return null
             val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return null
-            
+
             if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
                 val wifiInfo = capabilities.transportInfo as? android.net.wifi.WifiInfo
                 return wifiInfo?.ssid

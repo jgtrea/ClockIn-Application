@@ -4,19 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.clockin.SupabaseManager
 import com.example.clockin.model.NotificationItem
-import com.example.clockin.model.Schedule
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 data class HomeUiState(
     val userName: String = "User",
@@ -26,7 +22,7 @@ data class HomeUiState(
     val activeAttendanceId: String? = null,
     val isUpcomingClass: Boolean = false,
     val canClockInEarly: Boolean = false,
-    val currentAttendanceStatus: String? = null
+    val currentAttendanceStatus: String? = null,
 )
 
 class HomeViewModel : ViewModel() {
@@ -45,7 +41,10 @@ class HomeViewModel : ViewModel() {
         _uiState.update { it.copy(currentAttendanceStatus = status) }
     }
 
-    fun updateUpcomingClass(isUpcoming: Boolean, canClockInEarly: Boolean) {
+    fun updateUpcomingClass(
+        isUpcoming: Boolean,
+        canClockInEarly: Boolean,
+    ) {
         _uiState.update { it.copy(isUpcomingClass = isUpcoming, canClockInEarly = canClockInEarly) }
     }
 
@@ -58,17 +57,19 @@ class HomeViewModel : ViewModel() {
             // Fetch Notifications
             _uiState.update { it.copy(isLoadingNotifs = true) }
             try {
-                val result = SupabaseManager.client.from("notification")
-                    .select {
-                        order("dataCreated", Order.DESCENDING)
-                        limit(20)
-                    }
-                    .decodeList<NotificationItem>()
+                val result =
+                    SupabaseManager.client.from("notification")
+                        .select {
+                            order("dataCreated", Order.DESCENDING)
+                            limit(20)
+                        }
+                        .decodeList<NotificationItem>()
 
-                val userNotifications = result.filter {
-                    val targets = it.target?.split(",")?.map { t -> t.trim() } ?: emptyList()
-                    targets.any { t -> t.equals("everyone", true) || t.equals(userEmail, true) }
-                }
+                val userNotifications =
+                    result.filter {
+                        val targets = it.target?.split(",")?.map { t -> t.trim() } ?: emptyList()
+                        targets.any { t -> t.equals("everyone", true) || t.equals(userEmail, true) }
+                    }
 
                 // Full list shown in home page
                 _uiState.update { it.copy(notifications = userNotifications) }
