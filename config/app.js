@@ -60,7 +60,7 @@ const App = {
         localStorage.removeItem(k);
       });
       // window.top handles both shell and any lingering iframe context
-      window.top.location.href = '../index.html';
+      window.top.location.href = '/views/index.html';
     };
 
     document.getElementById('logoutBtn')?.addEventListener('click', doLogout);
@@ -102,7 +102,7 @@ const App = {
       // Sign-out hook: redirect to login when session ends
       supabase.auth.onAuthStateChange(event => {
         if (event === 'SIGNED_OUT') {
-          window.top.location.href = '../index.html';
+          window.top.location.href = '/views/index.html';
         }
       });
 

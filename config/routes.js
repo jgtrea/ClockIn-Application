@@ -28,9 +28,9 @@ const UserRoutes = [
 // ── Auth redirect destinations (relative to the shell page) ──────────────────
 
 const AuthPaths = {
-  login:  '../index.html',
-  admin:  'admin_clockin/index_admin.html',  // relative from views/index.html
-  user:   'user_clockin/index_user.html',    // relative from views/index.html
+  login:  '/views/index.html',
+  admin:  '/views/admin_clockin/index_admin.html',
+  user:   '/views/user_clockin/index_user.html',
 };
 
 // ── Router ───────────────────────────────────────────────────────────────────

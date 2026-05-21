@@ -1,7 +1,7 @@
 (function() {
   'use strict';
 
-  const LOGIN_PAGE = '../index.html';
+  const LOGIN_PAGE = '/views/index.html';
 
   async function initAuthCheck() {
     if (!window.supabaseClient) {

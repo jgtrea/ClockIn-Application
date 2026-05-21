@@ -76,7 +76,7 @@ const authentication = {
   },
 
   redirectToLogin() {
-    window.location.href = '../index.html';
+    window.location.href = '/views/index.html';
   },
 
   async signOut() {
