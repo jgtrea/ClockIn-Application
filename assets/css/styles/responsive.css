@@ -29,8 +29,7 @@ html, body {
 
 .users-table-container,
 .activityFeed,
-#activityFeed,
-.table-header {
+#activityFeed {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
@@ -49,8 +48,23 @@ html, body {
 .dashboard-title-wrapper > div:first-child { flex: 1; min-width: 200px; }
 .dashboard-title-wrapper > div:last-child  { display: flex; gap: 8px; align-items: center; }
 
-.table-header { flex-wrap: wrap; gap: 12px; }
-.table-actions-left { flex-wrap: wrap; }
+.table-header {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.table-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .search-username-input { width: 300px; }
 
 @media screen and (max-width: 1440px) {

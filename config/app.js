@@ -80,13 +80,22 @@ const App = {
       const email = session.user.email;
       let displayName = session.user.user_metadata?.displayName || email.split('@')[0];
 
-      // Try to get the employee display name from DB
-      const { data } = await supabase
-        .from('user_employee_data')
+      const { data: adminData } = await supabase
+        .from('user_admin_data')
         .select('name')
         .eq('email', email)
         .maybeSingle();
-      if (data?.name) displayName = data.name;
+
+      if (adminData?.name) {
+        displayName = adminData.name;
+      } else {
+        const { data: empData } = await supabase
+          .from('user_employee_data')
+          .select('name')
+          .eq('email', email)
+          .maybeSingle();
+        if (empData?.name) displayName = empData.name;
+      }
 
       this._renderProfile(displayName, email);
 
