@@ -1,16 +1,15 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset=”utf-8”>
-  <meta name=”viewport” content=”width=device-width, initial-scale=1”>
-  <base href=”/views/”>
-  <title>Login â€” ClockIn</title>
-  <link rel="stylesheet" href="login_path/styles/login_ui.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login - ClockIn</title>
+  <link rel="stylesheet" href="/views/login_path/styles/login_ui.css">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
-  
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../assets/js/scripts/core/supabase_config.js"></script>
-  <script src="../assets/js/scripts/login/login_functions.js" defer></script>
+  <script src="/assets/js/scripts/core/supabase_config.js"></script>
+  <script src="/assets/js/scripts/login/login_functions.js" defer></script>
   <script>
     function togglePasswordVisibility(inputId, toggleIcon) {
       const input = document.getElementById(inputId);
@@ -23,44 +22,26 @@
       }
     }
 
-    // Alert Prompt Functions
     let alertTimeout;
 
     function showAlertPrompt(message, type = 'error') {
       const alertEl = document.getElementById('alertPrompt');
       const messageEl = alertEl.querySelector('.alert-prompt-message');
-      
-      // Set message and type
       messageEl.textContent = message;
       alertEl.className = 'alert-prompt ' + type;
-      
-      // Show the alert
       alertEl.classList.add('show');
-      
-      // Clear any existing timeout
-      if (alertTimeout) {
-        clearTimeout(alertTimeout);
-      }
-      
-      // Auto-dismiss after 5 seconds
-      alertTimeout = setTimeout(() => {
-        closeAlertPrompt();
-      }, 5000);
+      if (alertTimeout) clearTimeout(alertTimeout);
+      alertTimeout = setTimeout(() => closeAlertPrompt(), 5000);
     }
 
     function closeAlertPrompt() {
       const alertEl = document.getElementById('alertPrompt');
       alertEl.classList.remove('show');
-      
-      if (alertTimeout) {
-        clearTimeout(alertTimeout);
-        alertTimeout = null;
-      }
+      if (alertTimeout) { clearTimeout(alertTimeout); alertTimeout = null; }
     }
   </script>
 </head>
 <body>
-  <!-- Alert Prompt Container -->
   <div id="alertPrompt" class="alert-prompt">
     <span class="alert-prompt-message"></span>
     <button class="alert-prompt-close" onclick="closeAlertPrompt()">
@@ -70,7 +51,7 @@
 
   <header class="auth-header">
     <div class="logo">
-      <img src="../assets/img/clockin-logo.svg" alt="ClockIn Logo">
+      <img src="/assets/img/clockin-logo.svg" alt="ClockIn Logo">
       <span>Clock In</span>
     </div>
   </header>
@@ -91,7 +72,7 @@
           </div>
 
           <div style="text-align: right; margin-bottom: 16px;">
-            <a class="forgot" href="login_path/reset/reset_code.html">Forgot Password?</a>
+            <a class="forgot" href="/views/login_path/reset/reset_code.html">Forgot Password?</a>
           </div>
 
           <button type="submit" class="btn">Login</button>
@@ -102,9 +83,9 @@
 
   <footer class="auth-footer">
     <div class="footer-links">
-      <a href="login_path/policy/terms.html">Terms of Service</a>
+      <a href="/views/login_path/policy/terms.html">Terms of Service</a>
       <span>|</span>
-      <a href="login_path/policy/privacy_policy.html">Privacy Policy</a>
+      <a href="/views/login_path/policy/privacy_policy.html">Privacy Policy</a>
     </div>
     <div class="copyright">
       <span class="material-symbols-outlined">copyright</span> 2026 Clock In
