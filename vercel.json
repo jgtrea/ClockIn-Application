@@ -1,9 +1,7 @@
 {
   "version": 2,
-  "rewrites": [
-    {
-      "source": "/((?!assets/|api/|config/|helper/|views/|db_config/).*)",
-      "destination": "/views/index.html"
-    }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/", "dest": "/views/index.html" }
   ]
 }
