@@ -53,14 +53,15 @@ const App = {
   _bindLogout() {
     const doLogout = async e => {
       e.preventDefault();
-      const supabase = window.supabaseClient;
-      if (supabase) await supabase.auth.signOut();
+      try {
+        const supabase = window.supabaseClient;
+        if (supabase) await supabase.auth.signOut();
+      } catch (_) {}
       ['userEmail', 'userId', 'userType', 'currentPage'].forEach(k => {
         sessionStorage.removeItem(k);
         localStorage.removeItem(k);
       });
-      // window.top handles both shell and any lingering iframe context
-      window.top.location.href = '/views/index.html';
+      window.location.href = '/views/index.html';
     };
 
     document.getElementById('logoutBtn')?.addEventListener('click', doLogout);
@@ -102,7 +103,7 @@ const App = {
       // Sign-out hook: redirect to login when session ends
       supabase.auth.onAuthStateChange(event => {
         if (event === 'SIGNED_OUT') {
-          window.top.location.href = '/views/index.html';
+          window.location.href = '/views/index.html';
         }
       });
 
