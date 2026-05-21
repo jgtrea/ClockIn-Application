@@ -48,8 +48,8 @@ const Router = {
     this._bindSidebarLinks();
     this._bindSearch();
 
-    // Restore last active page from session (survives F5 within the same tab)
-    const saved = sessionStorage.getItem('currentPage');
+    // Restore last active page (persists across reloads and redirects)
+    const saved = localStorage.getItem('currentPage');
     if (saved && routes.some(r => r.url === saved)) {
       this.navigateTo(saved, { silent: true });
     }
@@ -66,7 +66,7 @@ const Router = {
     if (frame) frame.src = url;
 
     this._setActive(url);
-    sessionStorage.setItem('currentPage', url);
+    localStorage.setItem('currentPage', url);
 
     if (!silent) this._collapseSidebar();
   },

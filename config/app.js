@@ -55,7 +55,7 @@ const App = {
       e.preventDefault();
       const supabase = window.supabaseClient;
       if (supabase) await supabase.auth.signOut();
-      ['userEmail', 'userId', 'userType'].forEach(k => {
+      ['userEmail', 'userId', 'userType', 'currentPage'].forEach(k => {
         sessionStorage.removeItem(k);
         localStorage.removeItem(k);
       });
