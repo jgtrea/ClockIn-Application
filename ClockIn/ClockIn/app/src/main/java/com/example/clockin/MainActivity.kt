@@ -124,8 +124,6 @@ class MainActivity : ComponentActivity() {
                     bindService(intent, connection, Context.BIND_AUTO_CREATE)
                 }
             }
-        } catch (e: SecurityException) {
-            Log.e("MainActivity", "SecurityException starting BeaconService: ${e.message}")
         } catch (e: Exception) {
             Log.e("MainActivity", "Failed to start BeaconService: ${e.message}")
         }
@@ -198,6 +196,8 @@ class MainActivity : ComponentActivity() {
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
                     }
                 lifecycleOwner.lifecycle.addObserver(observer)
@@ -240,7 +240,6 @@ class MainActivity : ComponentActivity() {
                     startAndBindBeaconService()
                 }
 
-                // FIXED: Strictly enforce login state by fetching the user.
                 SupabaseManager.loadSession()
                 val currentUser = SupabaseManager.getCurrentUser()
                 startDestination = if (currentUser != null) "home" else "login"

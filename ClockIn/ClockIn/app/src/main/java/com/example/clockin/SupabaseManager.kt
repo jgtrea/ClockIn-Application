@@ -449,12 +449,30 @@ object SupabaseManager {
                 val nowStr = timeFormat.format(now)
 
                 if (activeSession != null) {
+                    // Check if clocking out too early (more than 30 mins before endTime)
+                    val timeFormatShort = SimpleDateFormat("HH:mm:ss", Locale.US)
+                    val endTime = try { timeFormatShort.parse(myCurrentSchedule.endTime) } catch (e: Exception) { null }
+                    val currentTimeOnly = try { timeFormatShort.parse(timeFormatShort.format(now)) } catch (e: Exception) { null }
+                    
+                    var newStatus: String? = null
+                    if (endTime != null && currentTimeOnly != null) {
+                        val remainingMillis = endTime.time - currentTimeOnly.time
+                        if (remainingMillis > 30 * 60 * 1000) {
+                            newStatus = "Incomplete"
+                        }
+                    }
+
                     client.from("attendance").update({
                         set("timeOut", nowStr)
+                        if (newStatus != null) {
+                            set("status", newStatus)
+                        }
                     }) {
                         filter { eq("attendId", activeSession.id) }
                     }
-                    return@withContext Result.success("Successfully Clocked Out")
+                    
+                    val msg = if (newStatus == "Incomplete") "Successfully Clocked Out: Incomplete" else "Successfully Clocked Out"
+                    return@withContext Result.success(msg)
                 }
 
                 val todayDatePrefix = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
@@ -500,6 +518,7 @@ object SupabaseManager {
 
             if (start != null && current != null) {
                 val diff = current.time - start.time
+                // Grace period: 15 minutes
                 if (diff > 15 * 60 * 1000) "Late" else "Present"
             } else {
                 "Present"
@@ -583,7 +602,7 @@ object SupabaseManager {
     ): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
-                val cacheKey = "$schedId-$datePrefix"
+                val cacheKey = "${schedule.id}-$datePrefix"
                 if (processedAbsentCache.contains(cacheKey)) {
                     return@withContext Result.success(false)
                 }
@@ -603,13 +622,16 @@ object SupabaseManager {
                         }
                         .decodeSingleOrNull<Attendance>()
 
-                if (existingRecord != null) {
+                if (existingRecords.isNotEmpty()) {
                     processedAbsentCache.add(cacheKey)
                     return@withContext Result.success(false)
                 }
 
                 val absentId = UUID.randomUUID().toString()
-                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                
+                // Set the record times to the schedule's intended start/end for cleaner history
+                val startStr = "${datePrefix}T${schedule.startTime}"
+                val endStr = "${datePrefix}T${schedule.endTime}"
 
                 val absentRecord =
                     Attendance(
@@ -622,7 +644,6 @@ object SupabaseManager {
                     )
 
                 client.from("attendance").insert(absentRecord)
-
                 processedAbsentCache.add(cacheKey)
 
                 Result.success(true)

@@ -56,6 +56,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +76,8 @@ import androidx.navigation.NavController
 import com.example.clockin.model.*
 import com.example.clockin.viewmodel.HomeViewModel
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -90,6 +93,7 @@ fun DashboardScreen(
     statusMessage: String,
     onActiveAttendanceIdChanged: (String?) -> Unit,
     onTargetBleChanged: (String, Long, String) -> Unit,
+    onRefreshBeacon: () -> Unit = {},
     isBeaconFound: Boolean,
     onLogout: () -> Unit,
     onProfileClick: () -> Unit,
@@ -97,6 +101,7 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
 
     val homeUiState by homeViewModel.uiState.collectAsState()
 
@@ -118,7 +123,8 @@ fun DashboardScreen(
     var currentAttendanceStatus by remember { mutableStateOf<String?>(null) }
 
     val refreshDashboard = {
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        onRefreshBeacon()
+        scope.launch(Dispatchers.IO) {
             val user = SupabaseManager.getCurrentUser()
             val userEmail = user?.email ?: ""
             userName = user?.name ?: "User"
@@ -331,7 +337,9 @@ fun DashboardScreen(
                         }
 
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { refreshDashboard() },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         border = BorderStroke(1.dp, Color.LightGray),
@@ -351,6 +359,24 @@ fun DashboardScreen(
                                     fontWeight = FontWeight.Medium,
                                 )
                             }
+
+                            if (!isBeaconFound && !statusMessage.contains("Idle") && !statusMessage.contains("No Active")) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Make sure Bluetooth and Location are ON",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(start = 36.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Tap to refresh",
+                                fontSize = 10.sp,
+                                color = Color.LightGray,
+                                modifier = Modifier.align(Alignment.End)
+                            )
                         }
                     }
 
