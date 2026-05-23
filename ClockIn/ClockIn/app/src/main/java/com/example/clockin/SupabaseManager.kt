@@ -494,12 +494,30 @@ object SupabaseManager {
                 val nowStr = timeFormat.format(now)
 
                 if (activeSession != null) {
+                    // Check if clocking out too early (more than 30 mins before endTime)
+                    val timeFormatShort = SimpleDateFormat("HH:mm:ss", Locale.US)
+                    val endTime = try { timeFormatShort.parse(myCurrentSchedule.endTime) } catch (e: Exception) { null }
+                    val currentTimeOnly = try { timeFormatShort.parse(timeFormatShort.format(now)) } catch (e: Exception) { null }
+                    
+                    var newStatus: String? = null
+                    if (endTime != null && currentTimeOnly != null) {
+                        val remainingMillis = endTime.time - currentTimeOnly.time
+                        if (remainingMillis > 30 * 60 * 1000) {
+                            newStatus = "Incomplete"
+                        }
+                    }
+
                     client.from("attendance").update({
                         set("timeOut", nowStr)
+                        if (newStatus != null) {
+                            set("status", newStatus)
+                        }
                     }) {
                         filter { eq("attendId", activeSession.id) }
                     }
-                    return@withContext Result.success("Successfully Clocked Out")
+                    
+                    val msg = if (newStatus == "Incomplete") "Successfully Clocked Out: Incomplete" else "Successfully Clocked Out"
+                    return@withContext Result.success(msg)
                 }
 
                 val todayDatePrefix = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
@@ -663,21 +681,26 @@ object SupabaseManager {
                     return@withContext Result.success(false)
                 }
 
-                val absentId = UUID.randomUUID().toString()
-                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                val schedule = client.from("schedule")
+                    .select { filter { eq("schedId", schedId) } }
+                    .decodeSingleOrNull<Schedule>()
 
+                val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                val timeInStr = if (schedule != null) "${datePrefix}T${schedule.startTime}" else nowStr
+                val timeOutStr = if (schedule != null) "${datePrefix}T${schedule.endTime}" else nowStr
+
+                val absentId = UUID.randomUUID().toString()
                 val absentRecord =
                     Attendance(
                         id = absentId,
                         status = "Absent",
-                        timeIn = nowStr,
-                        timeOut = nowStr,
+                        timeIn = timeInStr,
+                        timeOut = timeOutStr,
                         schedId = schedId,
                         employeeId = employeeId,
                     )
 
                 client.from("attendance").insert(absentRecord)
-
                 processedAbsentCache.add(cacheKey)
 
                 Result.success(true)

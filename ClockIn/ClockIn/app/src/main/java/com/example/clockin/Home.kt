@@ -81,6 +81,8 @@ import com.example.clockin.model.*
 import com.example.clockin.ui.theme.*
 import com.example.clockin.viewmodel.HomeViewModel
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -95,6 +97,7 @@ fun DashboardScreen(
     statusMessage: String,
     onActiveAttendanceIdChanged: (String?) -> Unit,
     onTargetBleChanged: (String, Long, Long, String) -> Unit,
+    onRefreshBeacon: () -> Unit = {},
     isBeaconFound: Boolean,
     onLogout: () -> Unit,
     onProfileClick: () -> Unit,
@@ -126,6 +129,7 @@ fun DashboardScreen(
     var currentAttendanceStatus by remember { mutableStateOf<String?>(null) }
 
     val refreshDashboard = {
+        onRefreshBeacon()
         coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val user = SupabaseManager.getCurrentUser()
             val userEmail = user?.email ?: ""
@@ -353,7 +357,7 @@ fun DashboardScreen(
                             }
 
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().clickable { refreshDashboard() },
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             border = BorderStroke(1.dp, Color.LightGray),
@@ -374,6 +378,24 @@ fun DashboardScreen(
                                     )
                                 }
                             }
+
+                            if (!isBeaconFound && !statusMessage.contains("Idle") && !statusMessage.contains("No Active")) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Make sure Bluetooth and Location are ON",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(start = 36.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Tap to refresh",
+                                fontSize = 10.sp,
+                                color = Color.LightGray,
+                                modifier = Modifier.align(Alignment.End)
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
