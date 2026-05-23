@@ -27,16 +27,16 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sensors
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.outlined.Inventory
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Button
@@ -46,12 +46,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -74,14 +76,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.navigation.NavController
 import com.example.clockin.model.*
 import com.example.clockin.ui.theme.*
 import com.example.clockin.viewmodel.HomeViewModel
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -308,7 +307,7 @@ fun DashboardScreen(
                             isRefreshing = false
                         }
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     Column(
                         modifier =
@@ -385,16 +384,16 @@ fun DashboardScreen(
                                     text = "Make sure Bluetooth and Location are ON",
                                     fontSize = 11.sp,
                                     color = Color.Gray,
-                                    modifier = Modifier.padding(start = 36.dp)
+                                    modifier = Modifier.padding(start = 36.dp),
                                 )
                             }
-                            
+
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Tap to refresh",
                                 fontSize = 10.sp,
                                 color = Color.LightGray,
-                                modifier = Modifier.align(Alignment.End)
+                                modifier = Modifier.align(Alignment.End),
                             )
                         }
 
@@ -459,12 +458,12 @@ fun UserMenuHeader() {
                 text = if (userName.isNotEmpty()) userName else "Loading...",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = userEmail,
                 color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 10.sp
+                fontSize = 10.sp,
             )
         }
     }
@@ -489,12 +488,12 @@ fun DashboardHeader(
         }
         Spacer(modifier = Modifier.width(12.dp))
         IconButton(
-            onClick = { ThemeManager.toggleTheme(context) }
+            onClick = { ThemeManager.toggleTheme(context) },
         ) {
             Icon(
                 imageVector = if (ThemeManager.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                 contentDescription = "Toggle Theme",
-                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
@@ -717,12 +716,13 @@ fun PoliciesView(onBack: () -> Unit) {
 
 data class FAQData(val question: String, val answer: String, val initialExpanded: Boolean = false)
 
-private val faqList = listOf(
-    FAQData("How does the system work?", "The system tracks your clock-in and clock-out times via QR code scanning."),
-    FAQData("Can it detect late log-outs?", "The system automatically records the exact time of each scan."),
-    FAQData("What happens if the WiFi is wrong?", "The app will block clock-in. You must connect to the designated class WiFi access point."),
-    FAQData("How close do I need to be to the beacon?", "You must be within 15 meters of the beacon to clock in or stay clocked in.")
-)
+private val faqList =
+    listOf(
+        FAQData("How does the system work?", "The system tracks your clock-in and clock-out times via QR code scanning."),
+        FAQData("Can it detect late log-outs?", "The system automatically records the exact time of each scan."),
+        FAQData("What happens if the WiFi is wrong?", "The app will block clock-in. You must connect to the designated class WiFi access point."),
+        FAQData("How close do I need to be to the beacon?", "You must be within 15 meters of the beacon to clock in or stay clocked in."),
+    )
 
 @Composable
 fun FAQView(onBack: () -> Unit) {

@@ -138,222 +138,222 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
-            var isCheckingSession by remember { mutableStateOf(true) }
-            var startDestination by remember { mutableStateOf("login") }
+                var isCheckingSession by remember { mutableStateOf(true) }
+                var startDestination by remember { mutableStateOf("login") }
 
-            val permissionsLauncher =
-                rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestMultiplePermissions(),
-                ) { permissions ->
-                    val allGranted = permissions.values.all { it }
-                    if (!allGranted) {
-                        NotificationManager.show(
-                            header = "Permissions Required",
-                            message = "Bluetooth and Location are needed for attendance.",
+                val permissionsLauncher =
+                    rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestMultiplePermissions(),
+                    ) { permissions ->
+                        val allGranted = permissions.values.all { it }
+                        if (!allGranted) {
+                            NotificationManager.show(
+                                header = "Permissions Required",
+                                message = "Bluetooth and Location are needed for attendance.",
+                            )
+                        } else {
+                            startAndBindBeaconService()
+                        }
+                    }
+
+                val enableBluetoothLauncher =
+                    rememberLauncherForActivityResult(
+                        ActivityResultContracts.StartActivityForResult(),
+                    ) {}
+
+                DisposableEffect(lifecycleOwner) {
+                    val observer =
+                        LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME) {
+                                try {
+                                    val hasConnectPermission =
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            ContextCompat.checkSelfPermission(
+                                                context,
+                                                Manifest.permission.BLUETOOTH_CONNECT,
+                                            ) == PackageManager.PERMISSION_GRANTED
+                                        } else {
+                                            true
+                                        }
+
+                                    if (hasConnectPermission) {
+                                        val bluetoothManager = context.getSystemService(android.bluetooth.BluetoothManager::class.java)
+                                        val bluetoothAdapter = bluetoothManager?.adapter
+                                        if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled) {
+                                            val enableBtIntent =
+                                                Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                                            enableBluetoothLauncher.launch(enableBtIntent)
+                                        }
+                                    }
+                                } catch (e: SecurityException) {
+                                    Log.e(
+                                        "MainActivity",
+                                        "Bluetooth permission denied, skipping BT check",
+                                        e,
+                                    )
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
+
+                LaunchedEffect(Unit) {
+                    val isResetLink = intent?.data?.host == "reset-callback"
+                    if (isResetLink) {
+                        try {
+                            SupabaseManager.client.handleDeeplinks(intent)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+
+                    val permissionsToRequest =
+                        mutableListOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.FOREGROUND_SERVICE,
                         )
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+                        permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+                    }
+
+                    if (Build.VERSION.SDK_INT >= 34) {
+                        permissionsToRequest.add("android.permission.FOREGROUND_SERVICE_LOCATION")
+                    }
+
+                    if (permissionsToRequest.any {
+                            ContextCompat.checkSelfPermission(context, it) !=
+                                PackageManager.PERMISSION_GRANTED
+                        }
+                    ) {
+                        permissionsLauncher.launch(permissionsToRequest.toTypedArray())
                     } else {
                         startAndBindBeaconService()
                     }
+
+                    SupabaseManager.loadSession()
+                    val currentUser = SupabaseManager.getCurrentUser()
+                    startDestination = if (currentUser != null) "home" else "login"
+                    isCheckingSession = false
                 }
 
-            val enableBluetoothLauncher =
-                rememberLauncherForActivityResult(
-                    ActivityResultContracts.StartActivityForResult(),
-                ) {}
+                val uiState by viewModel.uiState.collectAsState()
 
-            DisposableEffect(lifecycleOwner) {
-                val observer =
-                    LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_RESUME) {
-                            try {
-                                val hasConnectPermission =
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                        ContextCompat.checkSelfPermission(
-                                            context,
-                                            Manifest.permission.BLUETOOTH_CONNECT,
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                    } else {
-                                        true
-                                    }
-
-                                if (hasConnectPermission) {
-                                    val bluetoothManager = context.getSystemService(android.bluetooth.BluetoothManager::class.java)
-                                    val bluetoothAdapter = bluetoothManager?.adapter
-                                    if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled) {
-                                        val enableBtIntent =
-                                            Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                                        enableBluetoothLauncher.launch(enableBtIntent)
-                                    }
-                                }
-                            } catch (e: SecurityException) {
-                                Log.e(
-                                    "MainActivity",
-                                    "Bluetooth permission denied, skipping BT check",
-                                    e,
-                                )
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                        }
-                    }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
-
-            LaunchedEffect(Unit) {
-                val isResetLink = intent?.data?.host == "reset-callback"
-                if (isResetLink) {
-                    try {
-                        SupabaseManager.client.handleDeeplinks(intent)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                LaunchedEffect(uiState.uiTargetBleName, uiState.uiTargetStartTime, uiState.activeAttendanceId) {
+                    val state = uiState
+                    if (state.uiTargetBleName.isNotEmpty() && isBound) {
+                        val isClockedInNow = (state.activeAttendanceId != null)
+                        beaconService?.startMonitoring(
+                            state.uiTargetBleName,
+                            state.uiTargetStartTime,
+                            state.uiTargetEndTime,
+                            state.uiSchedId,
+                            state.empId,
+                            isClockedInNow,
+                        )
+                    } else if (isBound) {
+                        beaconService?.stopMonitoring()
                     }
                 }
 
-                val permissionsToRequest =
-                    mutableListOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION,
-                        Manifest.permission.FOREGROUND_SERVICE,
-                    )
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
-                    permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
-                }
-
-                if (Build.VERSION.SDK_INT >= 34) {
-                    permissionsToRequest.add("android.permission.FOREGROUND_SERVICE_LOCATION")
-                }
-
-                if (permissionsToRequest.any {
-                        ContextCompat.checkSelfPermission(context, it) !=
-                            PackageManager.PERMISSION_GRANTED
-                    }
-                ) {
-                    permissionsLauncher.launch(permissionsToRequest.toTypedArray())
+                if (isCheckingSession) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background),
+                        contentAlignment = Alignment.Center,
+                    ) { CircularProgressIndicator(color = ButtonOrange) }
                 } else {
-                    startAndBindBeaconService()
-                }
-
-                SupabaseManager.loadSession()
-                val currentUser = SupabaseManager.getCurrentUser()
-                startDestination = if (currentUser != null) "home" else "login"
-                isCheckingSession = false
-            }
-
-            val uiState by viewModel.uiState.collectAsState()
-
-            LaunchedEffect(uiState.uiTargetBleName, uiState.uiTargetStartTime, uiState.activeAttendanceId) {
-                val state = uiState
-                if (state.uiTargetBleName.isNotEmpty() && isBound) {
-                    val isClockedInNow = (state.activeAttendanceId != null)
-                    beaconService?.startMonitoring(
-                        state.uiTargetBleName,
-                        state.uiTargetStartTime,
-                        state.uiTargetEndTime,
-                        state.uiSchedId,
-                        state.empId,
-                        isClockedInNow,
-                    )
-                } else if (isBound) {
-                    beaconService?.stopMonitoring()
-                }
-            }
-
-            if (isCheckingSession) {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator(color = ButtonOrange) }
-            } else {
-                NotificationOverlay {
-                    NavHost(navController = navController, startDestination = startDestination) {
-                        composable("login") {
-                            LoginScreen(
-                                onLoginSuccess = {
-                                    navController.navigate("home") {
-                                        popUpTo("login") { inclusive = true }
-                                    }
-                                },
-                                onForgotPassword = { navController.navigate("forgotPassword") },
-                                onNavigateToReset = { navController.navigate("resetPassword") },
-                            )
-                        }
-                        composable("forgotPassword") {
-                            ForgotPasswordScreen(
-                                onBack = { navController.popBackStack() },
-                                onNavigateToReset = { navController.navigate("resetPassword") },
-                            )
-                        }
-                        composable("resetPassword") {
-                            ResetPasswordScreen(
-                                onNavigateToLogin = {
-                                    navController.navigate("login") {
-                                        popUpTo("login") { inclusive = true }
-                                    }
-                                },
-                            )
-                        }
-                        composable("home") {
-                            val scope = rememberCoroutineScope()
-                            RealtimeNotificationListener()
-                            DashboardScreen(
-                                navController = navController,
-                                beaconDistance = uiState.beaconDistance,
-                                deviceName = uiState.uiTargetBleName,
-                                statusMessage = uiState.statusMessage,
-                                onActiveAttendanceIdChanged = { id ->
-                                    viewModel.updateActiveAttendance(id)
-                                },
-                                onTargetBleChanged = { newBleName, newStartTime, newEndTime, schedId ->
-                                    viewModel.setTargetBle(newBleName, newStartTime, newEndTime, schedId)
-                                    scope.launch(Dispatchers.Main) {
-                                        val user = SupabaseManager.getCurrentUser()
-                                        if (user != null) viewModel.setEmpId(user.id)
-                                        if (isBound) {
-                                            val isClockedInNow = (uiState.activeAttendanceId != null)
-                                            beaconService?.startMonitoring(
-                                                newBleName,
-                                                newStartTime,
-                                                newEndTime,
-                                                schedId,
-                                                uiState.empId,
-                                                isClockedInNow,
-                                            )
+                    NotificationOverlay {
+                        NavHost(navController = navController, startDestination = startDestination) {
+                            composable("login") {
+                                LoginScreen(
+                                    onLoginSuccess = {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
                                         }
-                                    }
-                                },
-                                isBeaconFound = uiState.isBeaconFound,
-                                onLogout = {
-                                    scope.launch(Dispatchers.Main) {
-                                        if (isBound) beaconService?.stopMonitoring()
-                                        SupabaseManager.signOut()
+                                    },
+                                    onForgotPassword = { navController.navigate("forgotPassword") },
+                                    onNavigateToReset = { navController.navigate("resetPassword") },
+                                )
+                            }
+                            composable("forgotPassword") {
+                                ForgotPasswordScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onNavigateToReset = { navController.navigate("resetPassword") },
+                                )
+                            }
+                            composable("resetPassword") {
+                                ResetPasswordScreen(
+                                    onNavigateToLogin = {
                                         navController.navigate("login") {
-                                            popUpTo("home") { inclusive = true }
+                                            popUpTo("login") { inclusive = true }
                                         }
-                                    }
-                                },
-                                onProfileClick = { navController.navigate("profile") },
-                            )
+                                    },
+                                )
+                            }
+                            composable("home") {
+                                val scope = rememberCoroutineScope()
+                                RealtimeNotificationListener()
+                                DashboardScreen(
+                                    navController = navController,
+                                    beaconDistance = uiState.beaconDistance,
+                                    deviceName = uiState.uiTargetBleName,
+                                    statusMessage = uiState.statusMessage,
+                                    onActiveAttendanceIdChanged = { id ->
+                                        viewModel.updateActiveAttendance(id)
+                                    },
+                                    onTargetBleChanged = { newBleName, newStartTime, newEndTime, schedId ->
+                                        viewModel.setTargetBle(newBleName, newStartTime, newEndTime, schedId)
+                                        scope.launch(Dispatchers.Main) {
+                                            val user = SupabaseManager.getCurrentUser()
+                                            if (user != null) viewModel.setEmpId(user.id)
+                                            if (isBound) {
+                                                val isClockedInNow = (uiState.activeAttendanceId != null)
+                                                beaconService?.startMonitoring(
+                                                    newBleName,
+                                                    newStartTime,
+                                                    newEndTime,
+                                                    schedId,
+                                                    uiState.empId,
+                                                    isClockedInNow,
+                                                )
+                                            }
+                                        }
+                                    },
+                                    isBeaconFound = uiState.isBeaconFound,
+                                    onLogout = {
+                                        scope.launch(Dispatchers.Main) {
+                                            if (isBound) beaconService?.stopMonitoring()
+                                            SupabaseManager.signOut()
+                                            navController.navigate("login") {
+                                                popUpTo("home") { inclusive = true }
+                                            }
+                                        }
+                                    },
+                                    onProfileClick = { navController.navigate("profile") },
+                                )
+                            }
+                            composable("profile") {
+                                ProfileDetailsScreen(onBack = { navController.popBackStack() })
+                            }
+                            composable("scan_qr") {
+                                ScannerScreen(
+                                    navController = navController,
+                                    isBeaconFound = uiState.isBeaconFound,
+                                )
+                            }
+                            composable("schedule") { ScheduleScreen(navController = navController) }
+                            composable("attendance") { AttendanceScreen(navController = navController) }
                         }
-                        composable("profile") {
-                            ProfileDetailsScreen(onBack = { navController.popBackStack() })
-                        }
-                        composable("scan_qr") {
-                            ScannerScreen(
-                                navController = navController,
-                                isBeaconFound = uiState.isBeaconFound,
-                            )
-                        }
-                        composable("schedule") { ScheduleScreen(navController = navController) }
-                        composable("attendance") { AttendanceScreen(navController = navController) }
                     }
                 }
             }
         }
     }
-}
 
     override fun onDestroy() {
         super.onDestroy()

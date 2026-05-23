@@ -76,11 +76,12 @@ object SupabaseManager {
     suspend fun getActiveGracePeriodMinutes(): Float {
         return withContext(Dispatchers.IO) {
             try {
-                val list = client.from("grace_period")
-                    .select {
-                        filter { eq("is_active", true) }
-                    }
-                    .decodeList<GracePeriod>()
+                val list =
+                    client.from("grace_period")
+                        .select {
+                            filter { eq("is_active", true) }
+                        }
+                        .decodeList<GracePeriod>()
 
                 list.firstOrNull()?.minutesAllowed ?: 15f
             } catch (e: Exception) {
@@ -496,9 +497,19 @@ object SupabaseManager {
                 if (activeSession != null) {
                     // Check if clocking out too early (more than 30 mins before endTime)
                     val timeFormatShort = SimpleDateFormat("HH:mm:ss", Locale.US)
-                    val endTime = try { timeFormatShort.parse(myCurrentSchedule.endTime) } catch (e: Exception) { null }
-                    val currentTimeOnly = try { timeFormatShort.parse(timeFormatShort.format(now)) } catch (e: Exception) { null }
-                    
+                    val endTime =
+                        try {
+                            timeFormatShort.parse(myCurrentSchedule.endTime)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    val currentTimeOnly =
+                        try {
+                            timeFormatShort.parse(timeFormatShort.format(now))
+                        } catch (e: Exception) {
+                            null
+                        }
+
                     var newStatus: String? = null
                     if (endTime != null && currentTimeOnly != null) {
                         val remainingMillis = endTime.time - currentTimeOnly.time
@@ -515,7 +526,7 @@ object SupabaseManager {
                     }) {
                         filter { eq("attendId", activeSession.id) }
                     }
-                    
+
                     val msg = if (newStatus == "Incomplete") "Successfully Clocked Out: Incomplete" else "Successfully Clocked Out"
                     return@withContext Result.success(msg)
                 }
@@ -681,9 +692,10 @@ object SupabaseManager {
                     return@withContext Result.success(false)
                 }
 
-                val schedule = client.from("schedule")
-                    .select { filter { eq("schedId", schedId) } }
-                    .decodeSingleOrNull<Schedule>()
+                val schedule =
+                    client.from("schedule")
+                        .select { filter { eq("schedId", schedId) } }
+                        .decodeSingleOrNull<Schedule>()
 
                 val nowStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
                 val timeInStr = if (schedule != null) "${datePrefix}T${schedule.startTime}" else nowStr

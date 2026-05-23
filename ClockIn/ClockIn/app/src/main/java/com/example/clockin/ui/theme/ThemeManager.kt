@@ -14,8 +14,11 @@ object ThemeManager {
     fun init(context: Context) {
         if (initialized) return
         val prefs = context.getSharedPreferences("theme_prefs", Context.MODE_PRIVATE)
-        val defaultDark = (context.resources.configuration.uiMode and 
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val defaultDark =
+            (
+                context.resources.configuration.uiMode and
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            ) == android.content.res.Configuration.UI_MODE_NIGHT_YES
         isDarkTheme = prefs.getBoolean("is_dark_theme", defaultDark)
         initialized = true
     }

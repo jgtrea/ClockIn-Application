@@ -17,4 +17,3 @@ val TextOrange = Color(0xFFFF725E)
 val ButtonOrange = Color(0xFFFF725E)
 val LightOrangeText = Color(0xFFE69A8D)
 val BorderGray = Color(0xFFE0E0E0)
-

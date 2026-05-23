@@ -1,12 +1,10 @@
 package com.example.clockin
 
-import com.example.clockin.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,11 +35,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.clockin.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -132,17 +132,18 @@ fun AttendanceScreen(navController: NavController) {
 
     val filteredAttendance =
         remember(attendanceMap, searchQuery, selectedStatusFilter) {
-            val baseMap = if (searchQuery.isBlank()) {
-                attendanceMap
-            } else {
-                attendanceMap.mapValues { (_, items) ->
-                    items.filter {
-                        it.title.contains(searchQuery, true) ||
-                            it.status.contains(searchQuery, true) ||
-                            it.timeIn.contains(searchQuery, true)
-                    }
-                }.filterValues { it.isNotEmpty() }
-            }
+            val baseMap =
+                if (searchQuery.isBlank()) {
+                    attendanceMap
+                } else {
+                    attendanceMap.mapValues { (_, items) ->
+                        items.filter {
+                            it.title.contains(searchQuery, true) ||
+                                it.status.contains(searchQuery, true) ||
+                                it.timeIn.contains(searchQuery, true)
+                        }
+                    }.filterValues { it.isNotEmpty() }
+                }
 
             if (selectedStatusFilter == "All") {
                 baseMap
@@ -208,10 +209,11 @@ fun AttendanceScreen(navController: NavController) {
 
                     val filterOptions = listOf("All", "Present", "Late", "Absent", "Incomplete")
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(vertical = 4.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         filterOptions.forEach { option ->
@@ -219,11 +221,12 @@ fun AttendanceScreen(navController: NavController) {
                             val chipColor = if (isSelected) PrimaryOrange else androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
                             val textColor = if (isSelected) Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                             Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(chipColor)
-                                    .clickable { selectedStatusFilter = option }
-                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                modifier =
+                                    Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(chipColor)
+                                        .clickable { selectedStatusFilter = option }
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
                             ) {
                                 Text(
                                     text = option,

@@ -1,6 +1,5 @@
 package com.example.clockin
 
-import com.example.clockin.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.clockin.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -210,13 +210,15 @@ fun ScheduleScreen(navController: NavController) {
                             onClick = { isDayDropdownExpanded = true },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.5.dp,
-                                androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-                            ),
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
+                                ),
+                            border =
+                                androidx.compose.foundation.BorderStroke(
+                                    1.5.dp,
+                                    androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                                ),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
