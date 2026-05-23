@@ -34,8 +34,8 @@ import java.util.UUID
 
 object SupabaseManager {
     private const val TAG = "SupabaseManager"
-    private const val SUPABASE_URL = "https://ckgvtzsslrxklmbkztxe.supabase.co"
-    private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZ3Z0enNzbHJ4a2xtYmt6dHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMDc1NzQsImV4cCI6MjA4NTY4MzU3NH0.fhKTJOFPL5oxK3C1cRws-HM4aUSJEGK1Ei1W4sv5qCo"
+    private val SUPABASE_URL = BuildConfig.SUPABASE_URL
+    private val SUPABASE_KEY = BuildConfig.SUPABASE_KEY
 
     private var cachedUser: UserProfile? = null
     private val processedAbsentCache = java.util.Collections.synchronizedSet(mutableSetOf<String>())
@@ -72,6 +72,23 @@ object SupabaseManager {
     }
 
     fun isLoggedIn(): Boolean = client.auth.currentSessionOrNull() != null
+
+    suspend fun getActiveGracePeriodMinutes(): Float {
+        return withContext(Dispatchers.IO) {
+            try {
+                val list = client.from("grace_period")
+                    .select {
+                        filter { eq("is_active", true) }
+                    }
+                    .decodeList<GracePeriod>()
+
+                list.firstOrNull()?.minutesAllowed ?: 15f
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching grace period", e)
+                15f
+            }
+        }
+    }
 
     suspend fun signOut() {
         cachedUser = null
@@ -321,20 +338,48 @@ object SupabaseManager {
             } catch (e: Exception) {
                 null
             }
-        val calendar = Calendar.getInstance()
-        calendar.time = Date()
+        val endOnlyTime =
+            try {
+                timeFormat.parse(schedule.endTime)
+            } catch (e: Exception) {
+                null
+            }
+
+        val calendarStart = Calendar.getInstance()
+        calendarStart.time = Date()
 
         if (startOnlyTime != null) {
             val timeCal = Calendar.getInstance()
             timeCal.time = startOnlyTime
-            calendar.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY))
-            calendar.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE))
-            calendar.set(Calendar.SECOND, timeCal.get(Calendar.SECOND))
-            calendar.set(Calendar.MILLISECOND, 0)
+            calendarStart.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY))
+            calendarStart.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE))
+            calendarStart.set(Calendar.SECOND, timeCal.get(Calendar.SECOND))
+            calendarStart.set(Calendar.MILLISECOND, 0)
         }
-        val preciseStartTime = calendar.time
+        val preciseStartTime = calendarStart.time
 
-        return ClassSession(schedule.subject, sectionDisplay, targetBeaconName, preciseStartTime, schedule.id, isUpcoming)
+        val calendarEnd = Calendar.getInstance()
+        calendarEnd.time = Date()
+
+        if (endOnlyTime != null) {
+            val timeCal = Calendar.getInstance()
+            timeCal.time = endOnlyTime
+            calendarEnd.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY))
+            calendarEnd.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE))
+            calendarEnd.set(Calendar.SECOND, timeCal.get(Calendar.SECOND))
+            calendarEnd.set(Calendar.MILLISECOND, 0)
+        }
+        val preciseEndTime = calendarEnd.time
+
+        return ClassSession(
+            schedule.subject,
+            sectionDisplay,
+            targetBeaconName,
+            preciseStartTime,
+            preciseEndTime,
+            schedule.id,
+            isUpcoming,
+        )
     }
 
     suspend fun getTodayAttendance(schedId: String): Attendance? {
@@ -377,7 +422,7 @@ object SupabaseManager {
         return withContext(Dispatchers.IO) {
             try {
                 if (!WifiChecker.isWifiEnabled(context) || !WifiChecker.isConnectedToAllowedWifi(context)) {
-                    val requiredWifi = WifiChecker.getAllowedWifiSsid()
+                    val requiredWifi = WifiChecker.getAllowedWifiSsid(context)
                     return@withContext Result.failure(Exception("Wrong WiFi! You must be connected to: $requiredWifi"))
                 }
 
@@ -467,7 +512,8 @@ object SupabaseManager {
                     return@withContext Result.success("Already Completed for Today")
                 }
 
-                val status = calculateStatus(myCurrentSchedule.startTime, now)
+                val minutesAllowed = getActiveGracePeriodMinutes()
+                val status = calculateStatus(myCurrentSchedule.startTime, now, minutesAllowed)
 
                 val newAttendance =
                     Attendance(
@@ -490,6 +536,7 @@ object SupabaseManager {
     private fun calculateStatus(
         scheduleStartTime: String,
         currentTime: Date,
+        minutesAllowed: Float,
     ): String {
         return try {
             val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
@@ -499,8 +546,16 @@ object SupabaseManager {
             val current = timeFormat.parse(currentTimeStr)
 
             if (start != null && current != null) {
-                val diff = current.time - start.time
-                if (diff > 15 * 60 * 1000) "Late" else "Present"
+                val diffMs = current.time - start.time
+                val totalSecs = diffMs / 1000
+                if (totalSecs <= 0) {
+                    "Present"
+                } else {
+                    val minutes = totalSecs / 60
+                    val seconds = totalSecs % 60
+                    val totalMinutesLate = minutes.toFloat() + (seconds.toFloat() / 60f)
+                    if (totalMinutesLate > minutesAllowed) "Late" else "Present"
+                }
             } else {
                 "Present"
             }

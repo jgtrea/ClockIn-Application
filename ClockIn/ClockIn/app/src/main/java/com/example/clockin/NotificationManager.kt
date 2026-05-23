@@ -138,7 +138,7 @@ private fun NotificationToastItem(
                     .padding(bottom = 8.dp)
                     .clickable { onDismiss() },
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         ) {
             Row(
@@ -173,18 +173,18 @@ private fun NotificationToastItem(
                         text = notification.header,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        color = Color.Black,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = notification.message,
                         fontSize = 12.sp,
-                        color = Color.Gray,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                     )
                     Text(
                         text = formatTimestamp(notification.timestamp),
                         fontSize = 10.sp,
-                        color = Color.LightGray,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.padding(top = 2.dp),
                     )
                 }
@@ -196,7 +196,7 @@ private fun NotificationToastItem(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Dismiss",
-                        tint = Color.Gray,
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
                 }

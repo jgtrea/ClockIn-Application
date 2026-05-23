@@ -14,6 +14,7 @@ data class MainUiState(
     val deviceId: String = "Fetching...",
     val uiTargetBleName: String = "",
     val uiTargetStartTime: Long = 0L,
+    val uiTargetEndTime: Long = 0L,
     val uiSchedId: String = "",
     val empId: String = "",
     val activeAttendanceId: String? = null,
@@ -54,12 +55,14 @@ class MainViewModel : ViewModel() {
     fun setTargetBle(
         name: String,
         startTime: Long,
+        endTime: Long,
         schedId: String,
     ) {
         _uiState.update {
             it.copy(
                 uiTargetBleName = name,
                 uiTargetStartTime = startTime,
+                uiTargetEndTime = endTime,
                 uiSchedId = schedId,
             )
         }

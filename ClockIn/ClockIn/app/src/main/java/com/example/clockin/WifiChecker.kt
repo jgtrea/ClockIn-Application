@@ -7,8 +7,27 @@ import android.net.wifi.WifiManager
 import android.os.Build
 
 object WifiChecker {
-    // REPLACE WIFI WITH CORRECT SSID
-    private const val ALLOWED_WIFI_SSID = "YOUR_WIFI_NAME_HERE"
+    private var customSsid: String? = null
+    private const val DEFAULT_WIFI_SSID = "ClockIn_WiFi"
+
+    fun setAllowedWifiSsid(
+        context: Context,
+        ssid: String,
+    ) {
+        customSsid = ssid
+        val prefs = context.getSharedPreferences("WifiPrefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("allowed_ssid", ssid).apply()
+    }
+
+    fun getAllowedWifiSsid(
+        context: Context? = null,
+    ): String {
+        customSsid?.let { return it }
+        val prefs = context?.getSharedPreferences("WifiPrefs", Context.MODE_PRIVATE)
+        val ssid = prefs?.getString("allowed_ssid", DEFAULT_WIFI_SSID) ?: DEFAULT_WIFI_SSID
+        customSsid = ssid
+        return ssid
+    }
 
     fun isWifiEnabled(context: Context): Boolean {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -18,7 +37,7 @@ object WifiChecker {
     fun isConnectedToAllowedWifi(context: Context): Boolean {
         val currentSsid = getCurrentWifiSsid(context) ?: return false
         val cleanSsid = currentSsid.replace("\"", "")
-        return cleanSsid == ALLOWED_WIFI_SSID
+        return cleanSsid == getAllowedWifiSsid(context)
     }
 
     fun getCurrentWifiSsid(context: Context): String? {
@@ -40,9 +59,5 @@ object WifiChecker {
             if (info.networkId == -1) return null
             return info.ssid
         }
-    }
-
-    fun getAllowedWifiSsid(): String {
-        return ALLOWED_WIFI_SSID
     }
 }

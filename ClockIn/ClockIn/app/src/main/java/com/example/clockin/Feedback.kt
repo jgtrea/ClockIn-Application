@@ -1,5 +1,6 @@
 package com.example.clockin
 
+import com.example.clockin.ui.theme.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +54,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = { if (!isSubmitting) onDismiss() }) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -87,7 +88,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
 
                 Text(
                     "Title",
-                    color = Color.DarkGray,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                 )
@@ -96,14 +97,16 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     value = title,
                     onValueChange = { title = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Enter feedback title", color = Color.Gray) },
+                    placeholder = { Text("Enter feedback title", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
                     enabled = !isSubmitting,
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                             focusedBorderColor = PrimaryOrange,
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
+                            unfocusedBorderColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
                         ),
                 )
 
@@ -111,7 +114,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
 
                 Text(
                     "Description",
-                    color = Color.DarkGray,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                 )
@@ -123,14 +126,16 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .height(150.dp),
-                    placeholder = { Text("Describe your feedback in detail", color = Color.Gray) },
+                    placeholder = { Text("Describe your feedback in detail", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
                     enabled = !isSubmitting,
                     maxLines = 8,
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                             focusedBorderColor = PrimaryOrange,
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
+                            unfocusedBorderColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
                         ),
                 )
 
@@ -149,7 +154,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     Text(
                         text = "Send as Anonymous",
                         fontSize = 14.sp,
-                        color = Color.DarkGray,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     )
                 }
 

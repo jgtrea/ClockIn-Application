@@ -70,7 +70,7 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
         return
     }
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState())) {
         Box(
             modifier =
                 Modifier
@@ -95,7 +95,7 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
                         .size(150.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFF7F66))
-                        .border(4.dp, Color.White, CircleShape),
+                        .border(4.dp, androidx.compose.material3.MaterialTheme.colorScheme.surface, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -107,8 +107,8 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(text = userProfile?.name ?: "User", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(text = userProfile?.email ?: "", color = Color.Gray, fontSize = 16.sp)
+            Text(text = userProfile?.name ?: "User", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground)
+            Text(text = userProfile?.email ?: "", color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 16.sp)
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -132,7 +132,7 @@ fun ProfileInfoItem(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, modifier = Modifier.width(120.dp), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
-        Text(text = value, modifier = Modifier.weight(1f), fontSize = 14.sp, color = Color.Gray)
+        Text(text = label, modifier = Modifier.width(120.dp), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground)
+        Text(text = value, modifier = Modifier.weight(1f), fontSize = 14.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
     }
 }

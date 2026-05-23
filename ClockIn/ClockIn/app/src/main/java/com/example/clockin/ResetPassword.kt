@@ -1,5 +1,6 @@
 package com.example.clockin
 
+import com.example.clockin.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -57,7 +58,7 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
     var successMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding().verticalScroll(rememberScrollState()).imePadding(),
+        modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background).statusBarsPadding().verticalScroll(rememberScrollState()).imePadding(),
     ) {
         Box(
             modifier =
@@ -89,7 +90,7 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
 
                 Card(
                     modifier = Modifier.fillMaxWidth().border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         LabeledInput(
@@ -127,8 +128,20 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
                                         errorMessage = "Passwords do not match"
                                         return@Button
                                     }
-                                    if (newPassword.length < 6) {
-                                        errorMessage = "Password must be at least 6 characters"
+                                    if (newPassword.length < 8) {
+                                        errorMessage = "Password must be at least 8 characters"
+                                        return@Button
+                                    }
+                                    if (!newPassword.any { it.isUpperCase() }) {
+                                        errorMessage = "Password must contain at least one uppercase letter"
+                                        return@Button
+                                    }
+                                    if (!newPassword.any { it.isDigit() }) {
+                                        errorMessage = "Password must contain at least one number"
+                                        return@Button
+                                    }
+                                    if (!newPassword.any { !it.isLetterOrDigit() }) {
+                                        errorMessage = "Password must contain at least one special character"
                                         return@Button
                                     }
 

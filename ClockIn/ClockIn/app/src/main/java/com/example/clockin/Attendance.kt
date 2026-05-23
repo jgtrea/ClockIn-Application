@@ -1,7 +1,12 @@
 package com.example.clockin
 
+import com.example.clockin.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,9 +29,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,11 +57,15 @@ data class AttendanceItem(
 
 @Composable
 fun AttendanceScreen(navController: NavController) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isConnected by remember(context) { NetworkObserver(context).isConnected }.collectAsState(initial = true)
+    val coroutineScope = rememberCoroutineScope()
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
+    var selectedStatusFilter by remember { mutableStateOf("All") }
 
     var attendanceMap by remember { mutableStateOf<Map<String, List<AttendanceItem>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -120,8 +131,8 @@ fun AttendanceScreen(navController: NavController) {
     }
 
     val filteredAttendance =
-        remember(attendanceMap, searchQuery) {
-            if (searchQuery.isBlank()) {
+        remember(attendanceMap, searchQuery, selectedStatusFilter) {
+            val baseMap = if (searchQuery.isBlank()) {
                 attendanceMap
             } else {
                 attendanceMap.mapValues { (_, items) ->
@@ -130,6 +141,14 @@ fun AttendanceScreen(navController: NavController) {
                             it.status.contains(searchQuery, true) ||
                             it.timeIn.contains(searchQuery, true)
                     }
+                }.filterValues { it.isNotEmpty() }
+            }
+
+            if (selectedStatusFilter == "All") {
+                baseMap
+            } else {
+                baseMap.mapValues { (_, items) ->
+                    items.filter { it.status.equals(selectedStatusFilter, ignoreCase = true) }
                 }.filterValues { it.isNotEmpty() }
             }
         }
@@ -146,8 +165,10 @@ fun AttendanceScreen(navController: NavController) {
                 Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color.White),
+                    .background(androidx.compose.material3.MaterialTheme.colorScheme.background),
         ) {
+            OfflineIndicator(isConnected = isConnected)
+
             DashboardHeader(
                 userName = userName,
                 onProfileClick = { navController.navigate("profile") },
@@ -155,8 +176,7 @@ fun AttendanceScreen(navController: NavController) {
                 onPoliciesClick = { showPolicies = true },
                 onFAQClick = { showFAQ = true },
                 onLogout = {
-                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
-                    scope.launch {
+                    coroutineScope.launch {
                         SupabaseManager.signOut()
                         navController.navigate("login") {
                             popUpTo("home") { inclusive = true }
@@ -167,7 +187,7 @@ fun AttendanceScreen(navController: NavController) {
                 onSearchChange = { searchQuery = it },
             )
 
-            HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
+            HorizontalDivider(thickness = 1.dp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
 
             if (showPolicies) {
                 PoliciesView(onBack = { showPolicies = false })
@@ -182,10 +202,41 @@ fun AttendanceScreen(navController: NavController) {
                             .padding(16.dp),
                 ) {
                     Text("Attendance History", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text("View your past clock-ins", color = Color.Gray, fontSize = 14.sp)
+                    Text("View your past clock-ins", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val filterOptions = listOf("All", "Present", "Late", "Absent", "Incomplete")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        filterOptions.forEach { option ->
+                            val isSelected = selectedStatusFilter == option
+                            val chipColor = if (isSelected) PrimaryOrange else androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+                            val textColor = if (isSelected) Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(chipColor)
+                                    .clickable { selectedStatusFilter = option }
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                            ) {
+                                Text(
+                                    text = option,
+                                    color = textColor,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
+                    HorizontalDivider(thickness = 1.dp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (isLoading) {
@@ -252,8 +303,8 @@ fun AttendanceCard(item: AttendanceItem) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+                .border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp),
     ) {
         Row(
@@ -278,24 +329,24 @@ fun AttendanceCard(item: AttendanceItem) {
             Spacer(modifier = Modifier.width(16.dp))
 
             Column {
-                Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(text = "Status: ${item.status}", color = Color.Gray, fontSize = 12.sp)
+                Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
+                Text(text = "Status: ${item.status}", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column {
-                        Text("Time In: ", fontSize = 13.sp, color = Color.Gray)
-                        Text("Time Out:", fontSize = 13.sp, color = Color.Gray)
+                        Text("Time In: ", fontSize = 13.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Time Out:", fontSize = 13.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(item.timeIn, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text(item.timeIn, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.width(8.dp))
                             StatusChip(item.status)
                         }
-                        Text(item.timeOut, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(item.timeOut, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }

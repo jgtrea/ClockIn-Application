@@ -1,5 +1,6 @@
 package com.example.clockin
 
+import com.example.clockin.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -55,7 +56,7 @@ fun ForgotPasswordScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding().verticalScroll(rememberScrollState()).imePadding(),
+        modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background).statusBarsPadding().verticalScroll(rememberScrollState()).imePadding(),
     ) {
         Box(
             modifier =
@@ -97,7 +98,7 @@ fun ForgotPasswordScreen(
 
                 Card(
                     modifier = Modifier.fillMaxWidth().border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         LabeledInput(label = "Email Address", placeholder = "Enter your email", value = email, onValueChange = {

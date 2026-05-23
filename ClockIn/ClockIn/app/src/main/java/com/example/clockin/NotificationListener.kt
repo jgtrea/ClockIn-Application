@@ -19,41 +19,42 @@ fun RealtimeNotificationListener() {
 
     LaunchedEffect(Unit) {
         while (true) {
-            if (SupabaseManager.isLoggedIn()) {
-                try {
-                    val user = SupabaseManager.getCurrentUser()
-                    val userEmail = user?.email ?: ""
+            if (!SupabaseManager.isLoggedIn()) {
+                break
+            }
+            try {
+                val user = SupabaseManager.getCurrentUser()
+                val userEmail = user?.email ?: ""
 
-                    val recentNotifications =
-                        SupabaseManager.client.from("notification")
-                            .select {
-                                order("dataCreated", Order.DESCENDING)
-                                limit(3)
-                            }
-                            .decodeList<Notification>()
-
-                    for (notif in recentNotifications) {
-                        val targets = notif.target.split(",").map { it.trim() }
-                        val isRelevant =
-                            targets.any { target ->
-                                target.equals("everyone", ignoreCase = true) ||
-                                    target.equals(userEmail, ignoreCase = true)
-                            }
-
-                        if (isRelevant && !NotificationTracker.hasBeenShown(notif.id)) {
-                            triggerVibration(context)
-
-                            NotificationManager.show(
-                                header = notif.header,
-                                message = notif.message,
-                                duration = 5000L,
-                            )
-                            NotificationTracker.markAsShown(context, notif.id)
+                val recentNotifications =
+                    SupabaseManager.client.from("notification")
+                        .select {
+                            order("dataCreated", Order.DESCENDING)
+                            limit(3)
                         }
+                        .decodeList<Notification>()
+
+                for (notif in recentNotifications) {
+                    val targets = notif.target.split(",").map { it.trim() }
+                    val isRelevant =
+                        targets.any { target ->
+                            target.equals("everyone", ignoreCase = true) ||
+                                target.equals(userEmail, ignoreCase = true)
+                        }
+
+                    if (isRelevant && !NotificationTracker.hasBeenShown(notif.id)) {
+                        triggerVibration(context)
+
+                        NotificationManager.show(
+                            header = notif.header,
+                            message = notif.message,
+                            duration = 5000L,
+                        )
+                        NotificationTracker.markAsShown(context, notif.id)
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
             delay(10000)
         }

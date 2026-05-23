@@ -57,6 +57,7 @@ data class ClassSession(
     val sectionDisplay: String,
     val targetBeaconName: String,
     val startTime: Date,
+    val endTime: Date,
     val schedId: String,
     val isUpcoming: Boolean = false,
 )
@@ -74,4 +75,11 @@ data class Notification(
     val message: String,
     @SerialName("endNotif") val target: String = "everyone",
     @SerialName("dataCreated") val dataCreated: String? = null,
+)
+
+@Serializable
+data class GracePeriod(
+    @SerialName("grace_period_id") val id: String = "",
+    @SerialName("minutes_allowed") val minutesAllowed: Float = 15f,
+    @SerialName("is_active") val isActive: Boolean = true,
 )

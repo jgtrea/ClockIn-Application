@@ -1,5 +1,6 @@
 package com.example.clockin
 
+import com.example.clockin.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -32,9 +33,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +64,9 @@ data class ScheduleItem(
 
 @Composable
 fun ScheduleScreen(navController: NavController) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isConnected by remember(context) { NetworkObserver(context).isConnected }.collectAsState(initial = true)
+    val coroutineScope = rememberCoroutineScope()
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
@@ -160,8 +166,10 @@ fun ScheduleScreen(navController: NavController) {
                 Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color.White),
+                    .background(androidx.compose.material3.MaterialTheme.colorScheme.background),
         ) {
+            OfflineIndicator(isConnected = isConnected)
+
             DashboardHeader(
                 userName = userName,
                 onProfileClick = { navController.navigate("profile") },
@@ -169,8 +177,7 @@ fun ScheduleScreen(navController: NavController) {
                 onPoliciesClick = { showPolicies = true },
                 onFAQClick = { showFAQ = true },
                 onLogout = {
-                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
-                    scope.launch {
+                    coroutineScope.launch {
                         SupabaseManager.signOut()
                         navController.navigate("login") { popUpTo("home") { inclusive = true } }
                     }
@@ -203,7 +210,13 @@ fun ScheduleScreen(navController: NavController) {
                             onClick = { isDayDropdownExpanded = true },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                            ),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -211,18 +224,18 @@ fun ScheduleScreen(navController: NavController) {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(text = "Filter by Day: $selectedDay")
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
 
                         DropdownMenu(
                             expanded = isDayDropdownExpanded,
                             onDismissRequest = { isDayDropdownExpanded = false },
-                            modifier = Modifier.fillMaxWidth(0.9f).background(Color.White),
+                            modifier = Modifier.fillMaxWidth(0.9f).background(androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         ) {
                             daysOfWeek.forEach { day ->
                                 DropdownMenuItem(
-                                    text = { Text(day) },
+                                    text = { Text(day, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface) },
                                     onClick = {
                                         selectedDay = day
                                         isDayDropdownExpanded = false
@@ -234,13 +247,13 @@ fun ScheduleScreen(navController: NavController) {
 
                     if (!isLoading && happeningNowItem != null && (selectedDay == "All Days" || happeningNowItem?.day == selectedDay)) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Happening Now", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        Text("Happening Now", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground)
                         Spacer(modifier = Modifier.height(8.dp))
                         ScheduleCard(happeningNowItem!!)
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    HorizontalDivider(thickness = 1.dp, color = Color.Black)
+                    HorizontalDivider(thickness = 1.dp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
 
                     if (isLoading) {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -289,14 +302,14 @@ fun ScheduleDateGroup(
 
 @Composable
 fun ScheduleCard(item: ScheduleItem) {
-    val borderColor = if (item.isHappeningNow || item.isUpcoming) ButtonOrange else Color(0xFFEEEEEE)
+    val borderColor = if (item.isHappeningNow || item.isUpcoming) ButtonOrange else androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
 
     Card(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp),
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -319,7 +332,7 @@ fun ScheduleCard(item: ScheduleItem) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.width(8.dp))
                     if (item.isHappeningNow || item.isUpcoming) {
                         Surface(
@@ -338,11 +351,11 @@ fun ScheduleCard(item: ScheduleItem) {
                 }
                 Text(
                     text = "Grade ${item.displaySection}",
-                    color = Color.DarkGray,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                 )
-                Text(text = item.details, color = Color.Gray, fontSize = 12.sp)
+                Text(text = item.details, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 if (item.day.isNotEmpty()) {
                     Text(
                         text = item.day,

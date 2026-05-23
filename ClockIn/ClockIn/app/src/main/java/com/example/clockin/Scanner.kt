@@ -131,7 +131,7 @@ fun ScannerScreen(
                                 return@CameraPreview
                             }
                             if (!WifiChecker.isConnectedToAllowedWifi(context)) {
-                                NotificationManager.show("Wrong WiFi", "Connect to: ${WifiChecker.getAllowedWifiSsid()}")
+                                NotificationManager.show("Wrong WiFi", "Connect to: ${WifiChecker.getAllowedWifiSsid(context)}")
                                 isProcessing = false
                                 return@CameraPreview
                             }

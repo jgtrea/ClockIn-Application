@@ -48,14 +48,17 @@ class HomeViewModel : ViewModel() {
         _uiState.update { it.copy(isUpcomingClass = isUpcoming, canClockInEarly = canClockInEarly) }
     }
 
-    fun refreshDashboard() {
+    fun refreshDashboard(forceShowLoading: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             val user = SupabaseManager.getCurrentUser()
             val userEmail = user?.email ?: ""
             _uiState.update { it.copy(userName = user?.name ?: "User") }
 
-            // Fetch Notifications
-            _uiState.update { it.copy(isLoadingNotifs = true) }
+            // Fetch Notifications silently if we already have some loaded
+            val shouldShowLoading = forceShowLoading || _uiState.value.notifications.isEmpty()
+            if (shouldShowLoading) {
+                _uiState.update { it.copy(isLoadingNotifs = true) }
+            }
             try {
                 val result =
                     SupabaseManager.client.from("notification")
@@ -76,7 +79,9 @@ class HomeViewModel : ViewModel() {
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
-                _uiState.update { it.copy(isLoadingNotifs = false) }
+                if (shouldShowLoading) {
+                    _uiState.update { it.copy(isLoadingNotifs = false) }
+                }
             }
 
             // The rest of the dashboard logic relies heavily on SupabaseManager context.
@@ -88,9 +93,9 @@ class HomeViewModel : ViewModel() {
     fun startNotificationPolling() {
         viewModelScope.launch(Dispatchers.IO) {
             while (true) {
-                delay(10_000L)
+                delay(30_000L)
                 if (SupabaseManager.isLoggedIn()) {
-                    refreshDashboard()
+                    refreshDashboard(forceShowLoading = false)
                 }
             }
         }

@@ -2,7 +2,6 @@ package com.example.clockin
 
 import android.annotation.SuppressLint
 import android.app.Service
-import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
@@ -24,8 +23,6 @@ class BeaconService : Service() {
     private val binder = LocalBinder()
     private var beaconManager: BeaconManager? = null
     private var serviceScope = CoroutineScope(Dispatchers.Default + Job())
-    private var rawScanner: android.bluetooth.le.BluetoothLeScanner? = null
-
     var currentDistance: Double = 0.0
         private set
     var isBeaconFound: Boolean = false
@@ -37,16 +34,17 @@ class BeaconService : Service() {
 
     private var targetBeaconName: String = ""
     private var classStartTime: Long = 0L
+    private var classEndTime: Long = 0L
     private var scheduleId: String = ""
     private var employeeId: String = ""
     private var isClockedIn: Boolean = false
+    private var gracePeriodMs: Long = 15 * 60 * 1000L
 
     private var isMarkedIncomplete: Boolean = false
     var onUpdate: ((Double, Boolean, Long, String) -> Unit)? = null
 
     companion object {
         private const val SAFE_DISTANCE = 15.0
-        private const val GRACE_PERIOD_MS = 15 * 60 * 1000
         private const val PREFS_NAME = "BeaconPrefs"
         private const val EARLY_CLOCK_IN_WINDOW_MS = 10 * 60 * 1000
     }
@@ -62,7 +60,6 @@ class BeaconService : Service() {
     override fun onCreate() {
         super.onCreate()
         setupBeaconManager()
-        startRawScan()
         startTimerLoop()
     }
 
@@ -94,20 +91,13 @@ class BeaconService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun startRawScan() {
-        try {
-            val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-            rawScanner = bluetoothManager.adapter.bluetoothLeScanner
-        } catch (e: SecurityException) {
-            Log.e("BeaconService", "Missing Bluetooth scan permission! Cannot start raw scan.", e)
-            statusMessage = "Missing Bluetooth Permissions"
-        } catch (e: Exception) {
-            Log.e("BeaconService", "Error starting raw scan", e)
-        }
+        // Raw BLE scan initialisation kept for future use; scanning is handled by BeaconManager.
     }
 
     fun startMonitoring(
         beaconName: String,
         startTimeMillis: Long,
+        endTimeMillis: Long,
         schedId: String,
         empId: String,
         clockedIn: Boolean,
@@ -121,9 +111,19 @@ class BeaconService : Service() {
 
         targetBeaconName = beaconName
         classStartTime = startTimeMillis
+        classEndTime = endTimeMillis
         scheduleId = schedId
         employeeId = empId
         isClockedIn = clockedIn
+
+        serviceScope.launch {
+            try {
+                val mins = SupabaseManager.getActiveGracePeriodMinutes()
+                gracePeriodMs = (mins * 60 * 1000).toLong()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
 
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -162,6 +162,7 @@ class BeaconService : Service() {
 
         targetBeaconName = ""
         classStartTime = 0L
+        classEndTime = 0L
         isBeaconFound = false
         remainingTime = 300L
         isMarkedIncomplete = false
@@ -208,7 +209,7 @@ class BeaconService : Service() {
                     }
 
                     val now = System.currentTimeMillis()
-                    val gracePeriodEnd = classStartTime + GRACE_PERIOD_MS
+                    val gracePeriodEnd = classStartTime + gracePeriodMs
                     val isPastGracePeriod = now > gracePeriodEnd
 
                     val distStr = "%.2f m".format(currentDistance)
@@ -216,8 +217,8 @@ class BeaconService : Service() {
                     val graceTimeStr = formatTime(graceMillisLeft / 1000)
 
                     if (isClockedIn) {
-                        val classEndTime = classStartTime + (60 * 60 * 1000)
-                        val isOvertime = now > classEndTime
+                        val effectiveEndTime = if (classEndTime > 0L) classEndTime else classStartTime + (60 * 60 * 1000)
+                        val isOvertime = now > effectiveEndTime
 
                         if (!isBeaconFound) {
                             if (isOvertime) {

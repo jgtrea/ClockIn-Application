@@ -44,6 +44,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -77,16 +78,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.clockin.model.*
+import com.example.clockin.ui.theme.*
 import com.example.clockin.viewmodel.MainViewModel
 import io.github.jan.supabase.gotrue.handleDeeplinks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-val BrownHeader = Color(0xFFAF8373)
-val TextOrange = Color(0xFFFF725E)
-val ButtonOrange = Color(0xFFFF725E)
-val LightOrangeText = Color(0xFFE69A8D)
-val BorderGray = Color(0xFFE0E0E0)
 
 class MainActivity : ComponentActivity() {
     private var beaconService: BeaconService? = null
@@ -138,9 +134,11 @@ class MainActivity : ComponentActivity() {
         NotificationTracker.init(this)
 
         setContent {
-            val navController = rememberNavController()
             val context = LocalContext.current
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            ThemeManager.init(context.applicationContext)
+            ClockInTheme(darkTheme = ThemeManager.isDarkTheme, dynamicColor = false) {
+                val navController = rememberNavController()
+                val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
             var isCheckingSession by remember { mutableStateOf(true) }
             var startDestination by remember { mutableStateOf("login") }
@@ -256,6 +254,7 @@ class MainActivity : ComponentActivity() {
                     beaconService?.startMonitoring(
                         state.uiTargetBleName,
                         state.uiTargetStartTime,
+                        state.uiTargetEndTime,
                         state.uiSchedId,
                         state.empId,
                         isClockedInNow,
@@ -267,12 +266,10 @@ class MainActivity : ComponentActivity() {
 
             if (isCheckingSession) {
                 Box(
-                    modifier = Modifier.fillMaxSize().background(Color.White),
+                    modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background),
                     contentAlignment = Alignment.Center,
                 ) { CircularProgressIndicator(color = ButtonOrange) }
             } else {
-                RealtimeNotificationListener()
-
                 NotificationOverlay {
                     NavHost(navController = navController, startDestination = startDestination) {
                         composable("login") {
@@ -303,6 +300,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("home") {
                             val scope = rememberCoroutineScope()
+                            RealtimeNotificationListener()
                             DashboardScreen(
                                 navController = navController,
                                 beaconDistance = uiState.beaconDistance,
@@ -311,8 +309,8 @@ class MainActivity : ComponentActivity() {
                                 onActiveAttendanceIdChanged = { id ->
                                     viewModel.updateActiveAttendance(id)
                                 },
-                                onTargetBleChanged = { newBleName, newStartTime, schedId ->
-                                    viewModel.setTargetBle(newBleName, newStartTime, schedId)
+                                onTargetBleChanged = { newBleName, newStartTime, newEndTime, schedId ->
+                                    viewModel.setTargetBle(newBleName, newStartTime, newEndTime, schedId)
                                     scope.launch(Dispatchers.Main) {
                                         val user = SupabaseManager.getCurrentUser()
                                         if (user != null) viewModel.setEmpId(user.id)
@@ -321,6 +319,7 @@ class MainActivity : ComponentActivity() {
                                             beaconService?.startMonitoring(
                                                 newBleName,
                                                 newStartTime,
+                                                newEndTime,
                                                 schedId,
                                                 uiState.empId,
                                                 isClockedInNow,
@@ -357,6 +356,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 
     override fun onDestroy() {
         super.onDestroy()
@@ -382,32 +382,25 @@ fun LoginScreen(
     var passwordInput by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
-    var savedAccounts by remember { mutableStateOf(mapOf<String, String>()) }
+    var savedEmails by remember { mutableStateOf(listOf<String>()) }
     var expanded by remember { mutableStateOf(false) }
 
     var showDeviceConflict by remember { mutableStateOf(false) }
     var registeredDeviceInfo by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        val rawString = prefs.getString("saved_accounts", "") ?: ""
+        val rawString = prefs.getString("saved_emails", "") ?: ""
         if (rawString.isNotEmpty()) {
-            val map = mutableMapOf<String, String>()
-            rawString.split(",").forEach { entry ->
-                val parts = entry.split("|")
-                if (parts.size == 2) {
-                    map[parts[0]] = parts[1]
-                }
-            }
-            savedAccounts = map
+            savedEmails = rawString.split(",").filter { it.isNotEmpty() }
         }
     }
 
-    val filteredEmails = savedAccounts.keys.filter { it.contains(emailInput, ignoreCase = true) }
+    val filteredEmails = savedEmails.filter { it.contains(emailInput, ignoreCase = true) }
 
     Column(
         modifier =
             Modifier.fillMaxSize()
-                .background(Color.White)
+                .background(androidx.compose.material3.MaterialTheme.colorScheme.background)
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .imePadding(),
@@ -452,7 +445,7 @@ fun LoginScreen(
                 modifier =
                     Modifier.fillMaxWidth()
                         .border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
@@ -474,7 +467,7 @@ fun LoginScreen(
                                 value = emailInput,
                                 onValueChange = { emailInput = it },
                                 placeholder = { Text("Enter Email") },
-                                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
                                 keyboardOptions =
                                     KeyboardOptions(keyboardType = KeyboardType.Email),
                                 shape = RoundedCornerShape(8.dp),
@@ -498,7 +491,6 @@ fun LoginScreen(
                                         text = { Text(email) },
                                         onClick = {
                                             emailInput = email
-                                            passwordInput = savedAccounts[email] ?: ""
                                             expanded = false
                                         },
                                     )
@@ -542,6 +534,8 @@ fun LoginScreen(
                                     isLoading = false
 
                                     if (result.isSuccess) {
+                                        val updatedEmails = (savedEmails + emailInput).distinct()
+                                        prefs.edit().putString("saved_emails", updatedEmails.joinToString(",")).apply()
                                         NotificationManager.show("Success", "Login Successful")
                                         onLoginSuccess()
                                     } else {
@@ -611,7 +605,7 @@ fun DeviceConflictDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxWidth().padding(16.dp),
         ) {
             Column(
@@ -666,7 +660,7 @@ fun DeviceConflictDialog(
                             registeredDevice,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -690,7 +684,7 @@ fun DeviceConflictDialog(
                             currentDevice,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
