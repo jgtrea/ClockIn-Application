@@ -40,13 +40,21 @@ function formatTimeFromDB24(timestamp) {
   return date.toLocaleTimeString('en-US', { hour12: false }).split(' ')[0];
 }
 
+function getLocalDateString(date) {
+  const d = date || new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function getDateFromDB(timestamp) {
   if (!timestamp) return null;
-  
+
   const date = parseDatabaseTimestamp(timestamp);
   if (!date || isNaN(date.getTime())) return null;
-  
-  return date.toISOString().split('T')[0];
+
+  return getLocalDateString(date);
 }
 
 function loadChart(callback) {
@@ -428,7 +436,7 @@ window.calculateOverallStats = function() {
   
   // If no date is selected, default to today and set the input
   if (!selectedDate) {
-    selectedDate = new Date().toISOString().split('T')[0];
+    selectedDate = getLocalDateString();
     if (statsDateEl) {
       statsDateEl.value = selectedDate;
     }
@@ -438,7 +446,7 @@ window.calculateOverallStats = function() {
       chartDateEl.value = selectedDate;
     }
   }
-  
+
   // Get total employees from usersData if available, otherwise from records
   if (window.allUsers && Array.isArray(window.allUsers)) {
     window.dashboardStats.totalEmployees = window.allUsers.length;
@@ -491,9 +499,9 @@ window.onStatsDateChanged = function() {
     }
   } else {
     // No date selected - default to today
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     statsDateEl.value = today;
-    
+
     // Sync the chart date picker
     if (chartDateEl) {
       chartDateEl.value = today;
@@ -567,7 +575,7 @@ async function loadRecentActivity() {
       });
     }
     
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
 
     usersData.forEach(user => {
       const userName = user.name || 'Unknown User';
@@ -1108,18 +1116,18 @@ window.onUserSelected = function(userName) {
   
   // If no date is selected, default to today
   if (!selectedDate) {
-    selectedDate = new Date().toISOString().split('T')[0];
+    selectedDate = getLocalDateString();
     if (statsDateEl) {
       statsDateEl.value = selectedDate;
     }
-    
+
     // Also sync the chart date
     const chartDateEl = document.getElementById('chartDate');
     if (chartDateEl) {
       chartDateEl.value = selectedDate;
     }
   }
-  
+
   // Filter records for selected user AND date
   let userRecords = allRecords.filter(record => record.userName === userName);
   
@@ -1201,7 +1209,7 @@ function openDatePicker() {
   const modal = document.getElementById('datePickerModal');
   const dateInput = document.getElementById('selectedDate');
   
-  dateInput.value = new Date().toISOString().split('T')[0];
+  dateInput.value = getLocalDateString();
   modal.style.display = 'block';
 }
 

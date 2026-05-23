@@ -337,18 +337,17 @@
   font-size: 16px;
   font-weight: 600;
   color: #fff;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 0;
   background: #374151;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
 }
 
 .day-section .users-table-container {
   margin-bottom: 16px;
   width: 100%;
   overflow-x: auto;
+  border-radius: 0 0 12px 12px;
 }
 
 /* Table column widths for consistent alignment */

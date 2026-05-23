@@ -114,8 +114,8 @@
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   padding: 12px;
-  min-width: 280px;
-  max-width: 320px;
+  min-width: 340px;
+  max-width: 440px;
   z-index: 100;
   animation: dropdownSlide 0.2s ease-out;
 }

@@ -15,10 +15,8 @@ const authentication = {
 
   async checkAuth(options = {}) {
     const { adminOnly = true } = options;
-    
-    if (!this.client) {
-      this.init();
-    }
+
+    if (!this.client) this.init();
 
     try {
       const { data: { session }, error } = await this.client.auth.getSession();
@@ -28,6 +26,17 @@ const authentication = {
         return false;
       }
 
+      // Use cached user type from login — skip the DB round trip
+      const cachedType = sessionStorage.getItem('userType') || localStorage.getItem('userType');
+      if (cachedType) {
+        if (adminOnly && cachedType !== 'admin') {
+          this.redirectToLogin();
+          return false;
+        }
+        return true;
+      }
+
+      // No cache — fall back to DB lookup
       const userInfo = await this.getUserIdByEmail(session.user.email);
 
       if (!userInfo) {
@@ -49,26 +58,13 @@ const authentication = {
 
   async getUserIdByEmail(email) {
     try {
-      const { data: adminData, error: adminError } = await this.client
-        .from('user_admin_data')
-        .select('adminId, email')
-        .eq('email', email)
-        .single();
+      const [adminResult, empResult] = await Promise.all([
+        this.client.from('user_admin_data').select('adminId, email').eq('email', email).maybeSingle(),
+        this.client.from('user_employee_data').select('employeeId, email').eq('email', email).maybeSingle()
+      ]);
 
-      if (!adminError && adminData) {
-        return { id: adminData.adminId, type: 'admin' };
-      }
-
-      const { data: empData, error: empError } = await this.client
-        .from('user_employee_data')
-        .select('employeeId, email')
-        .eq('email', email)
-        .single();
-
-      if (!empError && empData) {
-        return { id: empData.employeeId, type: 'employee' };
-      }
-
+      if (adminResult.data) return { id: adminResult.data.adminId, type: 'admin' };
+      if (empResult.data)   return { id: empResult.data.employeeId, type: 'employee' };
       return null;
     } catch (e) {
       return null;
@@ -92,9 +88,6 @@ const authentication = {
 window.authentication = authentication;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
   const allowEmployees = document.body.getAttribute('data-allow-employees') === 'true';
-  
   await authentication.checkAuth({ adminOnly: !allowEmployees });
 });

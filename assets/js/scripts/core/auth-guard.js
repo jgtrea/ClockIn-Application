@@ -13,32 +13,38 @@
       }
     }
 
-    const supabase = window.supabaseClient;
+    const supabase      = window.supabaseClient;
     const allowEmployees = document.body && document.body.getAttribute('data-allow-employees') === 'true';
 
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error || !session) {
-        console.log('No session found, redirecting to login');
         redirectToLogin();
         return;
       }
 
+      // Use cached user type from login — skip the DB round trip
+      const cachedType = sessionStorage.getItem('userType') || localStorage.getItem('userType');
+      if (cachedType) {
+        if (!allowEmployees && cachedType !== 'admin') {
+          redirectToLogin();
+        }
+        return;
+      }
+
+      // No cache — fall back to DB lookup
       const userInfo = await getUserInfo(session.user.email);
-      
+
       if (!userInfo) {
-        console.log('User not found in system, redirecting to login');
         redirectToLogin();
         return;
       }
 
       if (!allowEmployees && userInfo.type !== 'admin') {
-        console.log('Admin access required, redirecting to login');
         redirectToLogin();
-        return;
       }
-      
+
     } catch (e) {
       console.error('Auth check failed:', e);
       redirectToLogin();
@@ -49,26 +55,13 @@
     const supabase = window.supabaseClient;
 
     try {
-      const { data: adminData, error: adminError } = await supabase
-        .from('user_admin_data')
-        .select('adminId, email')
-        .eq('email', email)
-        .single();
+      const [adminResult, empResult] = await Promise.all([
+        supabase.from('user_admin_data').select('adminId, email').eq('email', email).maybeSingle(),
+        supabase.from('user_employee_data').select('employeeId, email').eq('email', email).maybeSingle()
+      ]);
 
-      if (!adminError && adminData) {
-        return { id: adminData.adminId, type: 'admin' };
-      }
-
-      const { data: empData, error: empError } = await supabase
-        .from('user_employee_data')
-        .select('employeeId, email')
-        .eq('email', email)
-        .single();
-
-      if (!empError && empData) {
-        return { id: empData.employeeId, type: 'employee' };
-      }
-
+      if (adminResult.data) return { id: adminResult.data.adminId, type: 'admin' };
+      if (empResult.data)   return { id: empResult.data.employeeId, type: 'employee' };
       return null;
     } catch (e) {
       console.error('Error getting user info:', e);

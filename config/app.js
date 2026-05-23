@@ -21,11 +21,40 @@ const App = {
   _bindHamburger() {
     const sidebar   = document.getElementById('sidebar');
     const hamburger = document.getElementById('hamburger');
+    const overlay   = document.getElementById('sidebarOverlay');
     if (!hamburger || !sidebar) return;
 
+    const MOBILE_BP = 798;
+    const isMobile  = () => window.innerWidth <= MOBILE_BP;
+
+    const closeSidebar = () => {
+      sidebar.classList.remove('expanded');
+      sidebar.classList.add('collapsed');
+      overlay?.classList.remove('active');
+    };
+
     hamburger.addEventListener('click', () => {
-      sidebar.classList.toggle('expanded');
+      const opening = sidebar.classList.toggle('expanded');
       sidebar.classList.toggle('collapsed');
+      if (isMobile()) overlay?.classList.toggle('active', opening);
+    });
+
+    overlay?.addEventListener('click', closeSidebar);
+
+    // Close sidebar when entering mobile; re-expand when returning to desktop
+    let prevMobile = isMobile();
+    window.addEventListener('resize', () => {
+      const nowMobile = isMobile();
+      if (nowMobile && !prevMobile) {
+        closeSidebar();
+      } else if (!nowMobile && prevMobile) {
+        overlay?.classList.remove('active');
+        sidebar.classList.add('expanded');
+        sidebar.classList.remove('collapsed');
+      } else if (!nowMobile) {
+        overlay?.classList.remove('active');
+      }
+      prevMobile = nowMobile;
     });
   },
 
