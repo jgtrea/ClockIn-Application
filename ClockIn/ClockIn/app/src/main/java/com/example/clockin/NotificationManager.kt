@@ -50,20 +50,24 @@ data class NotificationToast(
     val header: String,
     val message: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val duration: Long = 4000L
+    val duration: Long = 4000L,
 )
 
 object NotificationManager {
     private val _notifications = mutableStateListOf<NotificationToast>()
     val notifications: List<NotificationToast> = _notifications
 
-    fun show(header: String, message: String, duration: Long = 4000L) {
+    fun show(
+        header: String,
+        message: String,
+        duration: Long = 4000L,
+    ) {
         _notifications.add(
             NotificationToast(
                 header = header,
                 message = message,
-                duration = duration
-            )
+                duration = duration,
+            ),
         )
     }
 
@@ -81,17 +85,18 @@ fun NotificationOverlay(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         content()
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .zIndex(999f)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .zIndex(999f),
         ) {
             NotificationManager.notifications.forEach { notification ->
                 NotificationToastItem(
                     notification = notification,
-                    onDismiss = { NotificationManager.dismiss(notification.id) }
+                    onDismiss = { NotificationManager.dismiss(notification.id) },
                 )
             }
         }
@@ -101,7 +106,7 @@ fun NotificationOverlay(content: @Composable () -> Unit) {
 @Composable
 private fun NotificationToastItem(
     notification: NotificationToast,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     var isVisible by remember { mutableStateOf(false) }
 
@@ -115,44 +120,49 @@ private fun NotificationToastItem(
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = slideInVertically(
-            initialOffsetY = { -it },
-            animationSpec = tween(durationMillis = 300)
-        ),
-        exit = slideOutVertically(
-            targetOffsetY = { -it },
-            animationSpec = tween(durationMillis = 300)
-        )
+        enter =
+            slideInVertically(
+                initialOffsetY = { -it },
+                animationSpec = tween(durationMillis = 300),
+            ),
+        exit =
+            slideOutVertically(
+                targetOffsetY = { -it },
+                animationSpec = tween(durationMillis = 300),
+            ),
     ) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-                .clickable { onDismiss() },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .clickable { onDismiss() },
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = Color(0xFFFF7F66).copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(8.dp)
-                        ),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .size(40.dp)
+                            .background(
+                                color = Color(0xFFFF7F66).copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp),
+                            ),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Notification",
                         tint = Color(0xFFFF7F66),
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     )
                 }
 
@@ -163,31 +173,31 @@ private fun NotificationToastItem(
                         text = notification.header,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        color = Color.Black
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = notification.message,
                         fontSize = 12.sp,
-                        color = Color.Gray,
-                        maxLines = 2
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
                     )
                     Text(
                         text = formatTimestamp(notification.timestamp),
                         fontSize = 10.sp,
-                        color = Color.LightGray,
-                        modifier = Modifier.padding(top = 2.dp)
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
 
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Dismiss",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(18.dp)
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }

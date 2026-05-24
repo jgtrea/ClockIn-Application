@@ -2,15 +2,11 @@ package com.example.clockin
 
 import android.annotation.SuppressLint
 import android.app.Service
-import android.bluetooth.BluetoothManager
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import androidx.core.util.remove
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,12 +20,9 @@ import org.altbeacon.beacon.BeaconManager
 import org.altbeacon.beacon.Region
 
 class BeaconService : Service() {
-
     private val binder = LocalBinder()
     private var beaconManager: BeaconManager? = null
     private var serviceScope = CoroutineScope(Dispatchers.Default + Job())
-    private var rawScanner: android.bluetooth.le.BluetoothLeScanner? = null
-
     var currentDistance: Double = 0.0
         private set
     var isBeaconFound: Boolean = false
@@ -41,19 +34,20 @@ class BeaconService : Service() {
 
     private var targetBeaconName: String = ""
     private var classStartTime: Long = 0L
+    private var classEndTime: Long = 0L
     private var scheduleId: String = ""
     private var employeeId: String = ""
     private var isClockedIn: Boolean = false
+    private var gracePeriodMs: Long = 15 * 60 * 1000L
 
     private var isMarkedIncomplete: Boolean = false
     var onUpdate: ((Double, Boolean, Long, String) -> Unit)? = null
 
-    private val SAFE_DISTANCE = 8.0
-    private val NOTIFICATION_ID = 123
-    private val CHANNEL_ID = "AttendanceChannel"
-    private val GRACE_PERIOD_MS = 15 * 60 * 1000
-    private val PREFS_NAME = "BeaconPrefs"
-    private val EARLY_CLOCK_IN_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
+    companion object {
+        private const val SAFE_DISTANCE = 15.0
+        private const val PREFS_NAME = "BeaconPrefs"
+        private const val EARLY_CLOCK_IN_WINDOW_MS = 10 * 60 * 1000
+    }
 
     inner class LocalBinder : Binder() {
         fun getService(): BeaconService = this@BeaconService
@@ -66,17 +60,28 @@ class BeaconService : Service() {
     override fun onCreate() {
         super.onCreate()
         setupBeaconManager()
-        startRawScan()
         startTimerLoop()
     }
 
     private fun setupBeaconManager() {
         beaconManager = BeaconManager.getInstanceForApplication(this)
         beaconManager?.beaconParsers?.clear()
-        beaconManager?.beaconParsers?.add(org.altbeacon.beacon.BeaconParser().setBeaconLayout(org.altbeacon.beacon.BeaconParser.ALTBEACON_LAYOUT))
-        beaconManager?.beaconParsers?.add(org.altbeacon.beacon.BeaconParser().setBeaconLayout(org.altbeacon.beacon.BeaconParser.EDDYSTONE_UID_LAYOUT))
-        beaconManager?.beaconParsers?.add(org.altbeacon.beacon.BeaconParser().setBeaconLayout(org.altbeacon.beacon.BeaconParser.EDDYSTONE_URL_LAYOUT))
-        beaconManager?.beaconParsers?.add(org.altbeacon.beacon.BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24"))
+        beaconManager?.beaconParsers?.add(
+            org.altbeacon.beacon.BeaconParser()
+                .setBeaconLayout(org.altbeacon.beacon.BeaconParser.ALTBEACON_LAYOUT),
+        )
+        beaconManager?.beaconParsers?.add(
+            org.altbeacon.beacon.BeaconParser()
+                .setBeaconLayout(org.altbeacon.beacon.BeaconParser.EDDYSTONE_UID_LAYOUT),
+        )
+        beaconManager?.beaconParsers?.add(
+            org.altbeacon.beacon.BeaconParser()
+                .setBeaconLayout(org.altbeacon.beacon.BeaconParser.EDDYSTONE_URL_LAYOUT),
+        )
+        beaconManager?.beaconParsers?.add(
+            org.altbeacon.beacon.BeaconParser()
+                .setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24"),
+        )
 
         beaconManager?.foregroundScanPeriod = 1100L
         beaconManager?.foregroundBetweenScanPeriod = 0L
@@ -86,23 +91,17 @@ class BeaconService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun startRawScan() {
-        try {
-            val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-            rawScanner = bluetoothManager.adapter.bluetoothLeScanner
-            rawScanner?.startScan(object : ScanCallback() {
-                override fun onScanResult(callbackType: Int, result: ScanResult?) {
-                    super.onScanResult(callbackType, result)
-                }
-            })
-        } catch (e: SecurityException) {
-            Log.e("BeaconService", "Missing Bluetooth scan permission! Cannot start raw scan.", e)
-            statusMessage = "Missing Bluetooth Permissions"
-        } catch (e: Exception) {
-            Log.e("BeaconService", "Error starting raw scan", e)
-        }
+        // Raw BLE scan initialisation kept for future use; scanning is handled by BeaconManager.
     }
 
-    fun startMonitoring(beaconName: String, startTimeMillis: Long, schedId: String, empId: String, clockedIn: Boolean) {
+    fun startMonitoring(
+        beaconName: String,
+        startTimeMillis: Long,
+        endTimeMillis: Long,
+        schedId: String,
+        empId: String,
+        clockedIn: Boolean,
+    ) {
         Log.d("DEBUG_CLOCKIN", "Service START: Name=$beaconName, ClockedIn=$clockedIn")
 
         if (beaconName.isBlank()) {
@@ -112,17 +111,24 @@ class BeaconService : Service() {
 
         targetBeaconName = beaconName
         classStartTime = startTimeMillis
+        classEndTime = endTimeMillis
         scheduleId = schedId
         employeeId = empId
         isClockedIn = clockedIn
 
+        serviceScope.launch {
+            try {
+                val mins = SupabaseManager.getActiveGracePeriodMinutes()
+                gracePeriodMs = (mins * 60 * 1000).toLong()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         if (!isClockedIn) {
-            prefs.edit()
-                .remove("deadline_$schedId")
-                .remove("incomplete_$schedId")
-                .apply()
+            prefs.edit().remove("deadline_$schedId").remove("incomplete_$schedId").apply()
             isMarkedIncomplete = false
         } else {
             val savedIncomplete = prefs.getBoolean("incomplete_$schedId", false)
@@ -134,16 +140,15 @@ class BeaconService : Service() {
 
         if (!isMarkedIncomplete && !isBeaconFound) {
             remainingTime = 300L
-            statusMessage = if (isClockedIn) "Monitoring: $beaconName" else "Searching for Beacon..."
+            statusMessage =
+                if (isClockedIn) "Monitoring: $beaconName" else "Searching for Beacon..."
         }
 
         try {
             val region = Region("ClassRegion", null, null, null)
             beaconManager?.startRangingBeacons(region)
             beaconManager?.removeAllRangeNotifiers()
-            beaconManager?.addRangeNotifier { beacons, _ ->
-                processBeacons(beacons)
-            }
+            beaconManager?.addRangeNotifier { beacons, _ -> processBeacons(beacons) }
         } catch (e: SecurityException) {
             Log.e("BeaconService", "SecurityException starting BeaconManager", e)
             statusMessage = "Missing Bluetooth Permissions"
@@ -157,6 +162,7 @@ class BeaconService : Service() {
 
         targetBeaconName = ""
         classStartTime = 0L
+        classEndTime = 0L
         isBeaconFound = false
         remainingTime = 300L
         isMarkedIncomplete = false
@@ -169,11 +175,13 @@ class BeaconService : Service() {
     private fun processBeacons(beacons: Collection<Beacon>) {
         if (targetBeaconName.isEmpty()) return
 
-        val foundBeacon = beacons.firstOrNull { beacon ->
-            val name = beacon.bluetoothName ?: ""
-            val address = beacon.bluetoothAddress ?: ""
-            name.equals(targetBeaconName, ignoreCase = true) || address.equals(targetBeaconName, ignoreCase = true)
-        }
+        val foundBeacon =
+            beacons.firstOrNull { beacon ->
+                val name = beacon.bluetoothName ?: ""
+                val address = beacon.bluetoothAddress ?: ""
+                name.equals(targetBeaconName, ignoreCase = true) ||
+                    address.equals(targetBeaconName, ignoreCase = true)
+            }
 
         if (foundBeacon != null) {
             currentDistance = foundBeacon.distance
@@ -201,7 +209,7 @@ class BeaconService : Service() {
                     }
 
                     val now = System.currentTimeMillis()
-                    val gracePeriodEnd = classStartTime + GRACE_PERIOD_MS
+                    val gracePeriodEnd = classStartTime + gracePeriodMs
                     val isPastGracePeriod = now > gracePeriodEnd
 
                     val distStr = "%.2f m".format(currentDistance)
@@ -209,12 +217,13 @@ class BeaconService : Service() {
                     val graceTimeStr = formatTime(graceMillisLeft / 1000)
 
                     if (isClockedIn) {
-                        val classEndTime = classStartTime + (60 * 60 * 1000) // Assumed 1hr
-                        val isOvertime = now > classEndTime
+                        val effectiveEndTime = if (classEndTime > 0L) classEndTime else classStartTime + (60 * 60 * 1000)
+                        val isOvertime = now > effectiveEndTime
 
                         if (!isBeaconFound) {
                             if (isOvertime) {
-                                statusMessage = "Class Ended (Overtime). You can Clock Out anytime.\n(Dist: $distStr)"
+                                statusMessage =
+                                    "Class Ended (Overtime). You can Clock Out anytime.\n(Dist: $distStr)"
                                 remainingTime = 300L
                                 prefs.edit().remove("deadline_$scheduleId").apply()
                             } else {
@@ -225,7 +234,8 @@ class BeaconService : Service() {
                                 }
                                 val millisLeft = deadline - now
                                 remainingTime = millisLeft / 1000
-                                statusMessage = "OUT OF RANGE! ${formatTime(remainingTime)} (Dist: $distStr)"
+                                statusMessage =
+                                    "OUT OF RANGE! ${formatTime(remainingTime)} (Dist: $distStr)"
 
                                 if (remainingTime <= 0) {
                                     isMarkedIncomplete = true
@@ -237,42 +247,54 @@ class BeaconService : Service() {
                         } else {
                             prefs.edit().remove("deadline_$scheduleId").apply()
                             remainingTime = 300L
-                            statusMessage = if (isOvertime) "Overtime: Connected (Dist: $distStr)" else "Connected (Dist: $distStr)"
+                            statusMessage =
+                                if (isOvertime) {
+                                    "Overtime: Connected (Dist: $distStr)"
+                                } else {
+                                    "Connected (Dist: $distStr)"
+                                }
                         }
                     } else {
                         // PRE-CLOCK IN LOGIC
                         if (isBeaconFound) {
-                            statusMessage = when {
-                                now < (classStartTime - EARLY_CLOCK_IN_WINDOW_MS) -> {
-                                    "Waiting for 10-minute window...\n(Dist: $distStr)"
+                            statusMessage =
+                                when {
+                                    now < (classStartTime - EARLY_CLOCK_IN_WINDOW_MS) -> {
+                                        "Waiting for 10-minute window...\n(Dist: $distStr)"
+                                    }
+                                    now < classStartTime -> {
+                                        "Ready for Class (Early). Beacon Found!\n(Dist: $distStr)"
+                                    }
+                                    !isPastGracePeriod -> {
+                                        "Beacon Found. Ready to Clock In.\n(Dist: $distStr)"
+                                    }
+                                    else -> {
+                                        "Beacon Found. You are Late!\n(Dist: $distStr)"
+                                    }
                                 }
-                                now < classStartTime -> {
-                                    "Ready for Class (Early). Beacon Found!\n(Dist: $distStr)"
-                                }
-                                !isPastGracePeriod -> {
-                                    "Beacon Found. Ready to Clock In.\n(Dist: $distStr)"
-                                }
-                                else -> {
-                                    "Beacon Found. You are Late!\n(Dist: $distStr)"
-                                }
-                            }
                         } else {
-                            statusMessage = when {
-                                now < (classStartTime - EARLY_CLOCK_IN_WINDOW_MS) -> {
-                                    "Too early. Monitoring starts soon.\n(Dist: $distStr)"
+                            statusMessage =
+                                when {
+                                    now < (classStartTime - EARLY_CLOCK_IN_WINDOW_MS) -> {
+                                        "Too early. Monitoring starts soon.\n(Dist: $distStr)"
+                                    }
+                                    now < classStartTime -> {
+                                        "Waiting for Class (Early). Come closer.\n(Dist: $distStr)"
+                                    }
+                                    else -> {
+                                        "Searching... Grace Period: $graceTimeStr\n(Dist: $distStr)"
+                                    }
                                 }
-                                now < classStartTime -> {
-                                    "Waiting for Class (Early). Come closer.\n(Dist: $distStr)"
-                                }
-                                else -> {
-                                    "Searching... Grace Period: $graceTimeStr\n(Dist: $distStr)"
-                                }
-                            }
                         }
                     }
 
                     withContext(Dispatchers.Main) {
-                        onUpdate?.invoke(currentDistance, isBeaconFound, remainingTime, statusMessage)
+                        onUpdate?.invoke(
+                            currentDistance,
+                            isBeaconFound,
+                            remainingTime,
+                            statusMessage,
+                        )
                     }
                 }
             }
@@ -298,13 +320,5 @@ class BeaconService : Service() {
         super.onDestroy()
         serviceScope.cancel()
         beaconManager?.removeAllRangeNotifiers()
-        try {
-            @SuppressLint("MissingPermission")
-            rawScanner?.stopScan(object : ScanCallback() {})
-        } catch (e: SecurityException) {
-            Log.e("BeaconService", "SecurityException stopping scan", e)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 }

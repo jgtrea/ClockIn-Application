@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.clockin.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
@@ -57,10 +58,13 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
     var successMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding().verticalScroll(rememberScrollState()).imePadding()
+        modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background).statusBarsPadding().verticalScroll(rememberScrollState()).imePadding(),
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp)).background(BrownHeader)
+            modifier =
+                Modifier.fillMaxWidth().height(
+                    240.dp,
+                ).clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp)).background(BrownHeader),
         ) {
             IconButton(onClick = onNavigateToLogin, modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -77,16 +81,37 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
                 SuccessCard(title = "Success", message = successMessage!!, buttonText = "Go to Login", onButtonClick = onNavigateToLogin)
             } else {
                 Text("Enter Details", color = TextOrange, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text("Enter the code from your email and your new password.", color = LightOrangeText, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
+                Text(
+                    "Enter the code from your email and your new password.",
+                    color = LightOrangeText,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    textAlign = TextAlign.Center,
+                )
 
-                Card(modifier = Modifier.fillMaxWidth().border(1.dp, BorderGray, RoundedCornerShape(8.dp)), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
+                ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        LabeledInput(
+                            label = "Email Address",
+                            placeholder = "Enter your email",
+                            value = email,
+                            onValueChange = { email = it },
+                        )
+                        LabeledInput(
+                            label = "6-Digit Code",
+                            placeholder = "Enter OTP Code",
+                            value = otpToken,
+                            onValueChange = { otpToken = it },
+                        )
 
-                        LabeledInput(label = "Email Address", placeholder = "Enter your email", value = email, onValueChange = { email = it })
-                        LabeledInput(label = "6-Digit Code", placeholder = "Enter OTP Code", value = otpToken, onValueChange = { otpToken = it })
-
-                        LabeledInput(label = "New Password", placeholder = "Enter new password", value = newPassword, onValueChange = { newPassword = it }, isPassword = true)
-                        LabeledInput(label = "Confirm Password", placeholder = "Confirm new password", value = confirmPassword, onValueChange = { confirmPassword = it }, isPassword = true)
+                        LabeledInput(label = "New Password", placeholder = "Enter new password", value = newPassword, onValueChange = {
+                            newPassword = it
+                        }, isPassword = true)
+                        LabeledInput(label = "Confirm Password", placeholder = "Confirm new password", value = confirmPassword, onValueChange = {
+                            confirmPassword = it
+                        }, isPassword = true)
 
                         errorMessage?.let { Text(text = it, color = Color.Red, fontSize = 12.sp) }
 
@@ -95,8 +120,30 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
                         } else {
                             Button(
                                 onClick = {
-                                    if (email.isEmpty() || otpToken.isEmpty() || newPassword.isEmpty()) { errorMessage = "Please fill all fields"; return@Button }
-                                    if (newPassword != confirmPassword) { errorMessage = "Passwords do not match"; return@Button }
+                                    if (email.isEmpty() || otpToken.isEmpty() || newPassword.isEmpty()) {
+                                        errorMessage = "Please fill all fields"
+                                        return@Button
+                                    }
+                                    if (newPassword != confirmPassword) {
+                                        errorMessage = "Passwords do not match"
+                                        return@Button
+                                    }
+                                    if (newPassword.length < 8) {
+                                        errorMessage = "Password must be at least 8 characters"
+                                        return@Button
+                                    }
+                                    if (!newPassword.any { it.isUpperCase() }) {
+                                        errorMessage = "Password must contain at least one uppercase letter"
+                                        return@Button
+                                    }
+                                    if (!newPassword.any { it.isDigit() }) {
+                                        errorMessage = "Password must contain at least one number"
+                                        return@Button
+                                    }
+                                    if (!newPassword.any { !it.isLetterOrDigit() }) {
+                                        errorMessage = "Password must contain at least one special character"
+                                        return@Button
+                                    }
 
                                     isLoading = true
                                     errorMessage = null
@@ -118,7 +165,7 @@ fun ResetPasswordScreen(onNavigateToLogin: () -> Unit) {
                                 },
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = ButtonOrange),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(8.dp),
                             ) {
                                 Text("Reset Password", color = Color.White)
                             }

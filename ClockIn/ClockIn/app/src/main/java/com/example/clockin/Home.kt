@@ -27,8 +27,10 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Remove
@@ -44,14 +46,17 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,17 +75,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.clockin.model.*
+import com.example.clockin.ui.theme.*
+import com.example.clockin.viewmodel.HomeViewModel
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-val PrimaryOrange = Color(0xFFFF7F66)
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     navController: NavController,
@@ -88,23 +95,29 @@ fun DashboardScreen(
     deviceName: String,
     statusMessage: String,
     onActiveAttendanceIdChanged: (String?) -> Unit,
-    onTargetBleChanged: (String, Long, String) -> Unit,
+    onTargetBleChanged: (String, Long, Long, String) -> Unit,
     onRefreshBeacon: () -> Unit = {},
     isBeaconFound: Boolean,
     onLogout: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    homeViewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    val scope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
+
+    val homeUiState by homeViewModel.uiState.collectAsState()
+    val isConnected by remember(context) { NetworkObserver(context).isConnected }.collectAsState(initial = true)
 
     var showPolicies by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var showFAQ by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
-    var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
-    var isLoadingNotifs by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    // Notifications now come from ViewModel state
+    val notifications = homeUiState.notifications
+    val isLoadingNotifs = homeUiState.isLoadingNotifs
 
     var currentSectionTitle by remember { mutableStateOf("Checking Schedule...") }
     var userName by remember { mutableStateOf("User") }
@@ -116,33 +129,13 @@ fun DashboardScreen(
 
     val refreshDashboard = {
         onRefreshBeacon()
-        scope.launch(Dispatchers.IO) {
+        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val user = SupabaseManager.getCurrentUser()
             val userEmail = user?.email ?: ""
             userName = user?.name ?: "User"
 
-            try {
-                val result = SupabaseManager.client.from("notification")
-                    .select {
-                        order("dataCreated", Order.DESCENDING)
-                        limit(10)
-                    }
-                    .decodeList<NotificationItem>()
-
-                val userNotifications = result.filter {
-                    val targets = it.target?.split(",")?.map { t -> t.trim() } ?: emptyList()
-                    targets.any { t -> t.equals("everyone", true) || t.equals(userEmail, true) }
-                }
-                notifications = userNotifications
-
-                val newNotifications = NotificationTracker.filterNewNotifications(userNotifications)
-                newNotifications.forEach { notif ->
-                    NotificationManager.show(notif.header, notif.message, 5000L)
-                    NotificationTracker.markAsShown(context, notif.notifId)
-                }
-                NotificationTracker.cleanup(context)
-
-            } catch (e: Exception) { e.printStackTrace() } finally { isLoadingNotifs = false }
+            // Delegate notification fetch to ViewModel
+            homeViewModel.refreshDashboard()
 
             val classInfo = SupabaseManager.getCurrentClassBeacon()
             val attId = SupabaseManager.getActiveAttendanceId()
@@ -151,9 +144,49 @@ fun DashboardScreen(
 
             val excludedSubjects = listOf("Health Break", "Lunch Break")
 
+            try {
+                if (user != null) {
+                    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+                    val dayFormat = SimpleDateFormat("EEEE", Locale.US)
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
+                    val now = Date()
+                    val currentDay = dayFormat.format(now)
+                    val currentDateStr = dateFormat.format(now)
+                    val currentTimeStr = timeFormat.format(now)
+                    val currentTime = timeFormat.parse(currentTimeStr)
+
+                    val allSchedules =
+                        SupabaseManager.client.from("schedule")
+                            .select { filter { eq("employeeId", user.id) } }
+                            .decodeList<Schedule>()
+
+                    val todaysSchedules =
+                        allSchedules.filter {
+                            it.weekday.trim().equals(currentDay, ignoreCase = true)
+                        }
+
+                    for (sched in todaysSchedules) {
+                        val endTime = timeFormat.parse(sched.endTime)
+
+                        val isBreakSched = excludedSubjects.any { it.equals(sched.subject.trim(), ignoreCase = true) }
+
+                        if (!isBreakSched && currentTime != null && endTime != null && currentTime.after(endTime)) {
+                            val result = SupabaseManager.checkAndMarkAbsent(sched.id, user.id, currentDateStr)
+
+                            if (result.getOrNull() == true) {
+                                NotificationManager.show("Missed Class", "Marked ABSENT for ${sched.subject}")
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             if (classInfo != null) {
                 isUpcomingClass = classInfo.isUpcoming
-                
+
                 if (isUpcomingClass) {
                     val now = Date()
                     val diff = classInfo.startTime.time - now.time
@@ -167,7 +200,7 @@ fun DashboardScreen(
                 if (isBreak) {
                     currentSectionTitle = classInfo.subject
                     currentAttendanceStatus = "Break"
-                    onTargetBleChanged("", 0L, "")
+                    onTargetBleChanged("", 0L, 0L, "")
                     activeAttendanceId = null
                     onActiveAttendanceIdChanged(null)
                 } else {
@@ -181,7 +214,7 @@ fun DashboardScreen(
                     val isFinished = attendanceRecord != null && attendanceRecord.timeOut != null
 
                     if (isAbsent || isIncomplete || isFinished) {
-                        onTargetBleChanged("", 0L, "")
+                        onTargetBleChanged("", 0L, 0L, "")
                         if (isFinished) {
                             activeAttendanceId = null
                             onActiveAttendanceIdChanged(null)
@@ -190,7 +223,8 @@ fun DashboardScreen(
                         onTargetBleChanged(
                             classInfo.targetBeaconName,
                             classInfo.startTime.time,
-                            classInfo.schedId
+                            classInfo.endTime.time,
+                            classInfo.schedId,
                         )
                     }
                 }
@@ -199,7 +233,7 @@ fun DashboardScreen(
                 currentAttendanceStatus = null
                 isUpcomingClass = false
                 canClockInEarly = false
-                onTargetBleChanged("", 0L, "")
+                onTargetBleChanged("", 0L, 0L, "")
                 activeAttendanceId = null
                 onActiveAttendanceIdChanged(null)
             }
@@ -207,32 +241,45 @@ fun DashboardScreen(
     }
 
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                refreshDashboard()
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    refreshDashboard()
+                }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val filteredNotifications = remember(notifications, searchQuery) {
-        if (searchQuery.isBlank()) notifications else notifications.filter {
-            it.header.contains(searchQuery, true) || it.message.contains(searchQuery, true)
-        }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        homeViewModel.startNotificationPolling()
     }
+
+    val filteredNotifications =
+        remember(notifications, searchQuery) {
+            if (searchQuery.isBlank()) {
+                notifications
+            } else {
+                notifications.filter {
+                    it.header.contains(searchQuery, true) || it.message.contains(searchQuery, true)
+                }
+            }
+        }
 
     if (showFeedbackDialog) FeedbackDialog(onDismiss = { showFeedbackDialog = false })
 
     Scaffold(
-        bottomBar = { CustomBottomNavigation(navController, "home") }
+        bottomBar = { CustomBottomNavigation(navController, "home") },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color.White)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(androidx.compose.material3.MaterialTheme.colorScheme.background),
         ) {
+            OfflineIndicator(isConnected = isConnected)
+
             DashboardHeader(
                 userName = userName,
                 onProfileClick = { navController.navigate("profile") },
@@ -241,78 +288,94 @@ fun DashboardScreen(
                 onFAQClick = { showFAQ = true },
                 onSendFeedbackClick = { showFeedbackDialog = true },
                 searchQuery = searchQuery,
-                onSearchChange = { searchQuery = it }
+                onSearchChange = { searchQuery = it },
             )
 
             HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
 
-            if (showPolicies) PoliciesView(onBack = { showPolicies = false })
-            else if (showFAQ) FAQView(onBack = { showFAQ = false })
-            else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
+            if (showPolicies) {
+                PoliciesView(onBack = { showPolicies = false })
+            } else if (showFAQ) {
+                FAQView(onBack = { showFAQ = false })
+            } else {
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        isRefreshing = true
+                        coroutineScope.launch {
+                            refreshDashboard().join()
+                            isRefreshing = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    SectionHeader(title = "Current Class", icon = Icons.Default.Schedule)
-
-                    val titleText = when {
-                        currentAttendanceStatus == "Break" -> "Current Schedule: $currentSectionTitle"
-                        isUpcomingClass -> "Upcoming Class: $currentSectionTitle"
-                        else -> "Section: $currentSectionTitle"
-                    }
-
-                    val displayText = when {
-                        currentAttendanceStatus == "Break" -> "Take a well-deserved break! ☕"
-                        activeAttendanceId != null -> "Status: CLOCKED IN (Session Active)"
-                        currentAttendanceStatus?.equals("Absent", true) == true -> "Status: ABSENT"
-                        currentAttendanceStatus?.equals("Incomplete", true) == true -> "Status: INCOMPLETE"
-                        currentAttendanceStatus != null && activeAttendanceId == null -> "Status: CLOCKED OUT"
-                        isUpcomingClass && canClockInEarly -> "You can clock in early for this class."
-                        isUpcomingClass -> "Scanning will be available 10 minutes before class."
-                        currentSectionTitle.contains("No Active") -> "Relax! No classes scheduled."
-                        else -> "Please scan QR to Clock In."
-                    }
-
-                    InfoCard(
-                        title = titleText,
-                        text = displayText
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    SectionHeader(title = "Beacon Status", icon = Icons.Default.Bluetooth)
-
-                    val statusColor = when {
-                        statusMessage.contains("Connected") || statusMessage.contains("Beacon Found") -> Color(0xFF4CAF50)
-                        statusMessage.contains("Grace") -> Color(0xFF2196F3)
-                        statusMessage.contains("OUT OF RANGE") -> Color.Red
-                        else -> Color(0xFFFFA726)
-                    }
-
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { refreshDashboard() },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color.LightGray)
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(16.dp),
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Sensors,
-                                    contentDescription = null,
-                                    tint = statusColor
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = statusMessage,
-                                    fontSize = 14.sp,
-                                    color = statusColor,
-                                    fontWeight = FontWeight.Medium
-                                )
+                        SectionHeader(title = "Current Class", icon = Icons.Default.Schedule)
+
+                        val titleText =
+                            when {
+                                currentAttendanceStatus == "Break" -> "Current Schedule: $currentSectionTitle"
+                                isUpcomingClass -> "Upcoming Class: $currentSectionTitle"
+                                else -> "Section: $currentSectionTitle"
+                            }
+
+                        val displayText =
+                            when {
+                                currentAttendanceStatus == "Break" -> "Take a well-deserved break!"
+                                activeAttendanceId != null -> "Status: CLOCKED IN (Session Active)"
+                                currentAttendanceStatus?.equals("Absent", true) == true -> "Status: ABSENT"
+                                currentAttendanceStatus?.equals("Incomplete", true) == true -> "Status: INCOMPLETE"
+                                currentAttendanceStatus != null && activeAttendanceId == null -> "Status: CLOCKED OUT"
+                                isUpcomingClass && canClockInEarly -> "You can clock in early for this class."
+                                isUpcomingClass -> "Scanning will be available 10 minutes before class."
+                                currentSectionTitle.contains("No Active") -> "Relax! No classes scheduled."
+                                else -> "Please scan QR to Clock In."
+                            }
+
+                        InfoCard(
+                            title = titleText,
+                            text = displayText,
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        SectionHeader(title = "Beacon Status", icon = Icons.Default.Bluetooth)
+
+                        val statusColor =
+                            when {
+                                statusMessage.contains("Connected") || statusMessage.contains("Beacon Found") -> Color(0xFF4CAF50)
+                                statusMessage.contains("Grace") -> Color(0xFF2196F3)
+                                statusMessage.contains("OUT OF RANGE") -> Color.Red
+                                else -> Color(0xFFFFA726)
+                            }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable { refreshDashboard() },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
+                            border = BorderStroke(1.dp, Color.LightGray),
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Sensors,
+                                        contentDescription = null,
+                                        tint = statusColor,
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = statusMessage,
+                                        fontSize = 14.sp,
+                                        color = statusColor,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
                             }
 
                             if (!isBeaconFound && !statusMessage.contains("Idle") && !statusMessage.contains("No Active")) {
@@ -321,40 +384,40 @@ fun DashboardScreen(
                                     text = "Make sure Bluetooth and Location are ON",
                                     fontSize = 11.sp,
                                     color = Color.Gray,
-                                    modifier = Modifier.padding(start = 36.dp)
+                                    modifier = Modifier.padding(start = 36.dp),
                                 )
                             }
-                            
+
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Tap to refresh",
                                 fontSize = 10.sp,
                                 color = Color.LightGray,
-                                modifier = Modifier.align(Alignment.End)
+                                modifier = Modifier.align(Alignment.End),
                             )
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    SectionHeader(title = "Notifications", icon = Icons.Default.NotificationsNone)
+                        SectionHeader(title = "Notifications", icon = Icons.Default.NotificationsNone)
 
-                    if (isLoadingNotifs) {
-                        Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = PrimaryOrange, modifier = Modifier.size(24.dp))
-                        }
-                    } else if (filteredNotifications.isEmpty()) {
-                        Text(
-                            if(searchQuery.isNotEmpty()) "No matching notifications" else "No new notifications",
-                            color = Color.Gray,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-                    } else {
-                        filteredNotifications.forEach { item ->
-                            val dateStr = formatNotificationDate(item.dateCreated ?: "")
-                            InfoCard(title = "${item.header} ($dateStr):", text = item.message)
-                            Spacer(modifier = Modifier.height(12.dp))
+                        if (isLoadingNotifs) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = PrimaryOrange, modifier = Modifier.size(24.dp))
+                            }
+                        } else if (filteredNotifications.isEmpty()) {
+                            Text(
+                                if (searchQuery.isNotEmpty()) "No matching notifications" else "No new notifications",
+                                color = Color.Gray,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(bottom = 12.dp),
+                            )
+                        } else {
+                            filteredNotifications.forEach { item ->
+                                val dateStr = formatNotificationDate(item.dateCreated ?: "")
+                                InfoCard(title = "${item.header} ($dateStr):", text = item.message)
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
                         }
                     }
                 }
@@ -376,23 +439,32 @@ fun UserMenuHeader() {
 
     Row(
         modifier = Modifier.padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFFF7F66)),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = userName.firstOrNull()?.uppercase() ?: "",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                fontSize = 18.sp,
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(text = if (userName.isNotEmpty()) userName else "Loading...", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(text = userEmail, color = Color.Gray, fontSize = 10.sp)
+            Text(
+                text = if (userName.isNotEmpty()) userName else "Loading...",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = userEmail,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 10.sp,
+            )
         }
     }
 }
@@ -406,137 +478,306 @@ fun DashboardHeader(
     onPoliciesClick: () -> Unit,
     onFAQClick: () -> Unit,
     searchQuery: String,
-    onSearchChange: (String) -> Unit
+    onSearchChange: (String) -> Unit,
 ) {
+    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             SearchField(label = "Search...", value = searchQuery, onValueChange = onSearchChange, isHighlighted = false)
         }
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        IconButton(
+            onClick = { ThemeManager.toggleTheme(context) },
+        ) {
+            Icon(
+                imageVector = if (ThemeManager.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                contentDescription = "Toggle Theme",
+                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
         Box {
             Box(
                 modifier = Modifier.size(50.dp).clip(CircleShape).background(Color(0xFFFF7F66)).clickable { expanded = true },
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(text = userName.firstOrNull()?.uppercase() ?: "", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color.White).width(240.dp)) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(androidx.compose.material3.MaterialTheme.colorScheme.surface).width(240.dp),
+            ) {
                 UserMenuHeader()
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                MenuActionItem(Icons.Outlined.Person, "Profile") { expanded = false; onProfileClick() }
-                MenuActionItem(Icons.AutoMirrored.Outlined.Assignment, "Send Feedback") { expanded = false; onSendFeedbackClick() }
-                MenuActionItem(Icons.Outlined.Inventory, "Policies") { expanded = false; onPoliciesClick() }
-                MenuActionItem(Icons.AutoMirrored.Outlined.HelpOutline, "Help") { expanded = false; onFAQClick() }
-                MenuActionItem(Icons.AutoMirrored.Outlined.Logout, "Logout") { expanded = false; onLogout() }
+                MenuActionItem(Icons.Outlined.Person, "Profile") {
+                    expanded = false
+                    onProfileClick()
+                }
+                MenuActionItem(Icons.AutoMirrored.Outlined.Assignment, "Send Feedback") {
+                    expanded = false
+                    onSendFeedbackClick()
+                }
+                MenuActionItem(Icons.Outlined.Inventory, "Policies") {
+                    expanded = false
+                    onPoliciesClick()
+                }
+                MenuActionItem(Icons.AutoMirrored.Outlined.HelpOutline, "Help") {
+                    expanded = false
+                    onFAQClick()
+                }
+                MenuActionItem(Icons.AutoMirrored.Outlined.Logout, "Logout") {
+                    expanded = false
+                    onLogout()
+                }
             }
         }
     }
 }
 
 @Composable
-fun CustomBottomNavigation(navController: NavController, currentRoute: String) {
-    Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), shadowElevation = 8.dp, color = Color.White) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
+fun CustomBottomNavigation(
+    navController: NavController,
+    currentRoute: String,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        shadowElevation = 8.dp,
+        color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             SelectableNavItem(Icons.Default.Home, "Home", currentRoute == "home") {
-                if (currentRoute != "home") navController.navigate("home") { popUpTo("home") { saveState = true }; launchSingleTop = true }
+                if (currentRoute != "home") {
+                    navController.navigate("home") {
+                        popUpTo("home") { saveState = true }
+                        launchSingleTop = true
+                    }
+                }
             }
-            SelectableNavItem(Icons.Default.CropFree, "Scan QR", currentRoute == "scan_qr") { if (currentRoute != "scan_qr") navController.navigate("scan_qr") }
-            SelectableNavItem(Icons.Default.DateRange, "Schedule", currentRoute == "schedule") { if (currentRoute != "schedule") navController.navigate("schedule") }
-            SelectableNavItem(Icons.Default.Schedule, "Attendance", currentRoute == "attendance") { if (currentRoute != "attendance") navController.navigate("attendance") }
+            SelectableNavItem(Icons.Default.CropFree, "Scan QR", currentRoute == "scan_qr") {
+                if (currentRoute != "scan_qr") navController.navigate("scan_qr")
+            }
+            SelectableNavItem(Icons.Default.DateRange, "Schedule", currentRoute == "schedule") {
+                if (currentRoute != "schedule") navController.navigate("schedule")
+            }
+            SelectableNavItem(Icons.Default.Schedule, "Attendance", currentRoute == "attendance") {
+                if (currentRoute != "attendance") navController.navigate("attendance")
+            }
         }
     }
 }
 
 @Composable
-fun SelectableNavItem(icon: ImageVector, label: String, isSelected: Boolean, onClick: () -> Unit) {
-    Column(modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (isSelected) PrimaryOrange else Color.Transparent).clickable { onClick() }.padding(horizontal = 20.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = null, tint = if (isSelected) Color.White else Color.Black)
-        Text(text = label, color = if (isSelected) Color.White else Color.Black, fontSize = 12.sp)
+fun SelectableNavItem(
+    icon: ImageVector,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier.clip(RoundedCornerShape(16.dp)).background(if (isSelected) PrimaryOrange else Color.Transparent).clickable {
+                onClick()
+            }.padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(icon, contentDescription = null, tint = if (isSelected) Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
+        Text(text = label, color = if (isSelected) Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurface, fontSize = 12.sp)
     }
 }
 
 @Composable
-fun MenuActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
-    DropdownMenuItem(text = { Text(label, fontWeight = FontWeight.Medium) }, leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) }, onClick = onClick)
+fun MenuActionItem(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(text = {
+        Text(label, fontWeight = FontWeight.Medium)
+    }, leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) }, onClick = onClick)
 }
 
 @Composable
-fun SearchField(label: String, value: String, onValueChange: (String) -> Unit, isHighlighted: Boolean) {
-    val borderColor = if (isHighlighted) PrimaryOrange else Color.LightGray
-    BasicTextField(value = value, onValueChange = onValueChange, textStyle = TextStyle(fontSize = 16.sp, color = Color.Black), singleLine = true, decorationBox = { innerTextField ->
-        Row(modifier = Modifier.fillMaxWidth().border(1.5.dp, borderColor, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
-            Spacer(modifier = Modifier.width(8.dp))
-            Box {
-                if (value.isEmpty()) Text(text = label, color = Color.Gray, fontSize = 16.sp)
-                innerTextField()
+fun SearchField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    isHighlighted: Boolean,
+) {
+    val borderColor = if (isHighlighted) PrimaryOrange else androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        textStyle =
+            TextStyle(
+                fontSize = 16.sp,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+            ),
+        singleLine = true,
+        decorationBox = {
+                innerTextField ->
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth().border(
+                        1.5.dp,
+                        borderColor,
+                        RoundedCornerShape(12.dp),
+                    ).padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null, tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(8.dp))
+                Box {
+                    if (value.isEmpty()) Text(text = label, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), fontSize = 16.sp)
+                    innerTextField()
+                }
             }
-        }
-    })
+        },
+    )
 }
 
 @Composable
-fun SectionHeader(title: String, icon: ImageVector) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+fun SectionHeader(
+    title: String,
+    icon: ImageVector,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(text = title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Icon(icon, contentDescription = null)
     }
-    HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp), thickness = 1.dp, color = Color.Black)
+    HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp), thickness = 1.dp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
 }
 
 @Composable
-fun InfoCard(title: String? = null, text: String) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = CardDefaults.outlinedCardBorder()) {
+fun InfoCard(
+    title: String? = null,
+    text: String,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
+        border = CardDefaults.outlinedCardBorder(),
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (title != null) {
                 Text(text = title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(4.dp))
             }
-            Text(text = text, fontSize = 13.sp, color = Color.DarkGray)
+            Text(text = text, fontSize = 13.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 fun PoliciesView(onBack: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-        Button(onClick = onBack, modifier = Modifier.align(Alignment.End), colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange), shape = RoundedCornerShape(8.dp)) { Text("Back", color = Color.White) }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Button(
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.End),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Text("Back", color = Color.White)
+        }
         Spacer(modifier = Modifier.height(24.dp))
         Text("Privacy Statement", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text("We value your privacy and all personal information collected securely.", fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp))
+        Text(
+            "We value your privacy and all personal information collected securely.",
+            fontSize = 12.sp,
+            color = Color.Gray,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+        )
         Spacer(modifier = Modifier.height(24.dp))
         Text("Data Privacy Policy Statement", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "The Data Privacy Act of 2012 (Republic Act No. 10173) upholds the fundamental right to privacy...", fontSize = 13.sp, textAlign = TextAlign.Justify, lineHeight = 18.sp)
+        Text(
+            text = "The Data Privacy Act of 2012 (Republic Act No. 10173) upholds the fundamental right to privacy...",
+            fontSize = 13.sp,
+            textAlign = TextAlign.Justify,
+            lineHeight = 18.sp,
+        )
     }
 }
+
+data class FAQData(val question: String, val answer: String, val initialExpanded: Boolean = false)
+
+private val faqList =
+    listOf(
+        FAQData("How does the system work?", "The system tracks your clock-in and clock-out times via QR code scanning."),
+        FAQData("Can it detect late log-outs?", "The system automatically records the exact time of each scan."),
+        FAQData("What happens if the WiFi is wrong?", "The app will block clock-in. You must connect to the designated class WiFi access point."),
+        FAQData("How close do I need to be to the beacon?", "You must be within 15 meters of the beacon to clock in or stay clocked in."),
+    )
 
 @Composable
 fun FAQView(onBack: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-        Button(onClick = onBack, modifier = Modifier.align(Alignment.End), colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange), shape = RoundedCornerShape(8.dp)) { Text("Back", color = Color.White) }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Button(
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.End),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Text("Back", color = Color.White)
+        }
         Spacer(modifier = Modifier.height(24.dp))
         Text("Frequently asked Questions", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(24.dp))
-        FAQItem(question = "How does the system work?", answer = "The system tracks your clock-in and clock-out times via QR code scanning.")
-        FAQItem(question = "Can it detect late log-outs?", answer = "The system automatically records the exact time of each scan.", initialExpanded = true)
+        faqList.forEach { faq ->
+            FAQItem(
+                question = faq.question,
+                answer = faq.answer,
+                initialExpanded = faq.initialExpanded,
+            )
+        }
     }
 }
 
 @Composable
-fun FAQItem(question: String, answer: String, initialExpanded: Boolean = false, isPlaceholder: Boolean = false) {
+fun FAQItem(
+    question: String,
+    answer: String,
+    initialExpanded: Boolean = false,
+    isPlaceholder: Boolean = false,
+) {
     var expanded by remember { mutableStateOf(initialExpanded) }
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, Color(0xFFE0E0E0))) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isPlaceholder) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.MoreHoriz, null) }
-                else {
+                if (isPlaceholder) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.MoreHoriz, null)
+                } else {
                     Text(text = question, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     IconButton(onClick = { expanded = !expanded }) { Icon(if (expanded) Icons.Default.Remove else Icons.Default.Add, null) }
                 }
             }
-            if (expanded && !isPlaceholder) { Text(text = answer, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp)) }
+            if (expanded && !isPlaceholder) {
+                Text(text = answer, fontSize = 12.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
+            }
         }
     }
 }
@@ -547,5 +788,7 @@ fun formatNotificationDate(isoString: String): String {
         val output = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
         val date = input.parse(isoString)
         if (date != null) output.format(date) else ""
-    } catch (e: Exception) { "" }
+    } catch (e: Exception) {
+        ""
+    }
 }

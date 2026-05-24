@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.clockin.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
@@ -53,29 +54,31 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = { if (!isSubmitting) onDismiss() }) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         ) {
             Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState())
+                modifier =
+                    Modifier
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState()),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         "Submit Feedback",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = 20.sp,
                     )
                     IconButton(
                         onClick = { if (!isSubmitting) onDismiss() },
-                        enabled = !isSubmitting
+                        enabled = !isSubmitting,
                     ) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
@@ -85,66 +88,73 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
 
                 Text(
                     "Title",
-                    color = Color.DarkGray,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Enter feedback title", color = Color.Gray) },
+                    placeholder = { Text("Enter feedback title", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
                     enabled = !isSubmitting,
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryOrange,
-                        unfocusedBorderColor = Color(0xFFE0E0E0)
-                    )
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = PrimaryOrange,
+                            unfocusedBorderColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        ),
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     "Description",
-                    color = Color.DarkGray,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedTextField(
                     value = message,
                     onValueChange = { message = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    placeholder = { Text("Describe your feedback in detail", color = Color.Gray) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(150.dp),
+                    placeholder = { Text("Describe your feedback in detail", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
                     enabled = !isSubmitting,
                     maxLines = 8,
                     shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryOrange,
-                        unfocusedBorderColor = Color(0xFFE0E0E0)
-                    )
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = PrimaryOrange,
+                            unfocusedBorderColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        ),
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(
                         checked = isAnonymous,
                         onCheckedChange = { if (!isSubmitting) isAnonymous = it },
                         colors = CheckboxDefaults.colors(checkedColor = PrimaryOrange),
-                        enabled = !isSubmitting
+                        enabled = !isSubmitting,
                     )
                     Text(
                         text = "Send as Anonymous",
                         fontSize = 14.sp,
-                        color = Color.DarkGray
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -153,7 +163,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                     Text(
                         text = errorMessage!!,
                         color = Color.Red,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
                     )
                 }
 
@@ -162,11 +172,11 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                 if (isSubmitting) {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
                             color = PrimaryOrange,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(40.dp),
                         )
                     }
                 } else {
@@ -186,11 +196,12 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                                     isSubmitting = true
 
                                     scope.launch {
-                                        val result = SupabaseManager.submitFeedback(
-                                            title = title.trim(),
-                                            message = message.trim(),
-                                            isAnonymous = isAnonymous
-                                        )
+                                        val result =
+                                            SupabaseManager.submitFeedback(
+                                                title = title.trim(),
+                                                message = message.trim(),
+                                                isAnonymous = isAnonymous,
+                                            )
 
                                         isSubmitting = false
 
@@ -198,7 +209,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                                             NotificationManager.show(
                                                 header = "Feedback Submitted",
                                                 message = "Thank you for your feedback!",
-                                                duration = 3000L
+                                                duration = 3000L,
                                             )
                                             onDismiss()
                                         } else {
@@ -211,7 +222,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
                         shape = RoundedCornerShape(20.dp),
-                        enabled = !isSubmitting
+                        enabled = !isSubmitting,
                     ) {
                         Text("Submit", color = Color.White, modifier = Modifier.padding(vertical = 4.dp))
                     }

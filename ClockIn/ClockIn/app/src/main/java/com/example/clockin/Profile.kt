@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.clockin.model.*
 
 @Composable
 fun ProfileDetailsScreen(onBack: () -> Unit) {
@@ -69,48 +70,49 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
         return
     }
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState())) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .background(Brush.verticalGradient(listOf(Color(0xFF5D6366), Color(0xFFFF7F66))))
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .background(Brush.verticalGradient(listOf(Color(0xFF5D6366), Color(0xFFFF7F66)))),
         ) {
             Button(
                 onClick = onBack,
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = 20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66)),
             ) { Text("Back") }
         }
 
         Column(
             modifier = Modifier.fillMaxWidth().offset(y = (-75).dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
-                modifier = Modifier
-                    .size(150.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFF7F66))
-                    .border(4.dp, Color.White, CircleShape),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(150.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFF7F66))
+                        .border(4.dp, androidx.compose.material3.MaterialTheme.colorScheme.surface, CircleShape),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = userProfile?.name?.firstOrNull()?.uppercase() ?: "",
                     color = Color.White,
                     fontSize = 64.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(text = userProfile?.name ?: "User", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(text = userProfile?.email ?: "", color = Color.Gray, fontSize = 16.sp)
+            Text(text = userProfile?.name ?: "User", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground)
+            Text(text = userProfile?.email ?: "", color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 16.sp)
 
             Spacer(modifier = Modifier.height(32.dp))
 
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-
                 ProfileInfoItem("Name", userProfile?.name ?: "")
 
                 ProfileInfoItem("Email", userProfile?.email ?: "")
@@ -122,12 +124,15 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun ProfileInfoItem(label: String, value: String) {
+fun ProfileInfoItem(
+    label: String,
+    value: String,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, modifier = Modifier.width(120.dp), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
-        Text(text = value, modifier = Modifier.weight(1f), fontSize = 14.sp, color = Color.Gray)
+        Text(text = label, modifier = Modifier.width(120.dp), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground)
+        Text(text = value, modifier = Modifier.weight(1f), fontSize = 14.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
     }
 }

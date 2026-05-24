@@ -8,20 +8,10 @@ import android.os.VibratorManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import com.example.clockin.model.*
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.delay
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class Notification(
-    @SerialName("notifId") val id: String,
-    val header: String,
-    val message: String,
-    @SerialName("endNotif") val target: String = "everyone",
-    @SerialName("dateCreated") val dateCreated: String? = null
-)
 
 @Composable
 fun RealtimeNotificationListener() {
@@ -29,39 +19,42 @@ fun RealtimeNotificationListener() {
 
     LaunchedEffect(Unit) {
         while (true) {
-            if (SupabaseManager.isLoggedIn()) {
-                try {
-                    val user = SupabaseManager.getCurrentUser()
-                    val userEmail = user?.email ?: ""
+            if (!SupabaseManager.isLoggedIn()) {
+                break
+            }
+            try {
+                val user = SupabaseManager.getCurrentUser()
+                val userEmail = user?.email ?: ""
 
-                    val recentNotifications = SupabaseManager.client.from("notification")
+                val recentNotifications =
+                    SupabaseManager.client.from("notification")
                         .select {
-                            order("dateCreated", Order.DESCENDING)
+                            order("dataCreated", Order.DESCENDING)
                             limit(3)
                         }
                         .decodeList<Notification>()
 
-                    for (notif in recentNotifications) {
-                        val targets = notif.target.split(",").map { it.trim() }
-                        val isRelevant = targets.any { target ->
+                for (notif in recentNotifications) {
+                    val targets = notif.target.split(",").map { it.trim() }
+                    val isRelevant =
+                        targets.any { target ->
                             target.equals("everyone", ignoreCase = true) ||
-                                    target.equals(userEmail, ignoreCase = true)
+                                target.equals(userEmail, ignoreCase = true)
                         }
 
-                        if (isRelevant && !NotificationTracker.hasBeenShown(notif.id)) {
-                            triggerVibration(context)
+                    if (isRelevant && !NotificationTracker.hasBeenShown(notif.id)) {
+                        triggerVibration(context)
 
-                            NotificationManager.show(
-                                header = notif.header,
-                                message = notif.message,
-                                duration = 5000L
-                            )
-                            NotificationTracker.markAsShown(context, notif.id)
-                        }
+                        NotificationManager.show(
+                            header = notif.header,
+                            message = notif.message,
+                            duration = 5000L,
+                        )
+                        NotificationTracker.markAsShown(context, notif.id)
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
             delay(10000)
         }
@@ -69,17 +62,18 @@ fun RealtimeNotificationListener() {
 }
 
 private fun triggerVibration(context: Context) {
-    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-        vibratorManager.defaultVibrator
-    } else {
-        @Suppress("DEPRECATION")
-        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-    }
+    val vibrator =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
 
     if (vibrator.hasVibrator()) {
         vibrator.vibrate(
-            VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+            VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE),
         )
     }
 }

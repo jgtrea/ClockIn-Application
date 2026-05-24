@@ -1,6 +1,7 @@
 package com.example.clockin
 
 import android.content.Context
+import com.example.clockin.model.*
 
 object NotificationTracker {
     private const val PREFS_NAME = "notification_tracker"
@@ -18,7 +19,10 @@ object NotificationTracker {
         return shownNotificationIds.contains(notifId)
     }
 
-    fun markAsShown(context: Context, notifId: String) {
+    fun markAsShown(
+        context: Context,
+        notifId: String,
+    ) {
         shownNotificationIds.add(notifId)
         saveToPreferences(context)
     }

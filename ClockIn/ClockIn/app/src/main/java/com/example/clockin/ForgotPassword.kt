@@ -41,10 +41,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.clockin.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun ForgotPasswordScreen(onBack: () -> Unit, onNavigateToReset: () -> Unit) {
+fun ForgotPasswordScreen(
+    onBack: () -> Unit,
+    onNavigateToReset: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
     var emailSent by remember { mutableStateOf(false) }
@@ -52,14 +56,17 @@ fun ForgotPasswordScreen(onBack: () -> Unit, onNavigateToReset: () -> Unit) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding().verticalScroll(rememberScrollState()).imePadding()
+        modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background).statusBarsPadding().verticalScroll(rememberScrollState()).imePadding(),
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp)).background(BrownHeader)
+            modifier =
+                Modifier.fillMaxWidth().height(
+                    240.dp,
+                ).clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp)).background(BrownHeader),
         ) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
+                modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
             ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
@@ -78,18 +85,26 @@ fun ForgotPasswordScreen(onBack: () -> Unit, onNavigateToReset: () -> Unit) {
                     buttonText = "Proceed to Reset",
                     onButtonClick = {
                         onNavigateToReset()
-                    }
+                    },
                 )
             } else {
                 Text("Request OTP Code", color = TextOrange, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text("Enter your email to receive a login code.", color = LightOrangeText, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
+                Text(
+                    "Enter your email to receive a login code.",
+                    color = LightOrangeText,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    textAlign = TextAlign.Center,
+                )
 
                 Card(
                     modifier = Modifier.fillMaxWidth().border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        LabeledInput(label = "Email Address", placeholder = "Enter your email", value = email, onValueChange = { email = it; errorMessage = null })
+                        LabeledInput(label = "Email Address", placeholder = "Enter your email", value = email, onValueChange = {
+                            email = it
+                            errorMessage = null
+                        })
 
                         errorMessage?.let { Text(text = it, color = Color.Red, fontSize = 12.sp) }
 
@@ -98,7 +113,10 @@ fun ForgotPasswordScreen(onBack: () -> Unit, onNavigateToReset: () -> Unit) {
                         } else {
                             Button(
                                 onClick = {
-                                    if (email.isEmpty()) { errorMessage = "Please enter email"; return@Button }
+                                    if (email.isEmpty()) {
+                                        errorMessage = "Please enter email"
+                                        return@Button
+                                    }
                                     isLoading = true
                                     errorMessage = null
                                     scope.launch {
@@ -113,7 +131,7 @@ fun ForgotPasswordScreen(onBack: () -> Unit, onNavigateToReset: () -> Unit) {
                                 },
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = ButtonOrange),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(8.dp),
                             ) {
                                 Text("Send Code", color = Color.White)
                             }

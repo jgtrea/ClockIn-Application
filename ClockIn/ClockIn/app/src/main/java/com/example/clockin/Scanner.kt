@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.example.clockin.model.*
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -74,7 +75,7 @@ import kotlin.math.min
 @Composable
 fun ScannerScreen(
     navController: NavController,
-    isBeaconFound: Boolean
+    isBeaconFound: Boolean,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -83,7 +84,7 @@ fun ScannerScreen(
 
     var hasCameraPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
 
@@ -92,10 +93,11 @@ fun ScannerScreen(
     var lastScanTime by remember { mutableStateOf(0L) }
     val cooldownDuration = 2000L
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted -> hasCameraPermission = granted }
-    )
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { granted -> hasCameraPermission = granted },
+        )
 
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
@@ -104,13 +106,14 @@ fun ScannerScreen(
     }
 
     Scaffold(
-        bottomBar = { CustomBottomNavigation(navController, "scan_qr") }
+        bottomBar = { CustomBottomNavigation(navController, "scan_qr") },
     ) { paddingValues ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color.Black)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color.Black),
         ) {
             if (hasCameraPermission) {
                 CameraPreview(
@@ -128,7 +131,7 @@ fun ScannerScreen(
                                 return@CameraPreview
                             }
                             if (!WifiChecker.isConnectedToAllowedWifi(context)) {
-                                NotificationManager.show("Wrong WiFi", "Connect to: ${WifiChecker.getAllowedWifiSsid()}")
+                                NotificationManager.show("Wrong WiFi", "Connect to: ${WifiChecker.getAllowedWifiSsid(context)}")
                                 isProcessing = false
                                 return@CameraPreview
                             }
@@ -150,53 +153,53 @@ fun ScannerScreen(
                                 isProcessing = false
                             }
                         }
-                    }
+                    },
                 )
 
                 ScannerOverlay(bracketSizeDp)
-
             } else {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(32.dp),
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text("Camera permission is required.", color = Color.White, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = { launcher.launch(Manifest.permission.CAMERA) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66))
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66)),
                     ) { Text("Grant Permission") }
                 }
             }
 
             Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 40.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = if (isBeaconFound) Color(0xFF4CAF50) else Color(0xFFFF5252),
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp),
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             if (isBeaconFound) Icons.Default.FlashlightOn else Icons.Default.FlashlightOff,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (isBeaconFound) "Beacon: In Range" else "Beacon: Out of Range",
                             color = Color.White,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 }
@@ -205,14 +208,15 @@ fun ScannerScreen(
                     text = if (isProcessing) "Verifying..." else "Align QR code within frame",
                     color = if (isProcessing) Color.Yellow else Color.White,
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
             }
 
             Box(
-                modifier = Modifier
-                    .size(bracketSizeDp)
-                    .align(Alignment.Center)
+                modifier =
+                    Modifier
+                        .size(bracketSizeDp)
+                        .align(Alignment.Center),
             ) {
                 ScannerBracket(Modifier.align(Alignment.TopStart), false, false)
                 ScannerBracket(Modifier.align(Alignment.TopEnd), true, false)
@@ -221,15 +225,16 @@ fun ScannerScreen(
             }
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 80.dp),
-                horizontalArrangement = Arrangement.Center
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 80.dp),
+                horizontalArrangement = Arrangement.Center,
             ) {
                 ScannerActionButton(
                     icon = if (isFlashlightOn) Icons.Default.FlashlightOff else Icons.Default.FlashlightOn,
-                    onClick = { isFlashlightOn = !isFlashlightOn }
+                    onClick = { isFlashlightOn = !isFlashlightOn },
                 )
             }
         }
@@ -252,7 +257,7 @@ fun ScannerOverlay(boxSizeDp: androidx.compose.ui.unit.Dp) {
                 topLeft = Offset(left, top),
                 size = Size(boxSizePx, boxSizePx),
                 color = Color.Transparent,
-                blendMode = BlendMode.Clear
+                blendMode = BlendMode.Clear,
             )
             restoreToCount(checkPoint)
         }
@@ -264,7 +269,7 @@ fun ScannerOverlay(boxSizeDp: androidx.compose.ui.unit.Dp) {
 fun CameraPreview(
     modifier: Modifier = Modifier,
     torchOn: Boolean,
-    onQrCodeDetected: (String) -> Unit
+    onQrCodeDetected: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -284,45 +289,48 @@ fun CameraPreview(
 
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
-                val preview = Preview.Builder().build().also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
+                val preview =
+                    Preview.Builder().build().also {
+                        it.setSurfaceProvider(previewView.surfaceProvider)
+                    }
 
-                val imageAnalyzer = ImageAnalysis.Builder()
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build()
-                    .also {
-                        it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
-                            processImageProxy(imageProxy) { code ->
-                                currentOnQrCodeDetected(code)
+                val imageAnalyzer =
+                    ImageAnalysis.Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+                        .also {
+                            it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
+                                processImageProxy(imageProxy) { code ->
+                                    currentOnQrCodeDetected(code)
+                                }
                             }
                         }
-                    }
 
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
                 try {
                     cameraProvider.unbindAll()
-                    camera = cameraProvider.bindToLifecycle(
-                        lifecycleOwner,
-                        cameraSelector,
-                        preview,
-                        imageAnalyzer
-                    )
+                    camera =
+                        cameraProvider.bindToLifecycle(
+                            lifecycleOwner,
+                            cameraSelector,
+                            preview,
+                            imageAnalyzer,
+                        )
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             }, executor)
             previewView
         },
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
 @OptIn(ExperimentalGetImage::class)
 private fun processImageProxy(
     imageProxy: ImageProxy,
-    onSuccess: (String) -> Unit
+    onSuccess: (String) -> Unit,
 ) {
     val mediaImage = imageProxy.image
     if (mediaImage != null) {
@@ -330,12 +338,13 @@ private fun processImageProxy(
         val imgWidth = image.width
         val imgHeight = image.height
         val scanBoxSize = min(imgWidth, imgHeight) * 0.5f
-        val centerRect = Rect(
-            ((imgWidth - scanBoxSize) / 2).toInt(),
-            ((imgHeight - scanBoxSize) / 2).toInt(),
-            ((imgWidth + scanBoxSize) / 2).toInt(),
-            ((imgHeight + scanBoxSize) / 2).toInt()
-        )
+        val centerRect =
+            Rect(
+                ((imgWidth - scanBoxSize) / 2).toInt(),
+                ((imgHeight - scanBoxSize) / 2).toInt(),
+                ((imgWidth + scanBoxSize) / 2).toInt(),
+                ((imgHeight + scanBoxSize) / 2).toInt(),
+            )
 
         val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
         val scanner = BarcodeScanning.getClient(options)
@@ -360,27 +369,36 @@ private fun processImageProxy(
 }
 
 @Composable
-fun ScannerBracket(modifier: Modifier, rotateX: Boolean, rotateY: Boolean) {
+fun ScannerBracket(
+    modifier: Modifier,
+    rotateX: Boolean,
+    rotateY: Boolean,
+) {
     Box(
-        modifier = modifier
-            .size(45.dp)
-            .border(
-                width = 4.dp,
-                color = Color.White,
-                shape = RoundedCornerShape(
-                    topStart = if (!rotateX && !rotateY) 12.dp else 0.dp,
-                    topEnd = if (rotateX && !rotateY) 12.dp else 0.dp,
-                    bottomStart = if (!rotateX && rotateY) 12.dp else 0.dp,
-                    bottomEnd = if (rotateX && rotateY) 12.dp else 0.dp
-                )
-            )
+        modifier =
+            modifier
+                .size(45.dp)
+                .border(
+                    width = 4.dp,
+                    color = Color.White,
+                    shape =
+                        RoundedCornerShape(
+                            topStart = if (!rotateX && !rotateY) 12.dp else 0.dp,
+                            topEnd = if (rotateX && !rotateY) 12.dp else 0.dp,
+                            bottomStart = if (!rotateX && rotateY) 12.dp else 0.dp,
+                            bottomEnd = if (rotateX && rotateY) 12.dp else 0.dp,
+                        ),
+                ),
     )
 }
 
 @Composable
-fun ScannerActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+fun ScannerActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = Modifier.size(70.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)).clickable { onClick() },
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) { Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp)) }
 }
