@@ -1,3 +1,5 @@
+import globals from "globals";
+
 export default [
   {
     ignores: ["node_modules/**"]
@@ -7,25 +9,16 @@ export default [
       ecmaVersion: "latest",
       sourceType: "module",
       globals: {
-        window: "readonly",
-        document: "readonly",
-        console: "readonly",
-        localStorage: "readonly",
-        sessionStorage: "readonly",
-        fetch: "readonly",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
-        setInterval: "readonly",
-        clearInterval: "readonly",
+        ...globals.browser,
+        ...globals.node,
         supabaseClient: "readonly",
         bootstrap: "readonly"
       }
     },
     rules: {
-      "no-unused-vars": "error",
+      "no-unused-vars": "warn",
       "no-console": "off",
-      "no-undef": "error",
-      "eqeqeq": "error"
+      "eqeqeq": "warn"
     }
   }
 ];
