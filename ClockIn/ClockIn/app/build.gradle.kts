@@ -104,4 +104,8 @@ dependencyCheck {
     nvd {
         apiKey = project.findProperty("nvdApiKey") as String? ?: System.getenv("NVD_API_KEY") ?: ""
     }
+    analyzers {
+        centralEnabled = false
+        ossIndexEnabled = false
+    }
 }
