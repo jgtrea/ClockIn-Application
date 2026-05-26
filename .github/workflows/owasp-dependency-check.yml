@@ -39,7 +39,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run OWASP Dependency Scan
-        run: ./gradlew dependencyCheckAnalyze -PnvdApiKey=${{ secrets.NVD_API_KEY }}
+        run: ./gradlew dependencyCheckAnalyze
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
