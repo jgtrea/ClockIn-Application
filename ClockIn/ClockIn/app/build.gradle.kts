@@ -103,6 +103,8 @@ dependencyCheck {
     format = "ALL"
     nvd {
         apiKey = project.findProperty("nvdApiKey") as String? ?: System.getenv("NVD_API_KEY") ?: ""
+        delay = 6000
+        validForHours = 4
     }
     analyzers {
         centralEnabled = false
