@@ -101,5 +101,7 @@ dependencies {
 dependencyCheck {
     failBuildOnCVSS = 7.0f
     format = "ALL"
-    nvd.apiKey = project.findProperty("nvdApiKey") as String? ?: System.getenv("NVD_API_KEY") ?: ""
+    nvd {
+        apiKey = project.findProperty("nvdApiKey") as String? ?: System.getenv("NVD_API_KEY") ?: ""
+    }
 }
