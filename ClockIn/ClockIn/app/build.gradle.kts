@@ -17,6 +17,7 @@ plugins {
     id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.serialization")
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.dependencycheck)
 }
 
 android {
@@ -95,4 +96,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     // / BEACON
     implementation("org.altbeacon:android-beacon-library:2.20.4")
+}
+
+dependencyCheck {
+    // Fail build if high severity vulnerabilities are found (CVSS score >= 7.0)
+    failBuildOnCVSS = 7.0f
+    
+    // Generate both HTML and XML/JSON reports
+    format = "ALL"
 }
