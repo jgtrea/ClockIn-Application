@@ -99,9 +99,7 @@ dependencies {
 }
 
 dependencyCheck {
-    // Fail build if high severity vulnerabilities are found (CVSS score >= 7.0)
     failBuildOnCVSS = 7.0f
-
-    // Generate both HTML and XML/JSON reports
     format = "ALL"
+    nvd.apiKey = project.findProperty("nvdApiKey") as String? ?: System.getenv("NVD_API_KEY") ?: ""
 }
