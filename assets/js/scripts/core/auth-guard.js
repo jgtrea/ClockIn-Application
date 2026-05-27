@@ -56,8 +56,8 @@
 
     try {
       const [adminResult, empResult] = await Promise.all([
-        supabase.from('user_admin_data').select('adminId, email').eq('email', email).maybeSingle(),
-        supabase.from('user_employee_data').select('employeeId, email').eq('email', email).maybeSingle()
+        supabase.from('user_admin_data').select('adminId, email').ilike('email', email).maybeSingle(),
+        supabase.from('user_employee_data').select('employeeId, email').ilike('email', email).maybeSingle()
       ]);
 
       if (adminResult.data) return { id: adminResult.data.adminId, type: 'admin' };

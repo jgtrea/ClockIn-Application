@@ -51,7 +51,7 @@ async function loadTodaySchedule() {
   const { data: empData } = await supabase
     .from('user_employee_data')
     .select('employeeId')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (!empData) return;
@@ -83,12 +83,14 @@ async function loadTodaySchedule() {
 
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const todayName = days[new Date().getDay()];
+  const isWeekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(todayName);
+  const weekdayFilter = isWeekday ? [todayName, 'AllWeekdays'] : [todayName];
 
   const { data: schedules } = await supabase
     .from('schedule')
     .select('*')
     .eq('employeeId', empData.employeeId)
-    .eq('weekday', todayName)
+    .in('weekday', weekdayFilter)
     .order('startTime', { ascending: true });
 
   console.log('Schedules for today:', schedules);
@@ -204,7 +206,7 @@ window.confirmAttendance = async function(schedId) {
   const { data: empData } = await supabase
     .from('user_employee_data')
     .select('employeeId')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (!empData) {

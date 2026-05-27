@@ -8,7 +8,7 @@ async function loadMyFeedback() {
   const { data: empData } = await supabase
     .from('user_employee_data')
     .select('employeeId')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (!empData) return;
@@ -77,7 +77,7 @@ async function submitFeedback() {
   const { data: empData } = await supabase
     .from('user_employee_data')
     .select('employeeId')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (!empData) return;

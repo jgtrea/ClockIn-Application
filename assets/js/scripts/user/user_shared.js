@@ -115,7 +115,7 @@ async function loadEmployeeData(email, selectFields = '*') {
   const { data, error } = await supabase
     .from('user_employee_data')
     .select(selectFields)
-    .eq('email', email)
+    .ilike('email', email)
     .single();
   
   if (error) {

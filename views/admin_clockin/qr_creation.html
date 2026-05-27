@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../helper/asset_helper.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="/assets/img/clockin-logo.svg">
+  <title>QR Code Generator — ClockIn</title>
+  
+  <!-- Supabase client -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="../../assets/js/scripts/core/supabase_config.js" defer></script>
+  <script src="../../assets/js/scripts/core/auth-guard.js"></script>
+  
+  <!-- Client-side QR engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Client-side PDF engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <!-- QR Code specific styles -->
+  <link rel="stylesheet" href="../../assets/css/pages/qr_code_page.css" />
+</head>
+<body data-page="qr_creation">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+      
+      <!-- Dashboard Header -->
+      <div class="dashboard-header" style="margin-bottom: 24px;">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 4px 0;">QR Code Manager</h1>
+            <p class="tagline" style="color: #6b7280; font-size: 14px; margin: 0;">Generate, download, and manage secure attendance QR codes for sections.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 0 0 24px 0;">
+      
+      <!-- Creator and Live Preview Row -->
+      <div class="qr-creator-row" style="margin-bottom: 28px;">
+        
+        <!-- Generator Form Card -->
+        <div class="qr-card">
+          <h2 class="qr-card-title">
+            <span class="material-symbols-outlined">qr_code_2</span>
+            Generate New QR Code
+          </h2>
+          
+          <!-- Dropdown for Section selection -->
+          <div class="form-group">
+            <label class="form-label" for="sectionDropdown">Select Section</label>
+            <select id="sectionDropdown" class="form-select">
+              <option value="" disabled selected>Loading sections...</option>
+            </select>
+          </div>
+          
+          <!-- Toggle active status -->
+          <div class="switch-wrapper">
+            <div class="switch-label-group">
+              <span class="switch-title">Active Status</span>
+              <span class="switch-desc">Allow attendance logging immediately</span>
+            </div>
+            <label class="switch-control">
+              <input type="checkbox" id="statusCheckbox" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <button id="generateBtn" class="qr-btn qr-btn-primary" style="margin-top: 8px;">
+            <span class="material-symbols-outlined">bolt</span>
+            Generate QR Code
+          </button>
+        </div>
+        
+        <!-- Interactive Preview Box -->
+        <div class="qr-card">
+          <h2 class="qr-card-title">
+            <span class="material-symbols-outlined">visibility</span>
+            Live QR Preview
+          </h2>
+          
+          <div id="qrPreviewContainer" class="qr-preview-container">
+            <div id="qrPlaceholder" class="qr-placeholder">
+              <span class="material-symbols-outlined">qr_code_scanner</span>
+              <p style="margin: 0;">Fill section details and click generate to view live QR code preview</p>
+            </div>
+            
+            <!-- Target for qrcode.js -->
+            <div id="qrImageWrapper" class="qr-wrapper" style="display: none;"></div>
+            
+            <h3 id="previewSectionName" style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #111827; display: none;"></h3>
+            <p id="previewUUID" style="margin: 0 0 16px 0; font-size: 12px; color: #6b7280; font-family: monospace; display: none;"></p>
+            
+            <button id="downloadPdfBtn" class="qr-btn qr-btn-secondary" style="display: none; width: 100%;">
+              <span class="material-symbols-outlined">download</span>
+              Download QR PDF
+            </button>
+          </div>
+        </div>
+        
+      </div>
+      
+      <!-- Management Table List -->
+      <div class="qr-table-container">
+        <div class="qr-table-header">
+          <h2 class="qr-table-title">QR Code History & Logging</h2>
+          <button id="refreshBtn" class="qr-icon-btn" title="Refresh list">
+            <span class="material-symbols-outlined">refresh</span>
+          </button>
+        </div>
+        
+        <div class="qr-table-scroller">
+          <table class="qr-table">
+            <thead>
+              <tr>
+                <th>Section</th>
+                <th>UUID</th>
+                <th>Created At</th>
+                <th>Scan Count</th>
+                <th>Status</th>
+                <th style="text-align: right; padding-right: 24px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="qrTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 32px 0;">
+                  <div class="qr-spinner"></div>
+                  <p style="color: #6b7280; margin: 12px 0 0 0; font-size: 14px;">Loading QR history list...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+    </main>
+  </div>
+</div>
+
+<!-- Implementation Controller Logic -->
+<script src="../../assets/js/scripts/admin/qr_creation.js" defer></script>
+</body>
+</html>
