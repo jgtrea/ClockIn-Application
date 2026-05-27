@@ -143,7 +143,7 @@ fun ScheduleScreen(navController: NavController) {
                                 rawStartTime = record.startTime,
                                 isUpcoming = isUpcoming,
                                 isHappeningNow = isHappening,
-                            )
+                            ),
                         )
                     }
                 }

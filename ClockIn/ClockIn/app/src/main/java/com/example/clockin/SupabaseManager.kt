@@ -246,8 +246,8 @@ object SupabaseManager {
                 val todaySchedules =
                     schedules.filter {
                         it.weekday.trim().equals(currentDay, ignoreCase = true) ||
-                        it.weekday.trim().equals("All Days", ignoreCase = true) ||
-                        it.weekday.trim().equals("AllWeekdays", ignoreCase = true)
+                            it.weekday.trim().equals("All Days", ignoreCase = true) ||
+                            it.weekday.trim().equals("AllWeekdays", ignoreCase = true)
                     }.sortedBy { it.startTime }
 
                 val activeAttId = getActiveAttendanceId()
