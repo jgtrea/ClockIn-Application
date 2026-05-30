@@ -14,6 +14,7 @@ const AdminRoutes = [
   { name: 'Attendance',       url: 'attendance_db.html',       icon: 'how_to_reg' },
   { name: 'Push Notification',url: 'push_notification.html',   icon: 'notifications_active' },
   { name: 'Feedback',         url: 'feedback.html',            icon: 'feedback' },
+  { name: 'QR Code',          url: 'qr_creation.html',         icon: 'qr_code' },
 ];
 
 const UserRoutes = [

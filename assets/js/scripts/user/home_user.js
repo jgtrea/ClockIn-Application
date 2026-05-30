@@ -35,7 +35,7 @@ class HomeManager {
       const { data: empData } = await this.supabase
         .from('user_employee_data')
         .select('name')
-        .eq('email', email)
+        .ilike('email', email)
         .maybeSingle();
       
       const displayName = empData?.name || email.split('@')[0];
@@ -97,7 +97,7 @@ class HomeManager {
       const { data: empData } = await this.supabase
         .from('user_employee_data')
         .select('employeeId')
-        .eq('email', email)
+        .ilike('email', email)
         .maybeSingle();
       
       if (!empData?.employeeId) {
@@ -186,7 +186,7 @@ class HomeManager {
       const { data: empData } = await this.supabase
         .from('user_employee_data')
         .select('employeeId')
-        .eq('email', email)
+        .ilike('email', email)
         .maybeSingle();
       
       if (!empData?.employeeId) return;
@@ -200,11 +200,11 @@ class HomeManager {
       endOfWeek.setDate(startOfWeek.getDate() + 7);
 
       const { data: attendanceData } = await this.supabase
-        .from('user_attendance')
+        .from('attendance')
         .select('status')
         .eq('employeeId', empData.employeeId)
-        .gte('created_at', startOfWeek.toISOString())
-        .lt('created_at', endOfWeek.toISOString());
+        .gte('timeIn', startOfWeek.toISOString())
+        .lt('timeIn', endOfWeek.toISOString());
 
       const records = attendanceData || [];
       const present = records.filter(r => r.status === 'present').length;
@@ -231,7 +231,7 @@ class HomeManager {
       const { data: empData } = await this.supabase
         .from('user_employee_data')
         .select('employeeId')
-        .eq('email', email)
+        .ilike('email', email)
         .maybeSingle();
       
       if (!empData?.employeeId) {

@@ -25,7 +25,7 @@ async function loadData() {
   const { data: empData } = await supabase
     .from('user_employee_data')
     .select('*')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
     
   if (!empData) return;
@@ -122,7 +122,8 @@ function showDayRecords(date) {
   const weekday = weekdays[date.getDay()];
   const dateStr = date.toISOString().split('T')[0];
   
-  const daySchedules = Object.values(scheduleMap).filter(s => s.weekday === weekday);
+  const isWeekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(weekday);
+  const daySchedules = Object.values(scheduleMap).filter(s => s.weekday === weekday || (s.weekday === 'AllWeekdays' && isWeekday));
   
   const dayAttendance = allAttendance.filter(record => {
     const recordDate = new Date(record.timeIn);

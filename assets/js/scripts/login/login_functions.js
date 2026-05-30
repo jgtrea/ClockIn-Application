@@ -2,12 +2,14 @@ async function getUserIdByEmail(email) {
   const supabase = window.supabaseClient;
 
   const [adminResult, empResult] = await Promise.all([
-    supabase.from('user_admin_data').select('adminId, email').eq('email', email).maybeSingle(),
-    supabase.from('user_employee_data').select('employeeId, email').eq('email', email).maybeSingle()
+    supabase.from('user_admin_data').select('adminId, email').ilike('email', email).maybeSingle(),
+    supabase.from('user_employee_data').select('employeeId, email').ilike('email', email).maybeSingle()
   ]);
 
+  console.log('getUserIdByEmail results:', { adminResult, empResult });
+
   if (adminResult.data) return { id: adminResult.data.adminId, type: 'admin' };
-  if (empResult.data)  return { id: empResult.data.employeeId, type: 'employee' };
+  if (empResult.data) return { id: empResult.data.employeeId, type: 'employee' };
   return null;
 }
 
@@ -18,10 +20,12 @@ async function checkExistingSession() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session && session.user) {
       const userInfo = await getUserIdByEmail(session.user.email);
-      if (userInfo && userInfo.type === 'admin') {
-        window.location.href = '/views/admin_clockin/index_admin.html';
-      } else {
-        window.location.href = '/views/user_clockin/index_user.html';
+      if (userInfo) {
+        if (userInfo.type === 'admin') {
+          window.location.href = '/views/admin_clockin/index_admin.html';
+        } else {
+          window.location.href = '/views/user_clockin/index_user.html';
+        }
       }
     }
   } catch (e) {
@@ -39,7 +43,7 @@ if (loginForm) {
   loginForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const email    = document.getElementById('email').value.trim();
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
 
     if (!email || !password) {
@@ -61,8 +65,8 @@ if (loginForm) {
 
       if (!userInfo) throw new Error('User not found in system');
 
-      const isAdmin     = userInfo.type === 'admin';
-      const storageKey  = remember ? localStorage : sessionStorage;
+      const isAdmin = userInfo.type === 'admin';
+      const storageKey = remember ? localStorage : sessionStorage;
       storageKey.setItem('userEmail', email);
       storageKey.setItem('userType', isAdmin ? 'admin' : 'employee');
       storageKey.setItem('userId', userInfo.id);

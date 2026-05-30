@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const email = user.email;
     let displayName = user.user_metadata?.displayName || email.split("@")[0];
     
-    const { data: empData } = await supabase.from('user_employee_data').select('name, employment').eq('email', email).maybeSingle();
+    const { data: empData } = await supabase.from('user_employee_data').select('name, employment').ilike('email', email).maybeSingle();
     if (empData?.name) {
       displayName = empData.name;
     }

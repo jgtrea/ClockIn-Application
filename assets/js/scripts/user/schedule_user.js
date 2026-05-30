@@ -27,7 +27,7 @@ async function loadUserSchedule() {
   const { data: empData } = await supabase
     .from('user_employee_data')
     .select('employeeId, name')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
     
   if (!empData) {
@@ -61,8 +61,15 @@ async function loadUserSchedule() {
   const schedulesByDay = {};
   schedulesData.forEach(schedule => {
     const day = schedule.weekday || 'Monday';
-    if (!schedulesByDay[day]) schedulesByDay[day] = [];
-    schedulesByDay[day].push(schedule);
+    if (day === 'AllWeekdays') {
+      ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].forEach(d => {
+        if (!schedulesByDay[d]) schedulesByDay[d] = [];
+        schedulesByDay[d].push(schedule);
+      });
+    } else {
+      if (!schedulesByDay[day]) schedulesByDay[day] = [];
+      schedulesByDay[day].push(schedule);
+    }
   });
 
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -118,7 +125,10 @@ function getScheduleStatus(item) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const currentDay = days[now.getDay()];
   
-  if (item.weekday !== currentDay) {
+  const isWeekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(currentDay);
+  const matchesDay = item.weekday === currentDay || (item.weekday === 'AllWeekdays' && isWeekday);
+  
+  if (!matchesDay) {
     return '<span style="color: #9ca3af;">-</span>';
   }
   
