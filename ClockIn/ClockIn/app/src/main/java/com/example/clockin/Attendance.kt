@@ -314,20 +314,11 @@ fun AttendanceCard(item: AttendanceItem) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(45.dp)
-                        .background(PrimaryOrange, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = item.title.take(1).uppercase(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                )
-            }
+            InitialAvatar(
+                initial = item.title.take(1).uppercase(),
+                size = 45.dp,
+                shape = RoundedCornerShape(8.dp),
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 

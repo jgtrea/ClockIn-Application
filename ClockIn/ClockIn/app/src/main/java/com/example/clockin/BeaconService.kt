@@ -1,6 +1,5 @@
 package com.example.clockin
 
-import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -87,11 +86,6 @@ class BeaconService : Service() {
         beaconManager?.foregroundBetweenScanPeriod = 0L
         beaconManager?.backgroundScanPeriod = 1100L
         beaconManager?.backgroundBetweenScanPeriod = 0L
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun startRawScan() {
-        // Raw BLE scan initialisation kept for future use; scanning is handled by BeaconManager.
     }
 
     fun startMonitoring(

@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.clockin.model.*
+import com.example.clockin.ui.theme.PrimaryOrange
 
 @Composable
 fun ProfileDetailsScreen(onBack: () -> Unit) {
@@ -57,7 +58,7 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
 
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color(0xFFFF7F66))
+            CircularProgressIndicator(color = PrimaryOrange)
         }
         return
     }
@@ -76,12 +77,12 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .height(180.dp)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF5D6366), Color(0xFFFF7F66)))),
+                    .background(Brush.verticalGradient(listOf(Color(0xFF5D6366), PrimaryOrange))),
         ) {
             Button(
                 onClick = onBack,
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = 20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F66)),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
             ) { Text("Back") }
         }
 
@@ -94,7 +95,7 @@ fun ProfileDetailsScreen(onBack: () -> Unit) {
                     Modifier
                         .size(150.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFFF7F66))
+                        .background(PrimaryOrange)
                         .border(4.dp, androidx.compose.material3.MaterialTheme.colorScheme.surface, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {

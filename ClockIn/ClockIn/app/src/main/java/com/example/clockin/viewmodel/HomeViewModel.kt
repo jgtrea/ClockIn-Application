@@ -37,17 +37,6 @@ class HomeViewModel : ViewModel() {
         _uiState.update { it.copy(activeAttendanceId = id) }
     }
 
-    fun updateAttendanceStatus(status: String?) {
-        _uiState.update { it.copy(currentAttendanceStatus = status) }
-    }
-
-    fun updateUpcomingClass(
-        isUpcoming: Boolean,
-        canClockInEarly: Boolean,
-    ) {
-        _uiState.update { it.copy(isUpcomingClass = isUpcoming, canClockInEarly = canClockInEarly) }
-    }
-
     fun refreshDashboard(forceShowLoading: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             val user = SupabaseManager.getCurrentUser()
