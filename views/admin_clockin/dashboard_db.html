@@ -1,0 +1,207 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../helper/asset_helper.css">
+  <meta charset="utf-8">
+  <title>Dashboard — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
+
+  <link rel="stylesheet" href="../../assets/css/pages/dashboard.css">
+  <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../../assets/js/scripts/core/supabase_config.js" defer></script>
+  <script src="../../assets/js/scripts/core/auth-guard.js"></script>
+  <script src="../../assets/js/scripts/admin/utils/timestamp_utils.js" defer></script>
+  <script src="../../assets/js/scripts/admin/managers/clock_index.js" defer></script>
+  <script src="../../assets/js/scripts/admin/managers/schedule_overview.js" defer></script>
+  <script src="../../assets/js/scripts/admin/user_management/attendance_trend_db.js"></script>
+  <script src="../../assets/js/scripts/admin/user_management/dashboard_db.js" defer></script>
+</head>
+
+<body>
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+
+      <div class="dashboard-title-wrapper">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="tagline">
+            A smart and efficient way to monitor attendance in real time.
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="dropdown-wrapper">
+            <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
+              <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
+              <span>Export</span>
+            </button>
+            <div id="exportMenu" class="action-dropdown" style="display: none;">
+              <button class="action-dropdown-item" onclick="exportDashboardCSV()">
+                <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
+                <span>Export as CSV</span>
+              </button>
+              <button class="action-dropdown-item" onclick="exportDashboardJSON()">
+                <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
+                <span>Export as JSON</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+
+      <!-- Search and Filter -->
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px;">
+      </div>
+
+      <!-- Search and Stats Container -->
+      <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <!-- User search and date filter -->
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px;">
+          <div class="search-username-wrapper" style="flex: 1; max-width: 250px;">
+            <input type="text" id="searchUsernameInput" list="userList" class="search-username-input" placeholder="Search Username" onchange="onUserSelected(this.value)" autocomplete="off" style="width: 100%; box-sizing: border-box;">
+            <datalist id="userList"></datalist>
+          </div>
+          <input type="date" id="statsDate" onchange="onStatsDateChanged()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
+          <div style="margin-left: auto; display: flex; gap: 4px; align-items: center;">
+            <button onclick="changeStatsPage(-1)" id="statsPrevBtn" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center; height: 40px;">
+              <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left" style="font-size: 18px;">
+            </button>
+            <button onclick="changeStatsPage(1)" id="statsNextBtn" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center; height: 40px;">
+              <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right" style="font-size: 18px;">
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-container">
+          <div class="stat-scroll-container" id="statsScrollContainer">
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Total Employees</div>
+                  <div class="stat-value" id="totalEmployees" style="color: black;">-</div>
+                </div>
+              </div>
+              <div class="stat-separator" style="width: 1px; height: 50px; background-color: #cbd5e1; margin: auto 12px; border-radius: 1px; flex-shrink: 0;"></div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Total Records</div>
+                  <div class="stat-value total-users" id="totalInstances" style="color: black;">-</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Present</div>
+                  <div class="stat-value on-schedule" id="onSchedule" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="onSchedulePct">-</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Late</div>
+                  <div class="stat-value late-today" id="lateToday" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="lateTodayPct">-</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Absent</div>
+                  <div class="stat-value absent-today" id="absentToday" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="absentTodayPct">-</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Incomplete</div>
+                  <div class="stat-value" id="incompleteToday" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="incompleteTodayPct">-</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-left">
+                  <div class="stat-label">Excused</div>
+                  <div class="stat-value excused-today" id="excusedToday" style="color: black;">-</div>
+                </div>
+                <div class="stat-percentage" id="excusedTodayPct">-</div>
+              </div>
+          </div>
+        </div>
+      </div>
+
+          <div class="dashboard-bottom">
+            <div class="recent-activity-container recent-activity-half">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 class="recent-activity-title">Recent</h2>
+                <button class="view-all-btn" onclick="window.location.href='recent_clockin.html'">View All</button>
+              </div>
+              <div id="activityFeed">
+                <p class="loading-text">Loading recent activity...</p>
+              </div>
+              <div id="pagination">
+                <button id="prevBtn" onclick="changePage(-1)" class="pagination-btn"><img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left" style="font-size: 18px;"></button>
+                <span id="pageInfo" class="page-info"></span>
+                <button id="nextBtn" onclick="changePage(1)" class="pagination-btn"><img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right" style="font-size: 18px;"></button>
+              </div>
+            </div>
+            <div class="recent-activity-container recent-activity-half">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 class="recent-activity-title">Section</h2>
+              </div>
+              <div id="sectionClockinsFeed">
+                <p class="loading-text">Loading section clock-ins...</p>
+              </div>
+              <div id="sectionPagination">
+                <button id="sectionPrevBtn" onclick="changeSectionPage(-1)" class="pagination-btn"><img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left" style="font-size: 18px;"></button>
+                <span id="sectionPageInfo" class="page-info"></span>
+                <button id="sectionNextBtn" onclick="changeSectionPage(1)" class="pagination-btn"><img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right" style="font-size: 18px;"></button>
+              </div>
+            </div>
+          </div>
+
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+
+          <div class="chart-section" style="margin-top: 24px;">
+            <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 class="chart-title">Attendance Trend</h3>
+              <div class="chart-filters" style="display: flex; gap: 8px; align-items: center;">
+                <input type="date" id="chartDate" onchange="onDateSelected()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
+                <select id="statusTypeSelect" onchange="toggleStatusType()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
+                  <option value="present">Present</option>
+                  <option value="late">Late</option>
+                  <option value="absent">Absent</option>
+                  <option value="incomplete">Incomplete</option>
+                  <option value="excused">Excused</option>
+                </select>
+                <select id="trendSelect" onchange="onTrendChange()" style="padding: 8px 30px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
+                  <option value="weekly">This Week</option>
+                  <option value="monthly">This Month</option>
+                  <option value="yearly">This Year</option>
+                </select>
+              </div>
+            </div>
+            <div id="attendanceChart">
+            </div>
+        </div>
+
+    </main>
+  </div>
+</div>
+
+<div id="datePickerModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+  <div class="modal-content" style="background: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 300px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Select Date</h3>
+      <button onclick="closeDatePicker()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+    </div>
+    <input type="date" id="selectedDate" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 15px;">
+    <button onclick="showAttendanceByDate()" class="btn-primary" style="width: 100%; padding: 10px; background: #FF725E; color: white; border: none; border-radius: 6px; cursor: pointer;">Show Attendance</button>
+  </div>
+</div>
+
+</body>
+</html>

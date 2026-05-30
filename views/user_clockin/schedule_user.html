@@ -1,0 +1,45 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../helper/asset_helper.css">
+  <link rel="stylesheet" href="../../assets/css/pages/user-topbar.css">
+  <meta charset="utf-8">
+  <title>Schedule — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../assets/js/scripts/core/supabase_config.js" defer></script>
+  <script src="../../assets/js/scripts/core/auth-guard.js"></script>
+  <script src="../../assets/js/scripts/user/user_shared.js" defer></script>
+  <script src="../../assets/js/scripts/user/schedule_user.js" defer></script>
+</head>
+
+<body data-page="schedule_user" data-allow-employees="true">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+          <div>
+            <h1>Schedule</h1>
+            <p class="tagline">View class/work schedule.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+        
+      <div class="users-table-container">
+        <div id="scheduleList"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

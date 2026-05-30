@@ -1,0 +1,108 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../helper/asset_helper.css">
+  <meta charset="utf-8">
+  <title>Recent Clock-in — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
+
+  <link rel="stylesheet" href="../../assets/css/pages/user-cards.css">
+  <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../assets/js/scripts/core/supabase_config.js" defer></script>
+  <script src="../../assets/js/scripts/core/auth-guard.js"></script>
+  <script src="../../assets/js/scripts/admin/utils/timestamp_utils.js" defer></script>
+  <script src="../../assets/js/scripts/admin/user_management/attendance_trend_db.js" defer></script>
+  <script src="../../assets/js/scripts/admin/user_management/dashboard_db.js" defer></script>
+  <script src="../../assets/js/scripts/admin/filter/filter_user.js" defer></script>
+</head>
+
+<body data-page="recent_clockin">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+
+      <div class="dashboard-title-wrapper">
+        <div>
+          <h1>Recent Clock-in</h1>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+         
+      <div class="users-table-container">
+        <div class="table-header">
+          <div class="table-actions-left">
+            <div class="search-username-wrapper">
+              <input type="text" id="searchRecentClockins" class="search-username-input" placeholder="Search by name" oninput="searchByName(this.value)" autocomplete="off">
+            </div>
+            <div class="table-filter-wrapper">
+              <button class="filter-btn" onclick="toggleFilterMenu()">
+                <img src="/assets/img/icons/filter-list.svg" class="svg-icon" alt="filter_list">
+                Filter
+              </button>
+              <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
+                <div id="activeFilters"></div>
+                <hr class="filter-separator">
+                <div class="filter-footer">
+                  <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
+                    <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
+                    Add Filter
+                  </button>
+                  <div class="filter-actions">
+                    <button class="export-btn" onclick="applyFilters()">Apply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="table-info">
+            <span id="filterStatus"></span>
+          </div>
+        </div>
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="sortable-header" onclick="sortTable('userName')">Name</th>
+              <th class="sortable-header" onclick="sortTable('section')">Section</th>
+              <th class="sortable-header" onclick="sortTable('timeIn')">Time In / Out</th>
+              <th class="sortable-header" onclick="sortTable('status')">Status</th>
+            </tr>
+          </thead>
+          <tbody id="activityFeed">
+            <tr><td colspan="4" style="text-align:center;padding:20px;color:#9ca3af;">Loading...</td></tr>
+          </tbody>
+        </table>
+        <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="pagination-left">
+            <span>Show</span>
+            <input type="number" id="itemsPerPageInput" class="items-per-page-input" value="10" min="1" onchange="changeItemsPerPage(this.value)">
+            <span>from <span id="totalRecordsCount">0</span> data</span>
+          </div>
+          <div class="pagination-right">
+            <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
+              <img src="/assets/img/icons/first-page.svg" class="svg-icon" alt="first_page">
+            </button>
+            <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
+              <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left">
+            </button>
+            <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
+            <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
+              <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right">
+            </button>
+            <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
+              <img src="/assets/img/icons/last-page.svg" class="svg-icon" alt="last_page">
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,97 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../helper/asset_helper.css">
+  <link rel="stylesheet" href="../../assets/css/pages/user-topbar.css">
+  <meta charset="utf-8">
+  <title>Attendance — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
+
+  <link rel="stylesheet" href="../../assets/css/pages/attendance-detail-user.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../assets/js/scripts/core/supabase_config.js" defer></script>
+  <script src="../../assets/js/scripts/core/auth-guard.js"></script>
+  <script src="../../assets/js/scripts/user/user_shared.js" defer></script>
+  <script src="../../assets/js/scripts/user/attendance_user.js" defer></script>
+</head>
+
+<body data-page="attendance_user" data-allow-employees="true">
+   
+  <div class="app">
+    <div class="main">
+      <main class="content">
+
+        <div class="dashboard-header">
+          <div class="dashboard-title-wrapper">
+            <div>
+              <h1>Attendance</h1>
+              <p class="tagline">View attendance records.</p>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+        
+        <div class="attendance-detail-container">
+          <div class="calendar-section">
+            <div class="calendar-header">
+              <button class="btn-icon" onclick="previousMonth()">
+                <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left">
+              </button>
+              <h2 id="currentMonth" onclick="openDatePicker()" style="cursor: pointer;"></h2>
+              <button class="btn-icon" onclick="nextMonth()">
+                <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right">
+              </button>
+            </div>
+            <div id="datePickerModal" class="date-picker-modal" style="display: none;">
+              <div class="date-picker-content">
+                <select id="monthSelect" class="date-picker-select"></select>
+                <select id="yearSelect" class="date-picker-select"></select>
+                <div class="date-picker-actions">
+                  <button class="btn-outline" onclick="closeDatePicker()">Cancel</button>
+                  <button class="export-btn" onclick="applyDatePicker()">Apply</button>
+                </div>
+              </div>
+            </div>
+            <div class="calendar-weekdays">
+              <div>Sun</div>
+              <div>Mon</div>
+              <div>Tue</div>
+              <div>Wed</div>
+              <div>Thu</div>
+              <div>Fri</div>
+              <div>Sat</div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+          </div>
+
+          <div class="records-section">
+            <div class="records-header">
+              <h3 id="recordsTitle">Select a date</h3>
+            </div>
+            <div class="attendance-table-container">
+              <table class="attendance-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Subject</th>
+                    <th>Section</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceRecordsList">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+</body>
+</html>

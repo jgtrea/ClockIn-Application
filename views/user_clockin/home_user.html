@@ -1,0 +1,115 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../helper/asset_helper.css">
+  <link rel="stylesheet" href="../../assets/css/pages/user-topbar.css">
+  <meta charset="utf-8">
+  <title>Home — ClockIn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../assets/js/scripts/core/supabase_config.js" defer></script>
+  <script src="../../assets/js/scripts/core/auth-guard.js"></script>
+  <script src="../../assets/js/scripts/user/user_shared.js" defer></script>
+  <script src="../../assets/js/scripts/user/home_user.js" defer></script>
+</head>
+
+<body data-allow-employees="true">
+
+<div class="app">
+  <div class="main">
+    <main class="content">
+      <div class="dashboard-title-wrapper">
+        <div>
+          <h1 id="welcomeMessage">Welcome</h1>
+          <p class="tagline">Here's your attendance overview</p>
+        </div>
+      </div>
+
+      <div class="info-bar" id="currentClassBar">
+        <div class="bar-label">
+          <img src="/assets/img/icons/school.svg" class="svg-icon" alt="school">
+          <span>Current Class</span>
+        </div>
+        <div class="bar-content" id="currentClassContent">
+          <span class="class-name" id="currentClassName">Loading...</span>
+          <span class="class-time" id="classTime"></span>
+        </div>
+        <div class="bar-status">
+          <span class="status-badge" id="classStatus">Checking...</span>
+        </div>
+      </div>
+
+      <div class="info-bar" id="announcementsBar">
+        <div class="bar-label">
+          <img src="/assets/img/icons/campaign.svg" class="svg-icon" alt="campaign">
+          <span>Announcements</span>
+        </div>
+        <div class="bar-content" id="announcementsContent">
+          <span class="announcement-preview" id="latestAnnouncement">Loading...</span>
+        </div>
+        <button class="expand-btn" id="expandAnnouncements" title="View All Announcements">
+          <img src="/assets/img/icons/expand-more.svg" class="svg-icon" alt="expand_more">
+        </button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon present">
+            <img src="/assets/img/icons/check-circle.svg" class="svg-icon" alt="check_circle">
+          </div>
+          <div class="stat-info">
+            <p class="stat-label">Present This Week</p>
+            <p class="stat-value" id="presentCount">--</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon absent">
+            <img src="/assets/img/icons/cancel.svg" class="svg-icon" alt="cancel">
+          </div>
+          <div class="stat-info">
+            <p class="stat-label">Absent This Week</p>
+            <p class="stat-value" id="absentCount">--</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon late">
+            <img src="/assets/img/icons/schedule.svg" class="svg-icon" alt="schedule">
+          </div>
+          <div class="stat-info">
+            <p class="stat-label">Late Arrivals</p>
+            <p class="stat-value" id="lateCount">--</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon total">
+            <img src="/assets/img/icons/event-available.svg" class="svg-icon" alt="event_available">
+          </div>
+          <div class="stat-info">
+            <p class="stat-label">Total Classes</p>
+            <p class="stat-value" id="totalClasses">--</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="announcementsModal" class="modal" style="display: none;">
+  <div class="modal-content announcements-modal">
+    <div class="modal-header">
+      <h2>Announcements</h2>
+      <button class="modal-close" id="closeAnnouncementsModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="announcements-list" id="announcementsList">
+        <p class="no-announcements">No announcements</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,6 +1,8 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/favicon.ico", "dest": "/assets/img/clockin-logo.svg" },
+    { "handle": "filesystem" },
+    { "src": "/", "dest": "/views/index.html" }
   ]
 }

@@ -1,0 +1,121 @@
+/* Confirmation Dialog Styles */
+.confirm-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.confirm-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.confirm-dialog-icon {
+  font-size: 28px;
+  color: #dc2626;
+}
+
+.confirm-dialog-icon img.svg-icon {
+  width: 28px;
+  height: 28px;
+  top: 0;
+  position: static;
+}
+
+.confirm-dialog-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.confirm-dialog-body {
+  margin-bottom: 20px;
+}
+
+.confirm-dialog-body p {
+  margin: 0 0 12px 0;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.confirm-dialog-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirm-dialog-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirm-dialog-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.full-schedule-btn {
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.full-schedule-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.teacher-only-btn {
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+.teacher-only-btn:hover {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+
+.confirm-dialog-btn.cancel-btn {
+  width: 100%;
+  color: #6b7280;
+}
+
+.confirm-dialog-hint {
+  font-size: 12px;
+  color: #9ca3af;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+.confirm-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+}

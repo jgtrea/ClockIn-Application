@@ -1,0 +1,108 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../helper/asset_helper.css">
+  <link rel="stylesheet" href="../../assets/css/pages/user-topbar.css">
+  <meta charset=”UTF-8”>
+  <meta name=”viewport” content=”width=device-width, initial-scale=1.0”>
+  <link rel=”icon” type=”image/svg+xml” href=”/assets/img/icons/clockin-logo.svg”>
+  <title>ClockIn - User Dashboard</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../assets/js/scripts/core/supabase_config.js"></script>
+  <script src="../../assets/js/scripts/core/authentication.js"></script>
+  <script src="../../config/routes.js" defer></script>
+  <script src="../../config/app.js" defer></script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => Router.init(UserRoutes));
+  </script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/ldrs/dist/auto/ring.js"></script>
+</head>
+<body data-allow-employees="true">
+  <div id="page-loader"><l-ring size="50" speed="2" color="#FF725E"></l-ring></div>
+  <script>window.addEventListener('load', () => { const l = document.getElementById('page-loader'); if (l) l.classList.add('hidden'); });</script>
+
+<div class="app">
+  <aside class="sidebar collapsed" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <img src="../../assets/img/icons/clockin-logo.svg" alt="ClockIn Logo" class="brand-logo">
+        <span class="brand-text">ClockIn</span>
+      </div>
+      <button class="hamburger" id="hamburger">
+        <img src="/assets/img/icons/menu.svg" class="svg-icon" alt="menu">
+      </button>
+    </div>
+
+    <nav class="menu">
+      <a href="home_user.html" data-url="home_user.html" class="active">
+        <img src="/assets/img/icons/home.svg" class="svg-icon" alt="home">
+        <span class="label">Home</span>
+      </a>
+      <a href="checkin_user.html" data-url="checkin_user.html">
+        <img src="/assets/img/icons/login.svg" class="svg-icon" alt="login">
+        <span class="label">Check In/Out</span>
+      </a>
+      <a href="schedule_user.html" data-url="schedule_user.html">
+        <img src="/assets/img/icons/calendar-month.svg" class="svg-icon" alt="calendar_month">
+        <span class="label">Schedule</span>
+      </a>
+      <a href="attendance_user.html" data-url="attendance_user.html">
+        <img src="/assets/img/icons/how-to-reg.svg" class="svg-icon" alt="how_to_reg">
+        <span class="label">Attendance</span>
+      </a>
+      <a href="feedback_user.html" data-url="feedback_user.html">
+        <img src="/assets/img/icons/feedback.svg" class="svg-icon" alt="feedback">
+        <span class="label">Feedback</span>
+      </a>
+      <a href="notification_user.html" data-url="notification_user.html">
+        <img src="/assets/img/icons/notifications.svg" class="svg-icon" alt="notifications">
+        <span class="label">Notifications</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="#" id="sidebarLogout">
+        <img src="/assets/img/icons/logout.svg" class="svg-icon" alt="logout">
+        <span class="label">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="search-bar-wrapper">
+        <img src="/assets/img/icons/search.svg" class="svg-icon search-icon" alt="search">
+        <input type="text" id="sectionSearch" placeholder="Search..." autocomplete="off">
+        <div id="searchResults" class="search-results"></div>
+      </div>
+      <div class="profile-wrapper">
+        <div class="profile-circle" id="profileCircle">?</div>
+        <div class="profile-menu" id="profileMenu">
+          <div class="profile-header">
+            <div class="profile-circle" id="profileCircleMenu">?</div>
+            <div class="profile-text">
+              <div class="profile-name" id="profileName">User</div>
+              <div class="profile-email" id="profileEmail"></div>
+            </div>
+          </div>
+          <hr>
+          <a class="menu-item" href="#" onclick="Router.navigateTo('user_profile.html'); return false;">
+            <img src="/assets/img/icons/person.svg" class="svg-icon" alt="person">
+            Profile
+          </a>
+          <hr>
+          <button class="menu-item logout" id="logoutBtn">
+            <img src="/assets/img/icons/logout.svg" class="svg-icon" alt="logout">
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+    
+    <iframe name="contentFrame" src="home_user.html" frameborder="0" id="contentFrame" title="Page Content"></iframe>
+  </main>
+</div>
+
+</body>
+</html>
