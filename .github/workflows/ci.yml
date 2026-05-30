@@ -2,9 +2,9 @@ name: Android CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ mobile ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ mobile ]
 
 permissions:
   contents: read

@@ -2,9 +2,9 @@ name: Semgrep SAST Scan
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ mobile ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ mobile ]
   schedule:
     - cron: '0 0 * * 0'
   workflow_dispatch:
