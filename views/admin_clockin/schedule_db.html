@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>Schedule — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="/assets/img/clockin-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
 
   <link rel="stylesheet" href="../../assets/css/pages/schedule-detail.css">
   <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
@@ -40,37 +40,37 @@
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
               <button class="export-btn" id="gracePeriodBtn" onclick="openGracePeriodModal()">
-                <span class="material-symbols-outlined">timer</span>
+                <img src="/assets/img/icons/timer.svg" class="svg-icon" alt="timer">
                 <span id="gracePeriodBtnLabel">Grace Period</span>
               </button>
               <div class="dropdown-wrapper">
                 <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
-                  <span class="material-symbols-outlined">download</span>
+                  <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
                   Export
                 </button>
                 <div id="exportMenu" class="action-dropdown" style="display: none;">
                   <button class="action-dropdown-item" onclick="exportToCSV()">
-                    <span class="material-symbols-outlined">table_chart</span>
+                    <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                     Export as CSV
                   </button>
                   <button class="action-dropdown-item" onclick="exportToJSON()">
-                    <span class="material-symbols-outlined">code</span>
+                    <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                     Export as JSON
                   </button>
                 </div>
               </div>
               <div class="dropdown-wrapper">
                 <button class="add-user-btn" id="importScheduleBtn" onclick="toggleImportScheduleMenu()">
-                  <span class="material-symbols-outlined">upload</span>
+                  <img src="/assets/img/icons/upload.svg" class="svg-icon" alt="upload">
                   Import
                 </button>
                 <div id="importScheduleMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
                   <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromCSV()">
-                    <span class="material-symbols-outlined">table_chart</span>
+                    <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                     Import from CSV
                   </button>
                   <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromJSON()">
-                    <span class="material-symbols-outlined">code</span>
+                    <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                     Import from JSON
                   </button>
                 </div>
@@ -89,7 +89,7 @@
             </div>
             <div class="table-filter-wrapper">
               <button class="filter-btn" onclick="toggleFilterMenu()">
-                <span class="material-symbols-outlined">filter_list</span>
+                <img src="/assets/img/icons/filter-list.svg" class="svg-icon" alt="filter_list">
                 Filter
               </button>
               <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
@@ -97,30 +97,11 @@
                 <hr class="filter-separator">
                 <div class="filter-footer">
                   <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
-                    <span class="material-symbols-outlined">add</span>
+                    <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                     Add Filter
                   </button>
                   <div class="filter-actions">
                     <button class="export-btn" onclick="applyFilters()">Apply</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="table-filter-wrapper">
-              <button class="filter-btn" onclick="toggleSortMenu()">
-                <span class="material-symbols-outlined">sort</span>
-                Sort
-              </button>
-              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
-                <div id="activeSorts"></div>
-                <hr class="filter-separator">
-                <div class="filter-footer">
-                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
-                    <span class="material-symbols-outlined">add</span>
-                    Add Sort
-                  </button>
-                  <div class="filter-actions">
-                    <button class="export-btn" onclick="applySort()">Sort</button>
                   </div>
                 </div>
               </div>
@@ -136,11 +117,11 @@
           </div>
           <div class="selection-actions">
             <button class="selection-action-btn export-btn" onclick="exportSelectedRows()">
-              <span class="material-symbols-outlined">download</span>
+              <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
               Export CSV
             </button>
             <button class="selection-action-btn export-btn" onclick="exportSelectedRowsJSON()">
-              <span class="material-symbols-outlined">code</span>
+              <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
               Export JSON
             </button>
           </div>
@@ -148,11 +129,11 @@
         <table class="users-table">
           <thead>
             <tr>
-              <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllSchedules" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Employment</th>
-              <th>Total Schedules</th>
+              <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllSchedules" onclick="toggleSelectAll()"><img src="/assets/img/icons/remove.svg" class="svg-icon" alt="remove"></div></th>
+              <th class="sortable-header" onclick="sortTable('name')">Username</th>
+              <th class="sortable-header" onclick="sortTable('email')">Email</th>
+              <th class="sortable-header" onclick="sortTable('employment')">Employment</th>
+              <th class="sortable-header" onclick="sortTable('totalSchedules')">Total Schedules</th>
               <th></th>
             </tr>
           </thead>
@@ -167,17 +148,17 @@
           </div>
           <div class="pagination-right">
             <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
-              <span class="material-symbols-outlined">first_page</span>
+              <img src="/assets/img/icons/first-page.svg" class="svg-icon" alt="first_page">
             </button>
             <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
-              <span class="material-symbols-outlined">chevron_left</span>
+              <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left">
             </button>
             <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
             <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
-              <span class="material-symbols-outlined">chevron_right</span>
+              <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right">
             </button>
             <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
-              <span class="material-symbols-outlined">last_page</span>
+              <img src="/assets/img/icons/last-page.svg" class="svg-icon" alt="last_page">
             </button>
           </div>
         </div>
@@ -192,7 +173,7 @@
 <div id="gracePeriodModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
   <div style="background: white; border-radius: 12px; width: 400px; max-width: 90%; padding: 28px; position: relative;">
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-      <span class="material-symbols-outlined" style="font-size: 24px; color: #FF725E;">timer</span>
+      <img src="/assets/img/icons/timer.svg" class="svg-icon" alt="timer" style="font-size: 24px; color: #FF725E;">
       <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">Grace Period Settings</h2>
       <button onclick="closeGracePeriodModal()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 22px; cursor: pointer; color: #6b7280; line-height: 1;">&times;</button>
     </div>
@@ -234,8 +215,8 @@
 
     <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;">
       <button onclick="closeGracePeriodModal()" class="btn-outline" style="padding: 10px 20px; border-radius: 8px;">Cancel</button>
-      <button onclick="saveGracePeriod()" style="padding: 10px 20px; border-radius: 8px; background: #FF725E; border: none; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-        <span class="material-symbols-outlined" style="font-size: 18px;">save</span>
+      <button onclick="saveGracePeriod()" class="btn-accent" style="padding: 10px 20px; border-radius: 8px; background: #FF725E; border: none; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+        <img src="/assets/img/icons/save.svg" class="svg-icon" alt="save" style="font-size: 18px;">
         Save
       </button>
     </div>

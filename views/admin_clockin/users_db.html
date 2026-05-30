@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>Users — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="/assets/img/clockin-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
 
   <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
   <link rel="stylesheet" href="../../assets/css/pages/user-cards.css">
@@ -30,7 +30,7 @@
 <div id="alertPrompt" class="alert-prompt">
   <span class="alert-prompt-message"></span>
   <button class="alert-prompt-close" onclick="closeAlertPrompt()">
-    <span class="material-symbols-outlined">close</span>
+    <img src="/assets/img/icons/close.svg" class="svg-icon" alt="close">
   </button>
 </div>
 
@@ -40,10 +40,10 @@
     const input = document.getElementById(inputId);
     if (input.type === 'password') {
       input.type = 'text';
-      toggleIcon.textContent = 'visibility_off';
+      toggleIcon.src = '/assets/img/icons/visibility-off.svg';
     } else {
       input.type = 'password';
-      toggleIcon.textContent = 'visibility';
+      toggleIcon.src = '/assets/img/icons/visibility.svg';
     }
   }
 </script>
@@ -61,42 +61,42 @@
           <div style="display: flex; gap: 8px; align-items: center;">
             <div class="dropdown-wrapper">
               <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
-                <span class="material-symbols-outlined">download</span>
+                <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
                 Export
               </button>
               <div id="exportMenu" class="action-dropdown" style="display: none;">
                 <button class="action-dropdown-item" onclick="exportToCSV()">
-                  <span class="material-symbols-outlined">table_chart</span>
+                  <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                   Export as CSV
                 </button>
                 <button class="action-dropdown-item" onclick="exportToJSON()">
-                  <span class="material-symbols-outlined">code</span>
+                  <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                   Export as JSON
                 </button>
               </div>
             </div>
             <div class="dropdown-wrapper">
               <button class="add-user-btn" id="addUserBtn" onclick="toggleAddUserMenu()">
-                <span class="material-symbols-outlined">add</span>
+                <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                 Add User
               </button>
               <div id="addUserMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
                 <button class="action-dropdown-item" onclick="addNewUser()">
-                  <span class="material-symbols-outlined">person_add</span>
+                  <img src="/assets/img/icons/person-add.svg" class="svg-icon" alt="person_add">
                   Add New Data
                 </button>
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); showImportMenu()">
-                  <span class="material-symbols-outlined">upload</span>
+                  <img src="/assets/img/icons/upload.svg" class="svg-icon" alt="upload">
                   Import Data
                 </button>
               </div>
               <div id="importMenu" class="action-dropdown" style="display: none;">
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); importFromCSV()">
-                  <span class="material-symbols-outlined">table_chart</span>
+                  <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                   Import from CSV
                 </button>
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); importFromJSON()">
-                  <span class="material-symbols-outlined">code</span>
+                  <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                   Import from JSON
                 </button>
               </div>
@@ -115,7 +115,7 @@
             </div>
             <div class="table-filter-wrapper">
               <button class="filter-btn" onclick="toggleFilterMenu()">
-                <span class="material-symbols-outlined">filter_list</span>
+                <img src="/assets/img/icons/filter-list.svg" class="svg-icon" alt="filter_list">
                 Filter
               </button>
               <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
@@ -123,30 +123,11 @@
                 <hr class="filter-separator">
                 <div class="filter-footer">
                   <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
-                    <span class="material-symbols-outlined">add</span>
+                    <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                     Add Filter
                   </button>
                   <div class="filter-actions">
                     <button class="export-btn" onclick="applyFilters()">Apply</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="table-filter-wrapper">
-              <button class="filter-btn" onclick="toggleSortMenu()">
-                <span class="material-symbols-outlined">sort</span>
-                Sort
-              </button>
-              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
-                <div id="activeSorts"></div>
-                <hr class="filter-separator">
-                <div class="filter-footer">
-                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
-                    <span class="material-symbols-outlined">add</span>
-                    Add Sort
-                  </button>
-                  <div class="filter-actions">
-                    <button class="export-btn" onclick="applySort()">Sort</button>
                   </div>
                 </div>
               </div>
@@ -163,19 +144,19 @@
           </div>
           <div class="selection-actions">
             <button class="selection-action-btn" onclick="removeDeviceRecords()">
-              <span class="material-symbols-outlined">phonelink_erase</span>
+              <img src="/assets/img/icons/phonelink-erase.svg" class="svg-icon" alt="phonelink_erase">
               Remove Devices
             </button>
             <button class="selection-action-btn export-btn" onclick="exportSelectedRows()">
-              <span class="material-symbols-outlined">download</span>
+              <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
               Export CSV
             </button>
             <button class="selection-action-btn export-btn" onclick="exportSelectedRowsJSON()">
-              <span class="material-symbols-outlined">code</span>
+              <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
               Export JSON
             </button>
             <button class="selection-action-btn delete-btn" onclick="deleteSelectedRows()">
-              <span class="material-symbols-outlined">delete</span>
+              <img src="/assets/img/icons/delete.svg" class="svg-icon" alt="delete">
               Delete
             </button>
           </div>
@@ -183,11 +164,11 @@
         <table class="users-table">
           <thead>
             <tr>
-              <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllUsers" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Employment</th>
-              <th>Date Created</th>
+              <th class="checkbox-col"><div class="select-all-checkbox" id="selectAllUsers" onclick="toggleSelectAll()"><img src="/assets/img/icons/remove.svg" class="svg-icon" alt="remove"></div></th>
+              <th class="sortable-header" onclick="sortTable('name')">Username</th>
+              <th class="sortable-header" onclick="sortTable('email')">Email</th>
+              <th class="sortable-header" onclick="sortTable('employment')">Employment</th>
+              <th class="sortable-header" onclick="sortTable('createdAt')">Date Created</th>
               <th>Device</th>
               <th></th>
             </tr>
@@ -203,17 +184,17 @@
           </div>
           <div class="pagination-right">
             <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
-              <span class="material-symbols-outlined">first_page</span>
+              <img src="/assets/img/icons/first-page.svg" class="svg-icon" alt="first_page">
             </button>
             <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
-              <span class="material-symbols-outlined">chevron_left</span>
+              <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left">
             </button>
             <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
             <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
-              <span class="material-symbols-outlined">chevron_right</span>
+              <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right">
             </button>
             <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
-              <span class="material-symbols-outlined">last_page</span>
+              <img src="/assets/img/icons/last-page.svg" class="svg-icon" alt="last_page">
             </button>
           </div>
         </div>
@@ -250,7 +231,7 @@
         <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Password</label>
         <div style="position: relative;">
           <input type="password" id="addUserPassword" placeholder="Enter password" style="width: 100%; padding: 10px 40px 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
-          <span class="material-symbols-outlined password-toggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;" onclick="togglePasswordVisibility('addUserPassword', this)">visibility</span>
+          <img src="/assets/img/icons/visibility.svg" class="svg-icon password-toggle" alt="visibility" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;" onclick="togglePasswordVisibility('addUserPassword', this)">
         </div>
       </div>
     </div>

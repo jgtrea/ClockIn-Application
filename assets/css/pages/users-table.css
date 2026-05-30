@@ -306,15 +306,34 @@
   accent-color: var(--accent);
 }
 
-.select-all-checkbox .material-symbols-outlined {
+.select-all-checkbox .material-symbols-outlined,
+.select-all-checkbox img.svg-icon {
   display: none;
   color: #fff;
   font-size: 14px;
   line-height: 1;
 }
 
-.select-all-checkbox.has-selection .material-symbols-outlined {
+.select-all-checkbox.has-selection .material-symbols-outlined,
+.select-all-checkbox.has-selection img.svg-icon {
   display: block;
+  filter: brightness(0) invert(1);
+}
+
+.add-user-btn img.svg-icon {
+  filter: brightness(0) invert(1);
+}
+
+.selection-action-btn.delete-btn img.svg-icon {
+  filter: brightness(0) saturate(100%) invert(25%) sepia(92%) saturate(1500%) hue-rotate(348deg) brightness(92%);
+}
+
+.selection-action-btn.export-btn img.svg-icon {
+  filter: brightness(0) saturate(100%) invert(48%) sepia(98%) saturate(516%) hue-rotate(326deg) brightness(109%);
+}
+
+.selection-action-btn.export-btn:hover img.svg-icon {
+  filter: brightness(0) invert(1);
 }
 
 .users-table input[type="checkbox"] {

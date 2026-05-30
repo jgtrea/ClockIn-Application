@@ -108,6 +108,7 @@ html, body {
   .action-buttons { gap: 4px !important; }
   .btn-icon { width: 32px; height: 32px; }
   .btn-icon .material-symbols-outlined { font-size: 14px !important; }
+  .btn-icon img.svg-icon { width: 14px !important; height: 14px !important; }
 
   .user-table-row { padding: 8px 10px !important; min-height: 50px !important; }
   .user-table-row > div { font-size: 12px !important; }

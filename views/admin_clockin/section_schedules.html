@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>Sections — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="/assets/img/clockin-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
 
   <link rel="stylesheet" href="../../assets/css/pages/schedule-detail.css">
   <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
@@ -36,42 +36,42 @@
           <div style="display: flex; gap: 8px; align-items: center;">
             <div class="dropdown-wrapper">
               <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
-                <span class="material-symbols-outlined">download</span>
+                <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
                 Export
               </button>
               <div id="exportMenu" class="action-dropdown" style="display: none;">
                 <button class="action-dropdown-item" onclick="exportToCSV()">
-                  <span class="material-symbols-outlined">table_chart</span>
+                  <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                   Export as CSV
                 </button>
                 <button class="action-dropdown-item" onclick="exportToJSON()">
-                  <span class="material-symbols-outlined">code</span>
+                  <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                   Export as JSON
                 </button>
               </div>
             </div>
             <div class="dropdown-wrapper">
               <button class="add-user-btn" id="addSectionBtn" onclick="toggleAddSectionMenu()">
-                <span class="material-symbols-outlined">add</span>
+                <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                 Add Section
               </button>
               <div id="addSectionMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
                 <button class="action-dropdown-item" onclick="showAddSectionModal()">
-                  <span class="material-symbols-outlined">person_add</span>
+                  <img src="/assets/img/icons/person-add.svg" class="svg-icon" alt="person_add">
                   Add New Section
                 </button>
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); showImportMenu()">
-                  <span class="material-symbols-outlined">upload</span>
+                  <img src="/assets/img/icons/upload.svg" class="svg-icon" alt="upload">
                   Import Data
                 </button>
               </div>
               <div id="importMenu" class="action-dropdown" style="display: none;">
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); importSectionsFromCSV()">
-                  <span class="material-symbols-outlined">table_chart</span>
+                  <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                   Import from CSV
                 </button>
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); importSectionsFromJSON()">
-                  <span class="material-symbols-outlined">code</span>
+                  <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                   Import from JSON
                 </button>
               </div>
@@ -90,7 +90,7 @@
             </div>
             <div class="table-filter-wrapper">
               <button class="filter-btn" onclick="toggleFilterMenu()">
-                <span class="material-symbols-outlined">filter_list</span>
+                <img src="/assets/img/icons/filter-list.svg" class="svg-icon" alt="filter_list">
                 Filter
               </button>
               <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
@@ -98,30 +98,11 @@
                 <hr class="filter-separator">
                 <div class="filter-footer">
                   <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
-                    <span class="material-symbols-outlined">add</span>
+                    <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                     Add Filter
                   </button>
                   <div class="filter-actions">
                     <button class="export-btn" onclick="applyFilters()">Apply</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="table-filter-wrapper">
-              <button class="filter-btn" onclick="toggleSortMenu()">
-                <span class="material-symbols-outlined">sort</span>
-                Sort
-              </button>
-              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
-                <div id="activeSorts"></div>
-                <hr class="filter-separator">
-                <div class="filter-footer">
-                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
-                    <span class="material-symbols-outlined">add</span>
-                    Add Sort
-                  </button>
-                  <div class="filter-actions">
-                    <button class="export-btn" onclick="applySort()">Sort</button>
                   </div>
                 </div>
               </div>
@@ -137,19 +118,19 @@
           </div>
           <div class="selection-actions">
             <button class="selection-action-btn" onclick="removeAdvisorFromSelected()">
-              <span class="material-symbols-outlined">person_remove</span>
+              <img src="/assets/img/icons/person-remove.svg" class="svg-icon" alt="person_remove">
               Remove Advisor
             </button>
             <button class="selection-action-btn export-btn" onclick="exportSelectedRows()">
-              <span class="material-symbols-outlined">download</span>
+              <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
               Export CSV
             </button>
             <button class="selection-action-btn export-btn" onclick="exportSelectedRowsJSON()">
-              <span class="material-symbols-outlined">code</span>
+              <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
               Export JSON
             </button>
             <button class="selection-action-btn" onclick="deleteSelectedSections()">
-              <span class="material-symbols-outlined">delete</span>
+              <img src="/assets/img/icons/delete.svg" class="svg-icon" alt="delete">
               Delete
             </button>
           </div>
@@ -157,11 +138,11 @@
         <table class="users-table">
           <thead>
             <tr>
-              <th class="checkbox-col"><div id="selectAllSections" class="select-all-checkbox" onclick="toggleSelectAll()"><span class="material-symbols-outlined">remove</span></div></th>
-              <th>Section Name</th>
-              <th>Advisor</th>
-              <th>Year Level</th>
-              <th>Total Schedules</th>
+              <th class="checkbox-col"><div id="selectAllSections" class="select-all-checkbox" onclick="toggleSelectAll()"><img src="/assets/img/icons/remove.svg" class="svg-icon" alt="remove"></div></th>
+              <th class="sortable-header" onclick="sortTable('sectionName')">Section Name</th>
+              <th class="sortable-header" onclick="sortTable('advisor')">Advisor</th>
+              <th class="sortable-header" onclick="sortTable('yearLevel')">Year Level</th>
+              <th class="sortable-header" onclick="sortTable('totalSchedules')">Total Schedules</th>
               <th></th>
             </tr>
           </thead>
@@ -176,17 +157,17 @@
           </div>
           <div class="pagination-right">
             <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
-              <span class="material-symbols-outlined">first_page</span>
+              <img src="/assets/img/icons/first-page.svg" class="svg-icon" alt="first_page">
             </button>
             <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
-              <span class="material-symbols-outlined">chevron_left</span>
+              <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left">
             </button>
             <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
             <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
-              <span class="material-symbols-outlined">chevron_right</span>
+              <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right">
             </button>
             <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
-              <span class="material-symbols-outlined">last_page</span>
+              <img src="/assets/img/icons/last-page.svg" class="svg-icon" alt="last_page">
             </button>
           </div>
         </div>

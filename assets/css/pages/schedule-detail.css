@@ -136,8 +136,14 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.btn-icon .material-symbols-outlined {
+.btn-icon .material-symbols-outlined,
+.btn-icon img.svg-icon {
   font-size: 20px;
+  width: 18px;
+  height: 18px;
+  top: 0;
+  position: static;
+  vertical-align: unset;
 }
 
 .edit-btn:hover {
@@ -145,18 +151,16 @@
   border-color: #d1d5db;
 }
 
-.edit-btn .material-symbols-outlined {
-  color: #374151;
-}
+.edit-btn .material-symbols-outlined { color: #374151; }
+.edit-btn img.svg-icon { filter: brightness(0) saturate(100%) invert(27%) sepia(9%) saturate(582%) hue-rotate(183deg) brightness(96%); }
 
 .view-btn:hover {
   background: #f3f4f6;
   border-color: #d1d5db;
 }
 
-.view-btn .material-symbols-outlined {
-  color: #374151;
-}
+.view-btn .material-symbols-outlined { color: #374151; }
+.view-btn img.svg-icon { filter: brightness(0) saturate(100%) invert(27%) sepia(9%) saturate(582%) hue-rotate(183deg) brightness(96%); }
 
 .delete-btn:hover {
   background: #fef2f2;
@@ -172,24 +176,16 @@
   border-color: #374151;
 }
 
-.save-btn:hover .material-symbols-outlined {
-  color: #ffffff;
-}
+.save-btn:hover .material-symbols-outlined { color: #ffffff; }
+.save-btn:hover img.svg-icon { filter: brightness(0) invert(1); }
 
-.save-btn .material-symbols-outlined {
-  font-size: 18px;
-  color: #000000;
-}
+.save-btn .material-symbols-outlined { font-size: 18px; color: #000000; }
+.save-btn img.svg-icon { filter: brightness(0); }
 
-.cancel-btn:hover {
-  background: #fef2f2;
-  border-color: #fecaca;
-}
+.cancel-btn:hover { background: #fef2f2; border-color: #fecaca; }
 
-.cancel-btn .material-symbols-outlined {
-  font-size: 18px;
-  color: #dc2626;
-}
+.cancel-btn .material-symbols-outlined { font-size: 18px; color: #dc2626; }
+.cancel-btn img.svg-icon { filter: brightness(0) saturate(100%) invert(25%) sepia(92%) saturate(1500%) hue-rotate(348deg) brightness(92%); }
 
 /* Add User Button */
 .add-user-btn {
@@ -459,6 +455,15 @@
 
 .selection-action-btn.delete-btn .material-symbols-outlined {
   color: #dc2626;
+}
+
+.add-user-btn img.svg-icon {
+  filter: brightness(0) invert(1);
+}
+
+.delete-btn img.svg-icon,
+.selection-action-btn.delete-btn img.svg-icon {
+  filter: brightness(0) saturate(100%) invert(25%) sepia(92%) saturate(1500%) hue-rotate(348deg) brightness(92%);
 }
 
 .unselect-btn {

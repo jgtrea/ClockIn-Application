@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>Dashboard — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="/assets/img/clockin-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
 
   <link rel="stylesheet" href="../../assets/css/pages/dashboard.css">
   <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
@@ -37,16 +37,16 @@
         <div style="display: flex; gap: 8px; align-items: center;">
           <div class="dropdown-wrapper">
             <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
-              <span class="material-symbols-outlined">download</span>
+              <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
               <span>Export</span>
             </button>
             <div id="exportMenu" class="action-dropdown" style="display: none;">
               <button class="action-dropdown-item" onclick="exportDashboardCSV()">
-                <span class="material-symbols-outlined">table_chart</span>
+                <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                 <span>Export as CSV</span>
               </button>
               <button class="action-dropdown-item" onclick="exportDashboardJSON()">
-                <span class="material-symbols-outlined">code</span>
+                <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                 <span>Export as JSON</span>
               </button>
             </div>
@@ -71,10 +71,10 @@
           <input type="date" id="statsDate" onchange="onStatsDateChanged()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; height: 40px;">
           <div style="margin-left: auto; display: flex; gap: 4px; align-items: center;">
             <button onclick="changeStatsPage(-1)" id="statsPrevBtn" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center; height: 40px;">
-              <span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span>
+              <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left" style="font-size: 18px;">
             </button>
             <button onclick="changeStatsPage(1)" id="statsNextBtn" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; font-size: 12px; cursor: pointer; display: flex; align-items: center; height: 40px;">
-              <span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
+              <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right" style="font-size: 18px;">
             </button>
           </div>
         </div>
@@ -143,9 +143,9 @@
                 <p class="loading-text">Loading recent activity...</p>
               </div>
               <div id="pagination">
-                <button id="prevBtn" onclick="changePage(-1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>
+                <button id="prevBtn" onclick="changePage(-1)" class="pagination-btn"><img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left" style="font-size: 18px;"></button>
                 <span id="pageInfo" class="page-info"></span>
-                <button id="nextBtn" onclick="changePage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
+                <button id="nextBtn" onclick="changePage(1)" class="pagination-btn"><img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right" style="font-size: 18px;"></button>
               </div>
             </div>
             <div class="recent-activity-container recent-activity-half">
@@ -156,9 +156,9 @@
                 <p class="loading-text">Loading section clock-ins...</p>
               </div>
               <div id="sectionPagination">
-                <button id="sectionPrevBtn" onclick="changeSectionPage(-1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>
+                <button id="sectionPrevBtn" onclick="changeSectionPage(-1)" class="pagination-btn"><img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left" style="font-size: 18px;"></button>
                 <span id="sectionPageInfo" class="page-info"></span>
-                <button id="sectionNextBtn" onclick="changeSectionPage(1)" class="pagination-btn"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>
+                <button id="sectionNextBtn" onclick="changeSectionPage(1)" class="pagination-btn"><img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right" style="font-size: 18px;"></button>
               </div>
             </div>
           </div>

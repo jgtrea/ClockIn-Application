@@ -41,16 +41,12 @@ const App = {
 
     overlay?.addEventListener('click', closeSidebar);
 
-    // Close sidebar when entering mobile; re-expand when returning to desktop
+    // Close sidebar on resize to mobile; keep closed on desktop
     let prevMobile = isMobile();
     window.addEventListener('resize', () => {
       const nowMobile = isMobile();
       if (nowMobile && !prevMobile) {
         closeSidebar();
-      } else if (!nowMobile && prevMobile) {
-        overlay?.classList.remove('active');
-        sidebar.classList.add('expanded');
-        sidebar.classList.remove('collapsed');
       } else if (!nowMobile) {
         overlay?.classList.remove('active');
       }

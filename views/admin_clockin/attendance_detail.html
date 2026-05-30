@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>Attendance Details — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="/assets/img/clockin-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
 
   <link rel="stylesheet" href="../../assets/css/pages/attendance-detail-admin.css">
   <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
@@ -27,7 +27,7 @@
         <div class="dashboard-title-wrapper">
           <div>
             <button class="btn-outline" onclick="window.location.href='attendance_db.html'" style="margin-bottom: 12px;">
-              <span class="material-symbols-outlined">arrow_back</span>
+              <img src="/assets/img/icons/arrow-back.svg" class="svg-icon" alt="arrow_back">
               Back to Attendance
             </button>
             <h1 id="userName">Attendance Records</h1>
@@ -36,16 +36,16 @@
           <div style="display: flex; gap: 8px; align-items: center;">
             <div class="dropdown-wrapper">
               <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
-                <span class="material-symbols-outlined">download</span>
+                <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
                 Export
               </button>
               <div id="exportMenu" class="action-dropdown" style="display: none;">
                 <button class="action-dropdown-item" onclick="exportAttendanceDetailCSV()">
-                  <span class="material-symbols-outlined">table_chart</span>
+                  <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                   Export as CSV
                 </button>
                 <button class="action-dropdown-item" onclick="exportAttendanceDetailJSON()">
-                  <span class="material-symbols-outlined">code</span>
+                  <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                   Export as JSON
                 </button>
               </div>
@@ -64,7 +64,7 @@
           </div>
           <div class="table-filter-wrapper">
             <button class="filter-btn" onclick="toggleFilterMenu()">
-              <span class="material-symbols-outlined">filter_list</span>
+              <img src="/assets/img/icons/filter-list.svg" class="svg-icon" alt="filter_list">
               Filter
             </button>
             <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none; z-index: 10000;">
@@ -72,7 +72,7 @@
               <hr class="filter-separator">
               <div class="filter-footer">
                 <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
-                  <span class="material-symbols-outlined">add</span>
+                  <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                   Add Filter
                 </button>
                 <div class="filter-actions">
@@ -91,11 +91,11 @@
         <div class="calendar-section">
           <div class="calendar-header">
             <button class="btn-icon" onclick="previousMonth()">
-              <span class="material-symbols-outlined">chevron_left</span>
+              <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left">
             </button>
             <h2 id="currentMonth" onclick="openDatePicker()" style="cursor: pointer;"></h2>
             <button class="btn-icon" onclick="nextMonth()">
-              <span class="material-symbols-outlined">chevron_right</span>
+              <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right">
             </button>
           </div>
           <div id="datePickerModal" class="date-picker-modal" style="display: none;">
@@ -177,7 +177,7 @@ window.addFilterRow = function() {
     <span>:</span>
     <input type="text" class="filter-value-input" placeholder="Enter value...">
     <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
-      <span class="material-symbols-outlined">close</span>
+      <img src="/assets/img/icons/close.svg" class="svg-icon" alt="close">
     </button>
   `;
   

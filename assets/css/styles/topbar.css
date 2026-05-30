@@ -36,6 +36,10 @@
   flex-shrink: 0;
 }
 
+.search-icon.svg-icon {
+  filter: brightness(0) saturate(100%) invert(50%) sepia(8%) saturate(400%) hue-rotate(180deg) brightness(95%);
+}
+
 .search-bar-wrapper input {
   border: none;
   background: transparent;

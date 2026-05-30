@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>Schedule Details — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="/assets/img/clockin-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
 
   <link rel="stylesheet" href="../../assets/css/pages/schedule-detail.css">
   <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
@@ -29,7 +29,7 @@
         <div class="dashboard-title-wrapper">
           <div>
             <button class="btn-outline" onclick="window.location.href='schedule_db.html'" style="margin-bottom: 12px;">
-              <span class="material-symbols-outlined">arrow_back</span>
+              <img src="/assets/img/icons/arrow-back.svg" class="svg-icon" alt="arrow_back">
               Back to Schedules
             </button>
             <h1 id="userName">Schedule Details</h1>
@@ -38,42 +38,42 @@
           <div style="display: flex; gap: 8px; align-items: center;">
             <div class="dropdown-wrapper">
               <button class="export-btn" id="exportBtn" onclick="toggleExportMenu()">
-                <span class="material-symbols-outlined">download</span>
+                <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
                 Export
               </button>
               <div id="exportMenu" class="action-dropdown" style="display: none;">
                 <button class="action-dropdown-item" onclick="exportAllSchedulesCSV()">
-                  <span class="material-symbols-outlined">table_chart</span>
+                  <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                   Export as CSV
                 </button>
                 <button class="action-dropdown-item" onclick="exportAllSchedulesJSON()">
-                  <span class="material-symbols-outlined">code</span>
+                  <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                   Export as JSON
                 </button>
               </div>
             </div>
             <div class="dropdown-wrapper">
               <button class="add-user-btn" id="addScheduleBtn" onclick="toggleAddScheduleMenu()">
-                <span class="material-symbols-outlined">add</span>
+                <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                 Add Schedule
               </button>
               <div id="addScheduleMenu" class="action-dropdown action-dropdown-orange" style="display: none;">
                 <button class="action-dropdown-item" onclick="showAddExistingScheduleModal()">
-                  <span class="material-symbols-outlined">playlist_add</span>
+                  <img src="/assets/img/icons/playlist-add.svg" class="svg-icon" alt="playlist_add">
                   Add New Schedule
                 </button>
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); showImportMenu()">
-                  <span class="material-symbols-outlined">upload</span>
+                  <img src="/assets/img/icons/upload.svg" class="svg-icon" alt="upload">
                   Import Data
                 </button>
               </div>
               <div id="importMenu" class="action-dropdown" style="display: none;">
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromCSV()">
-                  <span class="material-symbols-outlined">table_chart</span>
+                  <img src="/assets/img/icons/table-chart.svg" class="svg-icon" alt="table_chart">
                   Import from CSV
                 </button>
                 <button class="action-dropdown-item" onclick="event.stopPropagation(); importSchedulesFromJSON()">
-                  <span class="material-symbols-outlined">code</span>
+                  <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
                   Import from JSON
                 </button>
               </div>
@@ -92,7 +92,7 @@
             </div>
             <div class="table-filter-wrapper">
               <button class="filter-btn" onclick="toggleFilterMenu()">
-                <span class="material-symbols-outlined">filter_list</span>
+                <img src="/assets/img/icons/filter-list.svg" class="svg-icon" alt="filter_list">
                 Filter
               </button>
               <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none; z-index: 1000;">
@@ -100,7 +100,7 @@
                 <hr class="filter-separator">
                 <div class="filter-footer">
                   <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
-                    <span class="material-symbols-outlined">add</span>
+                    <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                     Add Filter
                   </button>
                   <div class="filter-actions">
@@ -121,15 +121,15 @@
           </div>
           <div class="selection-actions">
             <button class="selection-action-btn" onclick="exportSelectedSchedulesCSV()">
-              <span class="material-symbols-outlined">download</span>
+              <img src="/assets/img/icons/download.svg" class="svg-icon" alt="download">
               Export CSV
             </button>
             <button class="selection-action-btn" onclick="exportSelectedSchedulesJSON()">
-              <span class="material-symbols-outlined">code</span>
+              <img src="/assets/img/icons/code.svg" class="svg-icon" alt="code">
               Export JSON
             </button>
             <button class="selection-action-btn delete-btn" onclick="deleteSelectedSchedules()">
-              <span class="material-symbols-outlined">delete</span>
+              <img src="/assets/img/icons/delete.svg" class="svg-icon" alt="delete">
               Delete
             </button>
           </div>
@@ -137,7 +137,7 @@
         
         <div class="select-all-wrapper" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border-radius: 8px; margin: 0 16px 16px 16px;">
           <div class="select-all-checkbox" id="selectAllSchedules" onclick="toggleSelectAll()">
-            <span class="material-symbols-outlined">remove</span>
+            <img src="/assets/img/icons/remove.svg" class="svg-icon" alt="remove">
           </div>
           <span style="font-size: 14px; color: #64748b; line-height: normal;">Select All</span>
         </div>
@@ -158,18 +158,18 @@
 <div id="deleteConfirmDialog" class="confirm-dialog-overlay" style="display: none;">
   <div class="confirm-dialog">
     <div class="confirm-dialog-header">
-      <span class="material-symbols-outlined confirm-dialog-icon">delete_warning</span>
+      <img src="/assets/img/icons/delete-warning.svg" class="svg-icon confirm-dialog-icon" alt="delete_warning">
       <h3>Delete Schedule</h3>
     </div>
     <div class="confirm-dialog-body">
       <p>What would you like to do?</p>
       <div class="confirm-dialog-options">
         <button class="confirm-dialog-btn full-schedule-btn" onclick="confirmDeleteSchedule('full')">
-          <span class="material-symbols-outlined">delete_forever</span>
+          <img src="/assets/img/icons/delete-forever.svg" class="svg-icon" alt="delete_forever">
           Remove Entire Schedule
         </button>
         <button class="confirm-dialog-btn teacher-only-btn" onclick="confirmDeleteSchedule('teacher')">
-          <span class="material-symbols-outlined">person_remove</span>
+          <img src="/assets/img/icons/person-remove.svg" class="svg-icon" alt="person_remove">
           Remove Teacher Only
         </button>
       </div>
@@ -185,7 +185,7 @@
 <div id="addExistingScheduleModal" class="confirm-dialog-overlay" style="display: none;">
   <div class="confirm-dialog" style="max-width: 800px; max-height: 80vh; display: flex; flex-direction: column;">
     <div class="confirm-dialog-header">
-      <span class="material-symbols-outlined confirm-dialog-icon" style="color: #FF725E;">playlist_add</span>
+      <img src="/assets/img/icons/playlist-add.svg" class="svg-icon confirm-dialog-icon" alt="playlist_add" style="color: #FF725E;">
       <h3>Add Schedule</h3>
     </div>
     <div class="modal-filter-bar" style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
@@ -250,7 +250,7 @@
       <div style="display: flex; gap: 8px;">
         <button class="confirm-dialog-btn cancel-btn" onclick="closeAddExistingScheduleModal()" style="width: auto; padding: 10px 20px;">Cancel</button>
         <button class="confirm-dialog-btn" onclick="assignSelectedSchedules()" style="width: auto; padding: 10px 20px; background: #FF725E; color: white; border-color: #FF725E;">
-          <span class="material-symbols-outlined">check</span>
+          <img src="/assets/img/icons/check.svg" class="svg-icon" alt="check">
           Assign Selected
         </button>
       </div>

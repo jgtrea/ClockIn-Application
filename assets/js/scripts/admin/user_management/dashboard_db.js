@@ -117,24 +117,32 @@ function toggleFilterMenu() {
   }
 }
 
-// Toggle Sort Dropdown
-function toggleSortMenu() {
-  const sortMenu = document.getElementById('sortMenu');
-  const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-  const isOpen = sortMenu && sortMenu.style.display === 'block';
-  
-  if (sortMenu) {
-    sortMenu.style.display = isOpen ? 'none' : 'block';
-  }
-  const filterMenu = document.getElementById('filterMenu');
-  if (filterMenu) {
-    filterMenu.style.display = 'none';
-  }
-  
-  if (sortWrapper) {
-    sortWrapper.classList.toggle('active', !isOpen);
-  }
+let rcSortCol = 'date';
+let rcSortAsc = false;
+
+function applyCurrentSort() {
+  filteredRecords = [...filteredRecords].sort((a, b) => {
+    const va = String(a[rcSortCol] || '').toLowerCase();
+    const vb = String(b[rcSortCol] || '').toLowerCase();
+    if (va === vb) return 0;
+    return (va > vb ? 1 : -1) * (rcSortAsc ? 1 : -1);
+  });
 }
+
+function updateSortHeaders() {
+  document.querySelectorAll('th.sortable-header').forEach(th => th.classList.remove('asc', 'desc'));
+  const active = document.querySelector(`th.sortable-header[onclick="sortTable('${rcSortCol}')"]`);
+  if (active) active.classList.add(rcSortAsc ? 'asc' : 'desc');
+}
+
+window.sortTable = function(col) {
+  rcSortAsc = rcSortCol === col ? !rcSortAsc : true;
+  rcSortCol = col;
+  applyCurrentSort();
+  updateSortHeaders();
+  currentPage = 1;
+  renderPage();
+};
 
 // Column options for recent clockin filter
 const recentClockinFilterColumns = [
@@ -180,33 +188,6 @@ window.addFilterRow = function() {
   `;
   
   activeFilters.appendChild(filterRow);
-};
-
-// Add Sort Row with column options for recent clockin
-window.addSortRow = function() {
-  const activeSorts = document.getElementById('activeSorts');
-  const sortRow = document.createElement('div');
-  sortRow.className = 'filter-row';
-  
-  const optionsHtml = recentClockinSortColumns.map(col => 
-    `<option value="${col.value}">${col.label}</option>`
-  ).join('');
-  
-  sortRow.innerHTML = `
-    <select class="filter-column-select">
-      ${optionsHtml}
-    </select>
-    <span>:</span>
-    <select class="filter-column-select">
-      <option value="asc">Ascending</option>
-      <option value="desc">Descending</option>
-    </select>
-    <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
-      <span class="material-symbols-outlined">close</span>
-    </button>
-  `;
-  
-  activeSorts.appendChild(sortRow);
 };
 
 window.applyFilters = function() {
@@ -260,64 +241,11 @@ window.applyFilters = function() {
   
   currentPage = 1;
   toggleFilterMenu();
-  
+
   const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
   if (filterWrapper) filterWrapper.classList.remove('active');
-  
-  applySort();
-  renderPage();
-};
 
-window.applySort = function() {
-  if (!filteredRecords || filteredRecords.length === 0) {
-    console.warn('No data available for sorting');
-    return;
-  }
-  
-  const sortRows = document.querySelectorAll('#activeSorts .filter-row');
-  const sorts = [];
-  
-  sortRows.forEach(row => {
-    const selects = row.querySelectorAll('select');
-    if (selects.length >= 2) {
-      const column = selects[0].value;
-      const orderValue = selects[1].value;
-      sorts.push({
-        column: column,
-        ascending: orderValue === 'asc'
-      });
-    }
-  });
-  
-  if (sorts.length > 0) {
-    const sortedData = [...filteredRecords].sort((a, b) => {
-      for (const sort of sorts) {
-        const { column, ascending } = sort;
-        let valueA, valueB;
-        
-        if (column === 'date' || column === 'timeIn' || column === 'timeOut') {
-          valueA = a[column] || '';
-          valueB = b[column] || '';
-        } else {
-          valueA = (a[column] || '').toLowerCase();
-          valueB = (b[column] || '').toLowerCase();
-        }
-        
-        if (valueA !== valueB) {
-          return ascending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
-        }
-      }
-      return 0;
-    });
-    filteredRecords = sortedData;
-  }
-  
-  currentPage = 1;
-  toggleSortMenu();
-  
-  const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-  if (sortWrapper) sortWrapper.classList.remove('active');
-  
+  applyCurrentSort();
   renderPage();
 };
 
@@ -706,13 +634,14 @@ async function loadRecentActivity() {
       });
     } else {
       filteredRecords = [...allRecords];
-      
+      applyCurrentSort();
+      updateSortHeaders();
+
       const totalRecentClockinsEl = document.getElementById('totalRecentClockins');
       if (totalRecentClockinsEl) {
         totalRecentClockinsEl.textContent = filteredRecords.length;
       }
-      
-      // Set total records count for recent clockin page
+
       const totalRecordsCount = document.getElementById('totalRecordsCount');
       if (totalRecordsCount) {
         totalRecordsCount.textContent = filteredRecords.length;
@@ -747,13 +676,32 @@ function renderPage() {
   const endIndex = startIndex + recordsPerPage;
   const pageRecords = filteredRecords.slice(startIndex, endIndex);
   
+  const isRecentPage = document.body.dataset.page === 'recent_clockin';
+
   activityFeed.innerHTML = pageRecords.map(record => {
     const status = record.status || 'Present';
     const statusLower = status.toLowerCase();
-    let statusClass = statusLower;
-    if (statusLower === 'incomplete') {
-      statusClass = 'unattended';
+    const statusClass = statusLower === 'incomplete' ? 'unattended' : statusLower;
+
+    if (isRecentPage) {
+      return `
+      <tr class="user-table-row">
+        <td>
+          <div style="font-weight: 600; font-size: 14px; color: #111827;">${record.userName}</div>
+          <div style="font-size: 12px; color: #9ca3af;">${record.date}</div>
+        </td>
+        <td>
+          <div style="font-size: 13px; color: #374151;">${record.section || 'N/A'}</div>
+          <div style="font-size: 12px; color: #9ca3af;">${record.subject || 'N/A'}</div>
+        </td>
+        <td>
+          <div style="font-weight: 600; color: #10B981; font-size: 13px;">${record.timeIn}</div>
+          <div style="font-weight: 600; color: #FF725E; font-size: 13px;">${record.timeOut}</div>
+        </td>
+        <td><span class="status-badge status-${statusClass}">${status}</span></td>
+      </tr>`;
     }
+
     return `
     <div class="user-table-row" style="background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 16px; display: table; width: 100%; table-layout: fixed;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
       <div style="display: table-cell; vertical-align: middle; width: 25%; padding-right: 20px;">
@@ -771,8 +719,8 @@ function renderPage() {
       <div style="display: table-cell; vertical-align: middle; width: 25%; padding-left: 20px;">
         <span class="status-badge status-${statusClass}" style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">${status}</span>
       </div>
-    </div>
-  `; }).join('');
+    </div>`;
+  }).join('');
   
   if (pagination && pageInfo && prevBtn && nextBtn) {
     if (totalPages > 1) {

@@ -1,3 +1,33 @@
+/* ── SVG icons ───────────────────────────────────────────────── */
+
+img.svg-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: text-bottom;
+  flex-shrink: 0;
+  position: relative;
+  top: -1px;
+}
+
+/* ── Page loader ─────────────────────────────────────────────── */
+
+#page-loader {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  transition: opacity 0.3s ease;
+}
+
+#page-loader.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ── Dropdowns ───────────────────────────────────────────────── */
 
 .dropdown-wrapper { position: relative; }
@@ -66,6 +96,31 @@
 }
 
 .export-btn .material-symbols-outlined { font-size: 20px; }
+
+.export-btn img.svg-icon {
+  filter: brightness(0) saturate(100%) invert(48%) sepia(98%) saturate(516%) hue-rotate(326deg) brightness(109%);
+}
+
+.export-btn:hover img.svg-icon {
+  filter: brightness(0) invert(1);
+}
+
+.filter-btn img.svg-icon {
+  filter: brightness(0) saturate(100%) invert(27%) sepia(9%) saturate(582%) hue-rotate(183deg) brightness(96%);
+}
+
+.btn-primary img.svg-icon,
+.btn-accent img.svg-icon {
+  filter: brightness(0) invert(1);
+}
+
+.btn-outline img.svg-icon {
+  filter: brightness(0) saturate(100%) invert(10%) sepia(5%) saturate(200%) brightness(90%);
+}
+
+.selection-action-btn img.svg-icon {
+  filter: brightness(0) saturate(100%) invert(27%) sepia(9%) saturate(582%) hue-rotate(183deg) brightness(96%);
+}
 
 /* ── Filters ─────────────────────────────────────────────────── */
 

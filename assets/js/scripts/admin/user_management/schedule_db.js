@@ -73,6 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       filteredUsers = [...users];
+      applyCurrentSort();
+      updateSortHeaders();
       Paginate.setTotalItems(users.length);
       Paginate.setPage(1);
       renderSchedules();
@@ -364,33 +366,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (filterMenu) {
       filterMenu.style.display = isOpen ? 'none' : 'block';
     }
-    const sortMenu = document.getElementById('sortMenu');
-    if (sortMenu) {
-      sortMenu.style.display = 'none';
-    }
-    
     if (filterWrapper) {
       filterWrapper.classList.toggle('active', !isOpen);
     }
   };
 
-  window.toggleSortMenu = function() {
-    const sortMenu = document.getElementById('sortMenu');
-    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-    const isOpen = sortMenu && sortMenu.style.display === 'block';
-    
-    if (sortMenu) {
-      sortMenu.style.display = isOpen ? 'none' : 'block';
-    }
-    const filterMenu = document.getElementById('filterMenu');
-    if (filterMenu) {
-      filterMenu.style.display = 'none';
-    }
-    
-    if (sortWrapper) {
-      sortWrapper.classList.toggle('active', !isOpen);
-    }
-  };
 
   window.toggleExportMenu = function() {
     const exportMenu = document.getElementById('exportMenu');
@@ -420,30 +400,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeFilters.appendChild(filterRow);
   };
 
-  window.addSortRow = function() {
-    const activeSorts = document.getElementById('activeSorts');
-    const sortRow = document.createElement('div');
-    sortRow.className = 'filter-row';
-    
-    sortRow.innerHTML = `
-      <select class="filter-column-select">
-        <option value="name">Username</option>
-        <option value="email">Email</option>
-        <option value="employment">Employment</option>
-        <option value="totalSchedules">Total Schedules</option>
-      </select>
-      <span>:</span>
-      <select class="filter-column-select">
-        <option value="asc">Ascending</option>
-        <option value="desc">Descending</option>
-      </select>
-      <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    `;
-    
-    activeSorts.appendChild(sortRow);
-  };
 
   window.applyFilters = function() {
     if (!users || users.length === 0) {
@@ -480,80 +436,53 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('filterStatus').textContent = `Filtered (${filters.length})`;
     }
     
+    applyCurrentSort();
     Paginate.setTotalItems(filteredUsers.length);
     Paginate.setPage(1);
     toggleFilterMenu();
-    
+
     const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
     if (filterWrapper) filterWrapper.classList.remove('active');
-    
+
     renderSchedules();
   };
 
-  window.applySort = function() {
-    if (!filteredUsers || filteredUsers.length === 0) {
-      console.warn('No data available for sorting');
-      return;
-    }
-    
-    const sortRows = document.querySelectorAll('#activeSorts .filter-row');
-    const sorts = [];
-    
-    sortRows.forEach(row => {
-      const selects = row.querySelectorAll('select');
-      if (selects.length >= 2) {
-        const column = selects[0].value;
-        const orderValue = selects[1].value;
-        sorts.push({
-          column: column,
-          ascending: orderValue === 'asc'
-        });
-      }
+  let sortCol = 'name';
+  let sortAsc = true;
+
+  function applyCurrentSort() {
+    filteredUsers = [...filteredUsers].sort((a, b) => {
+      const isNum = sortCol === 'totalSchedules';
+      const va = isNum ? (a[sortCol] || 0) : String(a[sortCol] || '').toLowerCase();
+      const vb = isNum ? (b[sortCol] || 0) : String(b[sortCol] || '').toLowerCase();
+      if (va === vb) return 0;
+      return (va > vb ? 1 : -1) * (sortAsc ? 1 : -1);
     });
-    
-    if (sorts.length > 0) {
-      const sortedData = [...filteredUsers].sort((a, b) => {
-        for (const sort of sorts) {
-          const { column, ascending } = sort;
-          let valueA = a[column] || '';
-          let valueB = b[column] || '';
-          
-          if (column !== 'totalSchedules') {
-            valueA = String(valueA).toLowerCase();
-            valueB = String(valueB).toLowerCase();
-          }
-          
-          if (valueA !== valueB) {
-            return ascending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
-          }
-        }
-        return 0;
-      });
-      filteredUsers = sortedData;
-    }
-    
+  }
+
+  function updateSortHeaders() {
+    document.querySelectorAll('th.sortable-header').forEach(th => th.classList.remove('asc', 'desc'));
+    const active = document.querySelector(`th.sortable-header[onclick="sortTable('${sortCol}')"]`);
+    if (active) active.classList.add(sortAsc ? 'asc' : 'desc');
+  }
+
+  window.sortTable = function(col) {
+    sortAsc = sortCol === col ? !sortAsc : true;
+    sortCol = col;
+    applyCurrentSort();
+    updateSortHeaders();
     Paginate.setPage(1);
-    toggleSortMenu();
-    
-    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-    if (sortWrapper) sortWrapper.classList.remove('active');
-    
     renderSchedules();
   };
 
   document.addEventListener('click', function(event) {
     const filterWrapper = document.querySelector('.table-filter-wrapper');
     const filterMenu = document.getElementById('filterMenu');
-    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-    const sortMenu = document.getElementById('sortMenu');
     const exportBtn = document.getElementById('exportBtn');
     const exportMenu = document.getElementById('exportMenu');
-    
+
     if (filterWrapper && filterMenu && !filterWrapper.contains(event.target)) {
       filterMenu.style.display = 'none';
-    }
-    if (sortWrapper && sortMenu && !sortWrapper.contains(event.target)) {
-      sortMenu.style.display = 'none';
     }
     if (exportBtn && exportMenu && !exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
       exportMenu.style.display = 'none';

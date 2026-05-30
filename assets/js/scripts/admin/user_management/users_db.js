@@ -215,6 +215,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     DataTableManager.setData(users);
     
     filteredUsers = [...users];
+    applyCurrentSort();
+    updateSortHeaders();
     DataTableManager.setSearchTerm('');
     DataTableManager.applySearch(['name', 'email', 'employment']);
     Paginate.setTotalItems(users.length);
@@ -700,33 +702,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (filterMenu) {
       filterMenu.style.display = isOpen ? 'none' : 'block';
     }
-    const sortMenu = document.getElementById('sortMenu');
-    if (sortMenu) {
-      sortMenu.style.display = 'none';
-    }
-    
     if (filterWrapper) {
       filterWrapper.classList.toggle('active', !isOpen);
     }
   };
 
-  window.toggleSortMenu = function() {
-    const sortMenu = document.getElementById('sortMenu');
-    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-    const isOpen = sortMenu && sortMenu.style.display === 'block';
-    
-    if (sortMenu) {
-      sortMenu.style.display = isOpen ? 'none' : 'block';
-    }
-    const filterMenu = document.getElementById('filterMenu');
-    if (filterMenu) {
-      filterMenu.style.display = 'none';
-    }
-    
-    if (sortWrapper) {
-      sortWrapper.classList.toggle('active', !isOpen);
-    }
-  };
 
   window.toggleAddUserMenu = function() {
     const addUserMenu = document.getElementById('addUserMenu');
@@ -786,30 +766,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeFilters.appendChild(filterRow);
   };
 
-  window.addSortRow = function() {
-    const activeSorts = document.getElementById('activeSorts');
-    const sortRow = document.createElement('div');
-    sortRow.className = 'filter-row';
-    
-    sortRow.innerHTML = `
-      <select class="filter-column-select">
-        <option value="name">Username</option>
-        <option value="email">Email</option>
-        <option value="employment">Employment</option>
-        <option value="createdAt">Date Created</option>
-      </select>
-      <span>:</span>
-      <select class="filter-column-select">
-        <option value="asc">Ascending</option>
-        <option value="desc">Descending</option>
-      </select>
-      <button class="remove-filter-btn" onclick="event.stopPropagation(); this.parentElement.remove()">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    `;
-    
-    activeSorts.appendChild(sortRow);
-  };
 
   window.applyFilters = function() {
     if (!users || users.length === 0) {
@@ -853,67 +809,42 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('filterStatus').textContent = `Filtered (${filters.length})`;
     }
     
+    applyCurrentSort();
     Paginate.setTotalItems(filteredUsers.length);
     Paginate.setPage(1);
     toggleFilterMenu();
-    
+
     const filterWrapper = document.querySelector('.table-filter-wrapper:first-child');
     if (filterWrapper) filterWrapper.classList.remove('active');
-    
+
     renderUsers();
   };
 
-  window.applySort = function() {
-    if (!filteredUsers || filteredUsers.length === 0) {
-      console.warn('No data available for sorting');
-      return;
-    }
-    
-    const sortRows = document.querySelectorAll('#activeSorts .filter-row');
-    const sorts = [];
-    
-    sortRows.forEach(row => {
-      const selects = row.querySelectorAll('select');
-      if (selects.length >= 2) {
-        const column = selects[0].value;
-        const orderValue = selects[1].value;
-        sorts.push({
-          column: column,
-          ascending: orderValue === 'asc'
-        });
-      }
+  let sortCol = 'name';
+  let sortAsc = true;
+
+  function applyCurrentSort() {
+    filteredUsers = [...filteredUsers].sort((a, b) => {
+      const va = sortCol === 'createdAt' ? (a[sortCol] || '') : String(a[sortCol] || '').toLowerCase();
+      const vb = sortCol === 'createdAt' ? (b[sortCol] || '') : String(b[sortCol] || '').toLowerCase();
+      if (va === vb) return 0;
+      return (va > vb ? 1 : -1) * (sortAsc ? 1 : -1);
     });
-    
-    if (sorts.length > 0) {
-      const sortedData = [...filteredUsers].sort((a, b) => {
-        for (const sort of sorts) {
-          const { column, ascending } = sort;
-          let valueA, valueB;
-          
-          if (column === 'createdAt') {
-            valueA = a.createdAt || '';
-            valueB = b.createdAt || '';
-          } else {
-            valueA = (a[column] || '').toLowerCase();
-            valueB = (b[column] || '').toLowerCase();
-          }
-          
-          if (valueA !== valueB) {
-            return ascending ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
-          }
-        }
-        return 0;
-      });
-      filteredUsers = sortedData;
-      DataTableManager.setFilteredData(filteredUsers);
-    }
-    
+    DataTableManager.setFilteredData(filteredUsers);
+  }
+
+  function updateSortHeaders() {
+    document.querySelectorAll('th.sortable-header').forEach(th => th.classList.remove('asc', 'desc'));
+    const active = document.querySelector(`th.sortable-header[onclick="sortTable('${sortCol}')"]`);
+    if (active) active.classList.add(sortAsc ? 'asc' : 'desc');
+  }
+
+  window.sortTable = function(col) {
+    sortAsc = sortCol === col ? !sortAsc : true;
+    sortCol = col;
+    applyCurrentSort();
+    updateSortHeaders();
     Paginate.setPage(1);
-    toggleSortMenu();
-    
-    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-    if (sortWrapper) sortWrapper.classList.remove('active');
-    
     renderUsers();
   };
 
@@ -1116,9 +1047,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterWrapper = document.querySelector('.table-filter-wrapper');
     const filterMenu = document.getElementById('filterMenu');
     const filterBtn = document.querySelector('.table-filter-wrapper:first-child .filter-btn');
-    const sortWrapper = document.querySelector('.table-filter-wrapper:last-child');
-    const sortMenu = document.getElementById('sortMenu');
-    const sortBtn = document.querySelector('.table-filter-wrapper:last-child .filter-btn');
     const addUserBtn = document.getElementById('addUserBtn');
     const addUserMenu = document.getElementById('addUserMenu');
     const exportBtn = document.getElementById('exportBtn');
@@ -1128,10 +1056,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (filterWrapper && filterMenu && !filterWrapper.contains(event.target)) {
       filterMenu.style.display = 'none';
       if (filterBtn) filterBtn.classList.remove('active');
-    }
-    if (sortWrapper && sortMenu && !sortWrapper.contains(event.target)) {
-      sortMenu.style.display = 'none';
-      if (sortBtn) sortBtn.classList.remove('active');
     }
     if (addUserBtn && addUserMenu && !addUserBtn.contains(event.target) && !addUserMenu.contains(event.target)) {
       addUserMenu.style.display = 'none';

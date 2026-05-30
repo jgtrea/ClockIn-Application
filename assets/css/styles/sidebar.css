@@ -119,6 +119,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-top: 16px;
 }
 
 .menu a {
@@ -149,7 +150,8 @@
   background: var(--accent);
 }
 
-.menu a .material-symbols-outlined {
+.menu a .material-symbols-outlined,
+.menu a img.svg-icon {
   width: 20px;
   height: 20px;
   font-size: 20px;
@@ -158,6 +160,14 @@
   justify-content: center;
   margin: 0 25px 0 32px;
   flex-shrink: 0;
+  top: 0;
+  position: static;
+  vertical-align: unset;
+  filter: brightness(0) saturate(100%) invert(27%) sepia(9%) saturate(582%) hue-rotate(183deg) brightness(96%);
+}
+
+.menu a.active img.svg-icon {
+  filter: brightness(0);
 }
 
 .menu a .label {
@@ -211,7 +221,8 @@
   background: var(--accent);
 }
 
-.sidebar-footer a .material-symbols-outlined {
+.sidebar-footer a .material-symbols-outlined,
+.sidebar-footer a img.svg-icon {
   width: 20px;
   height: 20px;
   font-size: 20px;
@@ -220,6 +231,10 @@
   justify-content: center;
   margin: 0 25px 0 32px;
   flex-shrink: 0;
+  top: 0;
+  position: static;
+  vertical-align: unset;
+  filter: brightness(0) saturate(100%) invert(27%) sepia(9%) saturate(582%) hue-rotate(183deg) brightness(96%);
 }
 
 .sidebar-footer a .label {

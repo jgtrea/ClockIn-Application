@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>Recent Clock-in — ClockIn</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="/assets/img/clockin-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icons/clockin-logo.svg">
 
   <link rel="stylesheet" href="../../assets/css/pages/user-cards.css">
   <link rel="stylesheet" href="../../assets/css/pages/users-table.css">
@@ -41,7 +41,7 @@
             </div>
             <div class="table-filter-wrapper">
               <button class="filter-btn" onclick="toggleFilterMenu()">
-                <span class="material-symbols-outlined">filter_list</span>
+                <img src="/assets/img/icons/filter-list.svg" class="svg-icon" alt="filter_list">
                 Filter
               </button>
               <div id="filterMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
@@ -49,30 +49,11 @@
                 <hr class="filter-separator">
                 <div class="filter-footer">
                   <button class="filter-btn add-filter-btn" onclick="addFilterRow()">
-                    <span class="material-symbols-outlined">add</span>
+                    <img src="/assets/img/icons/add.svg" class="svg-icon" alt="add">
                     Add Filter
                   </button>
                   <div class="filter-actions">
                     <button class="export-btn" onclick="applyFilters()">Apply</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="table-filter-wrapper">
-              <button class="filter-btn" onclick="toggleSortMenu()">
-                <span class="material-symbols-outlined">sort</span>
-                Sort
-              </button>
-              <div id="sortMenu" class="filter-dropdown filter-dropdown-grey" style="display: none;">
-                <div id="activeSorts"></div>
-                <hr class="filter-separator">
-                <div class="filter-footer">
-                  <button class="filter-btn add-filter-btn" onclick="addSortRow()">
-                    <span class="material-symbols-outlined">add</span>
-                    Add Sort
-                  </button>
-                  <div class="filter-actions">
-                    <button class="export-btn" onclick="applySort()">Sort</button>
                   </div>
                 </div>
               </div>
@@ -82,9 +63,19 @@
             <span id="filterStatus"></span>
           </div>
         </div>
-        <div id="activityFeed">
-          <p class="loading-text" style="text-align: center;">Loading...</p>
-        </div>
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="sortable-header" onclick="sortTable('userName')">Name</th>
+              <th class="sortable-header" onclick="sortTable('section')">Section</th>
+              <th class="sortable-header" onclick="sortTable('timeIn')">Time In / Out</th>
+              <th class="sortable-header" onclick="sortTable('status')">Status</th>
+            </tr>
+          </thead>
+          <tbody id="activityFeed">
+            <tr><td colspan="4" style="text-align:center;padding:20px;color:#9ca3af;">Loading...</td></tr>
+          </tbody>
+        </table>
         <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center;">
           <div class="pagination-left">
             <span>Show</span>
@@ -93,17 +84,17 @@
           </div>
           <div class="pagination-right">
             <button class="btn-outline pagination-btn" onclick="goToFirstPage()" id="firstBtn">
-              <span class="material-symbols-outlined">first_page</span>
+              <img src="/assets/img/icons/first-page.svg" class="svg-icon" alt="first_page">
             </button>
             <button class="btn-outline pagination-btn" onclick="changePage(-1)" id="prevBtn">
-              <span class="material-symbols-outlined">chevron_left</span>
+              <img src="/assets/img/icons/chevron-left.svg" class="svg-icon" alt="chevron_left">
             </button>
             <input type="number" id="pageNumberInput" class="page-number-input" value="1" onchange="goToPage(this.value)">
             <button class="btn-outline pagination-btn" onclick="changePage(1)" id="nextBtn">
-              <span class="material-symbols-outlined">chevron_right</span>
+              <img src="/assets/img/icons/chevron-right.svg" class="svg-icon" alt="chevron_right">
             </button>
             <button class="btn-outline pagination-btn" onclick="goToLastPage()" id="lastBtn">
-              <span class="material-symbols-outlined">last_page</span>
+              <img src="/assets/img/icons/last-page.svg" class="svg-icon" alt="last_page">
             </button>
           </div>
         </div>

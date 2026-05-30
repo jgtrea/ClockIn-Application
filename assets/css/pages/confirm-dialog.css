@@ -33,6 +33,13 @@
   color: #dc2626;
 }
 
+.confirm-dialog-icon img.svg-icon {
+  width: 28px;
+  height: 28px;
+  top: 0;
+  position: static;
+}
+
 .confirm-dialog-header h3 {
   margin: 0;
   font-size: 18px;
