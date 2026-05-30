@@ -355,7 +355,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
-    alert('Delete functionality not implemented for schedules');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   window.toggleFilterMenu = function() {
@@ -638,8 +641,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       let employeeId = null;
       const employeeName = row[4] || row[3] || '';
       
-      if (employeeName && employees) {
-        const matchedEmployee = employees.find(e => 
+      if (employeeName && users) {
+        const matchedEmployee = users.find(e => 
           e.name && e.name.toLowerCase() === employeeName.toLowerCase()
         );
         if (matchedEmployee) {

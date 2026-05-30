@@ -46,7 +46,7 @@ html, body {
 }
 
 .dashboard-title-wrapper > div:first-child { flex: 1; min-width: 200px; }
-.dashboard-title-wrapper > div:last-child  { display: flex; gap: 8px; align-items: center; }
+.dashboard-title-wrapper > div:last-child:not(:only-child) { display: flex; gap: 8px; align-items: center; }
 
 .table-header {
   width: 100%;
@@ -178,7 +178,7 @@ html, body {
   .tagline { font-size: 12px; }
   .dashboard-title-wrapper { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
   .dashboard-title-wrapper > div:first-child { flex: 1; min-width: 180px; }
-  .dashboard-title-wrapper > div:last-child  { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dashboard-title-wrapper > div:last-child:not(:only-child) { display: flex; gap: 8px; flex-wrap: wrap; }
 }
 
 @media screen and (max-width: 480px) {
@@ -190,7 +190,7 @@ html, body {
   .stat-label { font-size: 10px; }
   .dashboard-title-wrapper { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   .dashboard-title-wrapper > div:first-child { flex: 1; min-width: 150px; }
-  .dashboard-title-wrapper > div:last-child  { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dashboard-title-wrapper > div:last-child:not(:only-child) { display: flex; gap: 8px; flex-wrap: wrap; }
   .table-actions-left { gap: 8px; }
   .search-username-input { width: 100%; min-width: 100%; }
   .filter-btn { padding: 6px 8px; font-size: 11px; }

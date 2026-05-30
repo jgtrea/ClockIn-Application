@@ -262,7 +262,7 @@ window.clearFilters = function() {
     totalRecordsCount.textContent = filteredRecords.length;
   }
   
-  applySort();
+  applyCurrentSort();
   renderPage();
 };
 
@@ -746,7 +746,7 @@ function renderPage() {
   }
 }
 
-function changePage(direction) {
+window.changePage = function(direction) {
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
   const newPage = currentPage + direction;
   
@@ -754,27 +754,27 @@ function changePage(direction) {
     currentPage = newPage;
     renderPage();
   }
-}
+};
 
-function goToFirstPage() {
+window.goToFirstPage = function() {
   currentPage = 1;
   renderPage();
-}
+};
 
-function goToLastPage() {
+window.goToLastPage = function() {
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
   currentPage = totalPages;
   renderPage();
-}
+};
 
-function goToPage(pageNum) {
+window.goToPage = function(pageNum) {
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
   const page = parseInt(pageNum);
   if (page >= 1 && page <= totalPages) {
     currentPage = page;
     renderPage();
   }
-}
+};
 
 window.changeItemsPerPage = function(value) {
   try {
