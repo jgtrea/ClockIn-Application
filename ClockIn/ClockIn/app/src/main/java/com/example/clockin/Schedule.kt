@@ -102,7 +102,7 @@ fun ScheduleScreen(navController: NavController) {
 
         if (records.isNotEmpty()) {
             val items =
-                records.map { record ->
+                records.flatMap { record ->
                     val displayRoom =
                         if (record.sectionDetails != null) {
                             "${record.sectionDetails.yearLevel} - ${record.sectionDetails.sectionName}"
@@ -110,20 +110,42 @@ fun ScheduleScreen(navController: NavController) {
                             record.sectionName
                         }
 
-                    val isToday = record.weekday.equals(currentDay, ignoreCase = true)
-                    val isHappening = isToday && currentTime >= record.startTime && currentTime <= record.endTime
-                    val isUpcoming = isToday && record.startTime > currentTime
+                    val trimmedWeekday = record.weekday.trim()
+                    if (trimmedWeekday.equals("All Days", ignoreCase = true) || trimmedWeekday.equals("AllWeekdays", ignoreCase = true)) {
+                        daySortOrder.map { dayOfWeek ->
+                            val isToday = dayOfWeek.equals(currentDay, ignoreCase = true)
+                            val isHappening = isToday && currentTime >= record.startTime && currentTime <= record.endTime
+                            val isUpcoming = isToday && record.startTime > currentTime
 
-                    ScheduleItem(
-                        title = record.subject,
-                        details = formatScheduleTime(record.startTime, record.endTime),
-                        sectionHeader = record.sectionName,
-                        displaySection = displayRoom,
-                        day = record.weekday,
-                        rawStartTime = record.startTime,
-                        isUpcoming = isUpcoming,
-                        isHappeningNow = isHappening,
-                    )
+                            ScheduleItem(
+                                title = record.subject,
+                                details = formatScheduleTime(record.startTime, record.endTime),
+                                sectionHeader = record.sectionName,
+                                displaySection = displayRoom,
+                                day = dayOfWeek,
+                                rawStartTime = record.startTime,
+                                isUpcoming = isUpcoming,
+                                isHappeningNow = isHappening,
+                            )
+                        }
+                    } else {
+                        val isToday = trimmedWeekday.equals(currentDay, ignoreCase = true)
+                        val isHappening = isToday && currentTime >= record.startTime && currentTime <= record.endTime
+                        val isUpcoming = isToday && record.startTime > currentTime
+
+                        listOf(
+                            ScheduleItem(
+                                title = record.subject,
+                                details = formatScheduleTime(record.startTime, record.endTime),
+                                sectionHeader = record.sectionName,
+                                displaySection = displayRoom,
+                                day = trimmedWeekday,
+                                rawStartTime = record.startTime,
+                                isUpcoming = isUpcoming,
+                                isHappeningNow = isHappening,
+                            ),
+                        )
+                    }
                 }
             happeningNowItem = items.find { it.isHappeningNow }
             allScheduleItems = items
@@ -136,7 +158,7 @@ fun ScheduleScreen(navController: NavController) {
             var list =
                 allScheduleItems.filter {
                     val matchesSearch = it.title.contains(searchQuery, true) || it.details.contains(searchQuery, true)
-                    val matchesDay = selectedDay == "All Days" || it.day.equals(selectedDay, ignoreCase = true)
+                    val matchesDay = selectedDay.trim().equals("All Days", ignoreCase = true) || it.day.trim().equals(selectedDay.trim(), ignoreCase = true)
                     val isNotDuplicate = it != happeningNowItem
                     matchesSearch && matchesDay && isNotDuplicate
                 }
@@ -315,20 +337,12 @@ fun ScheduleCard(item: ScheduleItem) {
         shape = RoundedCornerShape(12.dp),
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(45.dp)
-                        .background(ButtonOrange, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = item.title.take(1).uppercase(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                )
-            }
+            InitialAvatar(
+                initial = item.title.take(1).uppercase(),
+                size = 45.dp,
+                shape = RoundedCornerShape(8.dp),
+                color = ButtonOrange,
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 

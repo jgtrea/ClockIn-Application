@@ -1,8 +1,6 @@
 package com.example.clockin
 
 import android.content.Context
-import com.example.clockin.model.*
-
 object NotificationTracker {
     private const val PREFS_NAME = "notification_tracker"
     private const val KEY_SHOWN_NOTIFICATIONS = "shown_notification_ids"
@@ -25,18 +23,6 @@ object NotificationTracker {
     ) {
         shownNotificationIds.add(notifId)
         saveToPreferences(context)
-    }
-
-    fun filterNewNotifications(notifications: List<NotificationItem>): List<NotificationItem> {
-        return notifications.filter { !hasBeenShown(it.notifId) }
-    }
-
-    fun cleanup(context: Context) {
-        if (shownNotificationIds.size > 100) {
-            val keepIds = shownNotificationIds
-            shownNotificationIds = keepIds
-            saveToPreferences(context)
-        }
     }
 
     private fun saveToPreferences(context: Context) {

@@ -41,7 +41,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -101,5 +101,17 @@ dependencies {
 dependencyCheck {
     failBuildOnCVSS = 7.0f
     format = "ALL"
+<<<<<<< HEAD
     nvd.apiKey = project.findProperty("nvdApiKey") as String? ?: System.getenv("NVD_API_KEY") ?: ""
+=======
+    nvd {
+        apiKey = project.findProperty("nvdApiKey") as String? ?: System.getenv("NVD_API_KEY") ?: ""
+        delay = 6000
+        validForHours = 4
+    }
+    analyzers {
+        centralEnabled = false
+        ossIndexEnabled = false
+    }
+>>>>>>> 97d1dc49613a707ebdd70d36f2e5c1cbdd1058ab
 }

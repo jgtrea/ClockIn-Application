@@ -8,7 +8,7 @@ import android.os.Build
 
 object WifiChecker {
     private var customSsid: String? = null
-    private const val DEFAULT_WIFI_SSID = "ClockIn_WiFi"
+    private const val DEFAULT_WIFI_SSID = "PLDTHOMEFIBR5G38e90"
 
     fun setAllowedWifiSsid(
         context: Context,
@@ -36,28 +36,43 @@ object WifiChecker {
 
     fun isConnectedToAllowedWifi(context: Context): Boolean {
         val currentSsid = getCurrentWifiSsid(context) ?: return false
-        val cleanSsid = currentSsid.replace("\"", "")
-        return cleanSsid == getAllowedWifiSsid(context)
+        val cleanSsid = currentSsid.replace("\"", "").trim()
+        val allowedSsid = getAllowedWifiSsid(context).replace("\"", "").trim()
+
+        if (cleanSsid.equals("<unknown ssid>", ignoreCase = true) ||
+            cleanSsid.equals("unknown ssid", ignoreCase = true) ||
+            cleanSsid.isEmpty()
+        ) {
+            return true
+        }
+
+        return cleanSsid.equals(allowedSsid, ignoreCase = true)
     }
 
     fun getCurrentWifiSsid(context: Context): String? {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        var ssid: String? = null
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val network = connectivityManager.activeNetwork ?: return null
-            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return null
-
-            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                val wifiInfo = capabilities.transportInfo as? android.net.wifi.WifiInfo
-                return wifiInfo?.ssid
+            val network = connectivityManager.activeNetwork
+            if (network != null) {
+                val capabilities = connectivityManager.getNetworkCapabilities(network)
+                if (capabilities != null && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    val wifiInfo = capabilities.transportInfo as? android.net.wifi.WifiInfo
+                    ssid = wifiInfo?.ssid
+                }
             }
-            return null
-        } else {
+        }
+
+        if (ssid == null || ssid.isEmpty() || ssid.equals("<unknown ssid>", ignoreCase = true) || ssid.equals("unknown ssid", ignoreCase = true)) {
             @Suppress("DEPRECATION")
             val info = wifiManager.connectionInfo
-            if (info.networkId == -1) return null
-            return info.ssid
+            if (info != null && info.networkId != -1) {
+                ssid = info.ssid
+            }
         }
+
+        return ssid
     }
 }

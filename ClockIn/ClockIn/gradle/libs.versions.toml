@@ -11,7 +11,7 @@ composeBom = "2024.09.00"
 playServicesMlkitBarcodeScanning = "18.3.1"
 foundation = "1.10.2"
 ktlint = "12.1.1"
-dependencycheck = "12.1.0"
+dependencycheck = "12.2.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

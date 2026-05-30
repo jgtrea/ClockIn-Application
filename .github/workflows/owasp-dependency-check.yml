@@ -1,10 +1,6 @@
 name: OWASP Dependency Check
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   schedule:
     # Runs at 00:00 every Sunday to check for new vulnerabilities
     - cron: '0 0 * * 0'
@@ -35,11 +31,23 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Cache OWASP NVD data
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: owasp-nvd-${{ runner.os }}
+          restore-keys: |
+            owasp-nvd-${{ runner.os }}
+
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 
       - name: Run OWASP Dependency Scan
+<<<<<<< HEAD
         run: ./gradlew dependencyCheckAnalyze -PnvdApiKey=${{ secrets.NVD_API_KEY }}
+=======
+        run: ./gradlew dependencyCheckAnalyze
+>>>>>>> 97d1dc49613a707ebdd70d36f2e5c1cbdd1058ab
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -163,7 +162,9 @@ fun DashboardScreen(
 
                     val todaysSchedules =
                         allSchedules.filter {
-                            it.weekday.trim().equals(currentDay, ignoreCase = true)
+                            it.weekday.trim().equals(currentDay, ignoreCase = true) ||
+                                it.weekday.trim().equals("All Days", ignoreCase = true) ||
+                                it.weekday.trim().equals("AllWeekdays", ignoreCase = true)
                         }
 
                     for (sched in todaysSchedules) {
@@ -441,17 +442,11 @@ fun UserMenuHeader() {
         modifier = Modifier.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFFF7F66)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = userName.firstOrNull()?.uppercase() ?: "",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-            )
-        }
+        InitialAvatar(
+            initial = userName.firstOrNull()?.uppercase() ?: "",
+            size = 40.dp,
+            fontSize = 18.sp,
+        )
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
@@ -498,12 +493,11 @@ fun DashboardHeader(
         }
         Spacer(modifier = Modifier.width(12.dp))
         Box {
-            Box(
-                modifier = Modifier.size(50.dp).clip(CircleShape).background(Color(0xFFFF7F66)).clickable { expanded = true },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(text = userName.firstOrNull()?.uppercase() ?: "", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            }
+            InitialAvatar(
+                initial = userName.firstOrNull()?.uppercase() ?: "",
+                size = 50.dp,
+                onClick = { expanded = true },
+            )
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },

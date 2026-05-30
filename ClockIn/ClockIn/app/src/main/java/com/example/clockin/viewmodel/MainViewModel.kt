@@ -10,15 +10,12 @@ data class MainUiState(
     val beaconDistance: Double = -1.0,
     val isBeaconFound: Boolean = false,
     val statusMessage: String = "Scanning...",
-    val deviceName: String = "Unknown Device",
-    val deviceId: String = "Fetching...",
     val uiTargetBleName: String = "",
     val uiTargetStartTime: Long = 0L,
     val uiTargetEndTime: Long = 0L,
     val uiSchedId: String = "",
     val empId: String = "",
     val activeAttendanceId: String? = null,
-    val isBinding: Boolean = false,
 )
 
 class MainViewModel : ViewModel() {
@@ -35,13 +32,6 @@ class MainViewModel : ViewModel() {
 
     fun setStatusMessage(message: String) {
         _uiState.update { it.copy(statusMessage = message) }
-    }
-
-    fun setDeviceInfo(
-        name: String,
-        id: String,
-    ) {
-        _uiState.update { it.copy(deviceName = name, deviceId = id) }
     }
 
     fun setEmpId(id: String) {
@@ -68,7 +58,4 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun setBindingStatus(binding: Boolean) {
-        _uiState.update { it.copy(isBinding = binding) }
-    }
 }
