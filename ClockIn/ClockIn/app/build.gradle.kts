@@ -9,6 +9,10 @@ if (localPropertiesFile.exists()) {
 
 val supabaseUrl = localProperties.getProperty("supabase.url") ?: ""
 val supabaseKey = localProperties.getProperty("supabase.key") ?: ""
+val keystorePath = localProperties.getProperty("keystore.path") ?: ""
+val keystorePassword = localProperties.getProperty("keystore.password") ?: ""
+val keystoreAlias = localProperties.getProperty("keystore.alias") ?: ""
+val keystoreKeyPassword = localProperties.getProperty("keystore.keyPassword") ?: ""
 
 plugins {
     alias(libs.plugins.android.application)
@@ -39,6 +43,15 @@ android {
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file(keystorePath)
+            storePassword = keystorePassword
+            keyAlias = keystoreAlias
+            keyPassword = keystoreKeyPassword
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -46,6 +59,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

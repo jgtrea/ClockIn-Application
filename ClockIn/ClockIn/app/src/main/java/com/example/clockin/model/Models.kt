@@ -45,7 +45,6 @@ data class Attendance(
 
 @Serializable
 data class NotificationItem(
-    @SerialName("notifId") val notifId: String = "",
     val header: String = "",
     val message: String = "",
     @SerialName("dataCreated") val dateCreated: String? = null,
@@ -74,7 +73,6 @@ data class Notification(
     val header: String,
     val message: String,
     @SerialName("endNotif") val target: String = "everyone",
-    @SerialName("dataCreated") val dataCreated: String? = null,
 )
 
 @Serializable

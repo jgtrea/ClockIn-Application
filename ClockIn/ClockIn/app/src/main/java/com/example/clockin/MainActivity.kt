@@ -134,7 +134,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             ThemeManager.init(context.applicationContext)
-            ClockInTheme(darkTheme = ThemeManager.isDarkTheme, dynamicColor = false) {
+            ClockInTheme(darkTheme = ThemeManager.isDarkTheme) {
                 val navController = rememberNavController()
                 val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
@@ -642,7 +642,7 @@ fun DeviceConflictDialog(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f)),
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -666,7 +666,7 @@ fun DeviceConflictDialog(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFF9800).copy(alpha = 0.15f)),
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {

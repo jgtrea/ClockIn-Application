@@ -95,7 +95,6 @@ fun DashboardScreen(
     statusMessage: String,
     onActiveAttendanceIdChanged: (String?) -> Unit,
     onTargetBleChanged: (String, Long, Long, String) -> Unit,
-    onRefreshBeacon: () -> Unit = {},
     isBeaconFound: Boolean,
     onLogout: () -> Unit,
     onProfileClick: () -> Unit,
@@ -127,7 +126,6 @@ fun DashboardScreen(
     var currentAttendanceStatus by remember { mutableStateOf<String?>(null) }
 
     val refreshDashboard = {
-        onRefreshBeacon()
         coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val user = SupabaseManager.getCurrentUser()
             val userEmail = user?.email ?: ""

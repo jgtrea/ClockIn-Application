@@ -40,3 +40,10 @@
 -keepattributes RuntimeVisibleAnnotations,RuntimeVisibleParameterAnnotations
 -keep class io.ktor.** { *; }
 -keep class io.github.jan.supabase.** { *; }
+
+# =========================================================================
+# R8 Missing Class Suppressions
+# =========================================================================
+-dontwarn java.lang.management.ManagementFactory
+-dontwarn java.lang.management.RuntimeMXBean
+-dontwarn org.slf4j.impl.StaticLoggerBinder
