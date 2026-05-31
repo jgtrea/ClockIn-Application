@@ -8,7 +8,7 @@ import android.os.Build
 
 object WifiChecker {
     private var customSsid: String? = null
-    private const val DEFAULT_WIFI_SSID = "PLDTHOMEFIBR5G38e90"
+    private const val DEFAULT_WIFI_SSID = "ClockIn_WiFi"
 
     fun setAllowedWifiSsid(
         context: Context,
