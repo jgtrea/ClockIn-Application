@@ -43,12 +43,14 @@ android {
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
 
-    signingConfigs {
-        create("release") {
-            storeFile = rootProject.file(keystorePath)
-            storePassword = keystorePassword
-            keyAlias = keystoreAlias
-            keyPassword = keystoreKeyPassword
+    if (keystorePath.isNotEmpty()) {
+        signingConfigs {
+            create("release") {
+                storeFile = rootProject.file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = keystoreAlias
+                keyPassword = keystoreKeyPassword
+            }
         }
     }
 
@@ -59,7 +61,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("release")
+            if (keystorePath.isNotEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
